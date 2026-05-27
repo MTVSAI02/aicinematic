@@ -110,7 +110,33 @@ npm run dev      # http://localhost:5173
 ```bash
 uv run uvicorn backend.app.main:app --reload   # http://localhost:8000
 ```
-> `backend/app/main.py` 가 만들어진 뒤부터 동작합니다.
+> API 자동 문서: http://localhost:8000/docs
+
+---
+
+## 연동 확인 (셋업 검증) ✅
+
+**프론트 + 백엔드가 서로 연결돼야 환경설정이 제대로 끝난 것**입니다. 아래로 확인하세요.
+
+1. 터미널 2개를 열어 **백엔드와 프론트 서버를 둘 다** 실행한다. (위 [실행](#실행) 참고)
+2. 브라우저에서 **http://localhost:5173** 접속.
+3. 화면에 **`✅ 백엔드 연결 성공`** 과 응답 JSON `{"status":"ok",...}` 이 보이면 정상.
+
+브라우저 없이 터미널로만 확인하려면:
+```bash
+curl http://localhost:8000/api/health
+# → {"status":"ok","service":"ai-cinematic-backend"}
+```
+
+### ❌ `백엔드 연결 실패` 가 뜨면
+
+| 원인 | 해결 |
+|---|---|
+| 백엔드 서버가 안 켜짐 | `uv run uvicorn backend.app.main:app --reload` 실행했는지 확인 |
+| 주소가 다름 | `frontend/.env` 의 `VITE_API_BASE_URL` 이 백엔드 주소(`http://localhost:8000`)와 같은지 확인 |
+| `.env` 가 없음 | `cp .env.example .env` (Windows: `copy` / `Copy-Item`) 했는지 확인 |
+| `.env` 수정 후 반영 안 됨 | `.env` 는 **서버 재시작해야** 적용됨 → 프론트 `npm run dev` 끄고 다시 실행 |
+| CORS 에러 (콘솔 빨간 메시지) | 백엔드 `main.py` 의 `allow_origins` 에 프론트 주소가 있는지 확인 |
 
 ---
 
