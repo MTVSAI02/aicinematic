@@ -1,0 +1,59 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Environments (uv)
+.venv
+.env
+**/.env
+env/
+venv/
+ENV/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.cache
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+.pyre/
+
+# Jupyter
+.ipynb_checkpoints
+
+# ===== Frontend (React / Node / Vite) =====
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/node_modules/
+*.local
+
+# Node logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===== 생성 결과물 (이미지·영상·JSON 덤프) =====
+backend/app/storage/*
+!backend/app/storage/.gitkeep
+
+# ===== Editor / OS =====
+.vscode/
+.idea/
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
