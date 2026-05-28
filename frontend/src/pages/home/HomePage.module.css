@@ -1,0 +1,37 @@
+.page {
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.sub {
+  color: var(--text);
+  margin-bottom: 32px;
+}
+
+.cta {
+  padding: 12px 32px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.cta:hover {
+  opacity: 0.85;
+}
+
+.section {
+  margin-top: 48px;
+  text-align: left;
+}
+
+.empty {
+  color: var(--text);
+  padding: 32px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
