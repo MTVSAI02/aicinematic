@@ -1,22 +1,31 @@
 import { useNavigate } from 'react-router-dom'
+import useStoryStore from '@/store/useStoryStore'
 import styles from './TimelinePage.module.css'
-
-const MOCK_SCENES = [
-  { id: '1', order: 1, duration: 3.0, text: '어린 왕자는 작은 별에 혼자 살았어요.' },
-  { id: '2', order: 2, duration: 4.0, text: '어린왕자: "오늘은 어디로 여행을 떠나볼까?"' },
-]
 
 export default function TimelinePage() {
   const navigate = useNavigate()
-  const total = MOCK_SCENES.reduce((acc, s) => acc + s.duration, 0)
+  const { scenes, updateSceneDuration } = useStoryStore()
+  const total = scenes.reduce((acc, s) => acc + s.duration, 0)
+
+  if (scenes.length === 0) {
+    return (
+      <div className={styles.page}>
+        <h1>타임라인</h1>
+        <p className={styles.empty}>씬이 없어요. 스토리를 먼저 입력해주세요.</p>
+        <button className={styles.btn} onClick={() => navigate('/story-input')}>
+          스토리 입력하러 가기
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.page}>
       <h1>타임라인</h1>
-      <p className={styles.guide}>씬 순서와 재생 길이를 조절하세요. 총 {total}초</p>
+      <p className={styles.guide}>씬 순서와 재생 길이를 조절하세요. 총 {total.toFixed(1)}초</p>
 
       <div className={styles.track}>
-        {MOCK_SCENES.map((scene) => (
+        {scenes.map((scene) => (
           <div
             key={scene.id}
             className={styles.clip}
@@ -29,16 +38,21 @@ export default function TimelinePage() {
       </div>
 
       <ul className={styles.list}>
-        {MOCK_SCENES.map((scene) => (
+        {scenes.map((scene) => (
           <li key={scene.id} className={styles.row}>
             <span className={styles.rowOrder}>씬 {scene.order}</span>
-            <span className={styles.rowText}>{scene.text}</span>
+            <span className={styles.rowText}>
+              {scene.segments[0]?.text ?? ''}
+            </span>
             <input
               className={styles.durationInput}
               type="number"
               min="1"
               step="0.5"
-              defaultValue={scene.duration}
+              value={scene.duration}
+              onChange={(e) =>
+                updateSceneDuration(scene.id, parseFloat(e.target.value) || 1)
+              }
             />
             <span className={styles.unit}>초</span>
           </li>

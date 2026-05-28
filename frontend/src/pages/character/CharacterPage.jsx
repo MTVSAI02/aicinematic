@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useCharacterStore from '@/store/useCharacterStore'
 import styles from './CharacterPage.module.css'
-
-// TODO: useCharacterStore로 교체
-const MOCK_LIBRARY = []
 
 export default function CharacterPage() {
   const navigate = useNavigate()
+  const { characters, addCharacter, selectCharacter } = useCharacterStore()
   const [name, setName] = useState('')
   const [tags, setTags] = useState('')
   const [loading, setLoading] = useState(false)
@@ -14,8 +13,25 @@ export default function CharacterPage() {
   async function handleCreate() {
     if (!name.trim()) return
     setLoading(true)
-    // TODO: POST /characters → AI character.py 호출
-    setTimeout(() => setLoading(false), 1000)
+    try {
+      // TODO: POST /characters → AI character.py 호출
+      // const character = await characterApi.create({ name, tags })
+      // addCharacter(character)
+
+      // 백엔드 연동 전 임시 mock
+      const mockCharacter = {
+        id: crypto.randomUUID(),
+        name,
+        tags,
+        image_url: null,
+        locked: false,
+      }
+      addCharacter(mockCharacter)
+      setName('')
+      setTags('')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -55,14 +71,24 @@ export default function CharacterPage() {
 
       <section className={styles.section}>
         <h2>캐릭터 라이브러리</h2>
-        {MOCK_LIBRARY.length === 0 ? (
+        {characters.length === 0 ? (
           <p className={styles.empty}>아직 생성된 캐릭터가 없어요.</p>
         ) : (
           <ul className={styles.grid}>
-            {MOCK_LIBRARY.map((c) => (
-              <li key={c.id} className={styles.card}>
-                <div className={styles.thumb} />
+            {characters.map((c) => (
+              <li
+                key={c.id}
+                className={styles.card}
+                onClick={() => selectCharacter(c.id)}
+              >
+                <div className={styles.thumb}>
+                  {c.image_url
+                    ? <img src={c.image_url} alt={c.name} className={styles.thumbImg} />
+                    : <span className={styles.thumbEmpty}>생성 중</span>
+                  }
+                </div>
                 <span>{c.name}</span>
+                {c.locked && <span className={styles.lockBadge}>🔒 락</span>}
               </li>
             ))}
           </ul>

@@ -1,23 +1,29 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useStoryStore from '@/store/useStoryStore'
 import styles from './StoryInputPage.module.css'
 
 const PLACEHOLDER = `어린 왕자는 작은 별에 혼자 살았어요.
 어린왕자: "오늘은 어디로 여행을 떠나볼까?"`
 
 export default function StoryInputPage() {
-  const [text, setText] = useState('')
-  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { storyText, setStoryText, setStoryId, setScenes } = useStoryStore()
+  const [loading, setLoading] = useState(false)
 
   async function handleParse() {
-    if (!text.trim()) return
+    if (!storyText.trim()) return
     setLoading(true)
-    // TODO: POST /stories → POST /stories/{id}/parse
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      // TODO: POST /stories → POST /stories/{id}/parse 연동
+      // const { id } = await storyApi.create(storyText)
+      // setStoryId(id)
+      // const scenes = await storyApi.parse(id)
+      // setScenes(scenes)
       navigate('/scene-check')
-    }, 500)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -29,16 +35,16 @@ export default function StoryInputPage() {
       <textarea
         className={styles.textarea}
         placeholder={PLACEHOLDER}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
+        value={storyText}
+        onChange={(e) => setStoryText(e.target.value)}
         rows={16}
       />
       <div className={styles.actions}>
-        <span className={styles.count}>{text.length}자</span>
+        <span className={styles.count}>{storyText.length}자</span>
         <button
           className={styles.btn}
           onClick={handleParse}
-          disabled={!text.trim() || loading}
+          disabled={!storyText.trim() || loading}
         >
           {loading ? '분석 중...' : '씬 분해하기 →'}
         </button>
