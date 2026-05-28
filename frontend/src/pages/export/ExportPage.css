@@ -1,0 +1,182 @@
+.app-shell {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 48px 0;
+  text-align: left;
+}
+
+.hero-section {
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(170, 59, 255, 0.12), transparent 34%),
+    var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-section h1,
+.panel h2 {
+  margin: 0;
+}
+
+.hero-copy {
+  max-width: 720px;
+  margin-top: 14px;
+  color: var(--text);
+}
+
+.panel {
+  margin-top: 24px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--bg) 94%, var(--accent) 6%);
+}
+
+.panel-header {
+  display: flex;
+  gap: 24px;
+  align-items: start;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.panel-description {
+  max-width: 420px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.scene-list {
+  display: grid;
+  gap: 16px;
+}
+
+.scene-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg);
+}
+
+.scene-card-top,
+.scene-actions,
+.scene-timing,
+.scene-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.scene-card-top {
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.scene-order {
+  color: var(--text-h);
+  font-weight: 700;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-idle {
+  color: #5f6470;
+  background: #eef0f4;
+}
+
+.status-loading {
+  color: #7a4c00;
+  background: #fff0c2;
+}
+
+.status-done {
+  color: #11623a;
+  background: #d9f7e8;
+}
+
+.status-error {
+  color: #8d1f1f;
+  background: #ffe0e0;
+}
+
+.scene-meta span,
+.scene-timing span {
+  padding: 5px 9px;
+  border-radius: 10px;
+  color: var(--text-h);
+  background: var(--code-bg);
+  font-size: 14px;
+}
+
+.scene-line {
+  margin: 14px 0;
+  color: var(--text-h);
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.scene-timing {
+  margin-bottom: 16px;
+}
+
+.scene-actions {
+  align-items: stretch;
+}
+
+.primary-button {
+  border: 0;
+  border-radius: 12px;
+  padding: 0 18px;
+  color: white;
+  background: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.audio-player {
+  flex: 1 1 280px;
+  min-width: 240px;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: min(100% - 24px, 1120px);
+    padding: 24px 0;
+  }
+
+  .hero-section,
+  .panel {
+    padding: 22px;
+  }
+
+  .panel-header {
+    display: block;
+  }
+
+  .panel-description {
+    margin-top: 10px;
+  }
+}
