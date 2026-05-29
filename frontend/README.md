@@ -50,7 +50,7 @@ AI가 만든 캐릭터·배경·음성 에셋을 사용자가 조립해 **움직
 | Health Check | 연동 대상 | 백엔드 연결 상태 확인 |
 | Story Parse | 연동 대상 | 대본 입력 후 `POST /api/stories/parse` 호출 |
 | Scene Check | 연동 대상 | 백엔드 응답의 `sceneId`, `items` 기준으로 씬 카드 표시 |
-| Character Library | 개발 대상 | 캐릭터 생성·불러오기·선택 상태 관리 |
+| Character Library | 연동 대상 | 캐릭터 생성(Job)·목록/단건 조회·수정·삭제 (백엔드 mock API 연동 가능) |
 | Voice / TTS | 개발 대상 | 씬 item 기준 음성 생성 요청 및 결과 표시 |
 | Voice Cloning | 개발 대상 | 음성 샘플 업로드, 캐릭터 voiceId 연결 |
 | Scene Editor | 개발 대상 | 배경·캐릭터 합성 결과 표시 준비 |
@@ -856,6 +856,42 @@ src/api/voice.js
 src/api/scenes.js
 src/api/render.js
 ```
+
+### `src/api/characters.js` 역할 (백엔드 연동 가능)
+
+캐릭터 생성은 비동기 Job 구조입니다. `generate`는 `jobId`를 반환하고, `getJob`으로 상태를 폴링합니다. 현재 백엔드는 mock이라 생성 직후 바로 `completed` 상태가 됩니다.
+
+```js
+export async function generateCharacter({ name, appearancePrompt }) {
+  // POST /api/characters/generate  -> { jobId, status, message }
+}
+
+export async function getJob(jobId) {
+  // GET /api/jobs/{jobId}  -> { jobId, type, status, progress, result, error }
+}
+
+export async function listCharacters() {
+  // GET /api/characters  -> [{ characterId, name, appearancePrompt, imageUrl }]
+}
+
+export async function createCharacter({ name, appearancePrompt, imageUrl = null }) {
+  // POST /api/characters  -> { characterId, name, appearancePrompt, imageUrl }
+}
+
+export async function getCharacter(characterId) {
+  // GET /api/characters/{characterId}  (404 시 없음)
+}
+
+export async function updateCharacter(characterId, patch) {
+  // PATCH /api/characters/{characterId}  (name/appearancePrompt/imageUrl 부분 수정)
+}
+
+export async function deleteCharacter(characterId) {
+  // DELETE /api/characters/{characterId}  -> { deleted, characterId }
+}
+```
+
+> 캐릭터 데이터: `{ characterId, name, appearancePrompt, imageUrl }` — `imageUrl`은 optional이며 mock 단계에서는 `null`. 스타일/seed/reference/lock, voice 관련 필드는 백엔드가 받지 않습니다(ComfyUI 파트 담당).
 
 ### `src/api/voice.js` 역할
 

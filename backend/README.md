@@ -61,16 +61,29 @@ backend/
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── health.py          # GET /api/health
-│   │   └── stories.py         # POST /api/stories/parse, GET /api/stories, GET /api/stories/{id}
+│   │   ├── stories.py         # POST /api/stories/parse, GET /api/stories, GET /api/stories/{id}
+│   │   ├── characters.py      # POST /api/characters/generate, 캐릭터 CRUD
+│   │   └── jobs.py            # GET /api/jobs/{job_id}
 │   ├── services/
 │   │   ├── __init__.py
-│   │   └── story_parser.py    # 빈 줄 기준 씬 분해, narration/dialogue 분리
+│   │   ├── story_parser.py    # 빈 줄 기준 씬 분해, narration/dialogue 분리
+│   │   ├── job_manager.py     # InMemoryJobManager (나중에 RabbitMQ/Celery로 교체)
+│   │   ├── character_service.py  # 캐릭터 CRUD 비즈니스 로직 (커스텀 예외 발생)
+│   │   └── job_service.py     # Job 조회 비즈니스 로직 (JobNotFoundError)
 │   ├── repositories/
 │   │   ├── __init__.py
-│   │   └── story_repo.py      # 메모리 Mock Repository
+│   │   ├── story_repo.py      # 메모리 Mock Repository
+│   │   ├── character_repo.py  # 캐릭터 메모리 Mock Repository
+│   │   └── job_repo.py        # Job 상태 메모리 Mock Repository
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   └── story.py           # StoryParseRequest, StoryParseResponse 등
+│   │   ├── story.py           # StoryParseRequest, StoryParseResponse 등
+│   │   ├── character.py       # Character 요청/응답 모델
+│   │   └── job.py             # JobStatus Enum, JobResponse
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── exceptions.py          # AppException 및 커스텀 예외
+│   │   └── exception_handlers.py  # AppException → HTTP 응답 변환 핸들러
 │   ├── storage/
 │   │   └── .gitkeep           # 생성 결과물 저장 (git 제외)
 │   ├── __init__.py
@@ -94,6 +107,13 @@ backend/
 | POST | `/api/stories/parse` | 대본을 씬으로 분해 후 메모리 저장 |
 | GET | `/api/stories` | 저장된 스토리 목록 조회 |
 | GET | `/api/stories/{story_id}` | 저장된 스토리 단건 조회 |
+| POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (mock, 즉시 completed) |
+| GET | `/api/jobs/{job_id}` | 캐릭터 생성 Job 상태 조회 |
+| GET | `/api/characters` | 캐릭터 목록 조회 |
+| POST | `/api/characters` | 캐릭터 결과 직접 저장 |
+| GET | `/api/characters/{character_id}` | 캐릭터 단건 조회 |
+| PATCH | `/api/characters/{character_id}` | 캐릭터 부분 수정 (name/appearancePrompt/imageUrl) |
+| DELETE | `/api/characters/{character_id}` | 캐릭터 삭제 |
 
 ### 파싱 규칙
 
@@ -106,14 +126,89 @@ backend/
 
 - DB 없이 메모리 `dict`에 임시 저장
 - storyId 자동 생성: `story_mock_001`, `story_mock_002`, ...
+- characterId 자동 생성: `char_mock_001`, `char_mock_002`, ...
+- jobId 자동 생성: `job_mock_001`, `job_mock_002`, ...
 - 서버 재시작 시 데이터 초기화됨
+
+### 캐릭터 / Job API
+
+캐릭터는 **재사용**을 위해 라이브러리에 저장된다. 한 번 만든 캐릭터를 다른 스토리에서도 다시 불러와 사용할 수 있다.
+
+**캐릭터 데이터 구조**
+
+```json
+{
+  "characterId": "char_mock_001",
+  "name": "어린왕자",
+  "appearancePrompt": "금발 단발, 초록 외투를 입은 작은 소년",
+  "imageUrl": null
+}
+```
+
+- `imageUrl`은 optional(nullable). mock 단계에서는 `null`이며, 나중에 ComfyUI 결과 연결 후 이미지 경로가 채워진다.
+- PATCH 동작 기준 (나중에 DB 컬럼 nullability와 1:1 매핑):
+  - `imageUrl`: nullable → `PATCH {"imageUrl": null}`을 보내면 **실제로 `null`로 초기화**된다(이미지 연결 해제).
+  - `name` / `appearancePrompt`: NOT NULL 성격 → 명시적 `null`을 보내면 무시되고 기존 값이 유지된다(공백 문자열은 `422`).
+  - 라우터에서 `exclude_unset`으로 "미전달"과 "명시적 null"을 구분한다.
+
+**Job 데이터 구조**
+
+```json
+{
+  "jobId": "job_mock_001",
+  "type": "character_generate",
+  "status": "completed",
+  "progress": 100,
+  "result": { "characterId": "char_mock_001", "name": "어린왕자", "appearancePrompt": "...", "imageUrl": null },
+  "error": null
+}
+```
+
+- `status`는 `JobStatus` Enum으로 제한: `pending`, `running`, `completed`, `failed`
+- 캐릭터 생성은 비동기 Job 구조로, `POST /api/characters/generate`가 `jobId`를 반환하고 클라이언트가 `GET /api/jobs/{job_id}`로 상태를 폴링한다.
+
+**현재 구현 범위 / 가정**
+
+- 실제 ComfyUI 연동은 아직 구현하지 않음. `InMemoryJobManager`가 mock 캐릭터 결과를 만들어 **즉시 `completed`** 처리한다.
+- RabbitMQ/Celery는 아직 구현하지 않음. 나중에 `InMemoryJobManager`만 교체하면 되도록 분리되어 있다.
+  - 현재: `FastAPI → InMemoryJobManager → Mock Character Result`
+  - 나중: `FastAPI → RabbitMQ/Celery → Worker → ComfyUI → Character Result`
+- 스타일(`stylePreset`) / `seed` / `referenceImageUrl` / `lockProfile`은 백엔드가 받지 않는다. 스타일·seed·캐릭터 고정은 ComfyUI 파트에서 관리한다고 가정한다.
+- 보이스(`voiceId`, `voiceProfile`, TTS) 관련 필드는 이번 단계에서 제외한다.
+
+**예외 처리 기준**
+
+| 상황 | 응답 |
+|---|---|
+| 존재하지 않는 `character_id` 조회/수정/삭제 | `404 {"detail": "Character not found"}` |
+| 존재하지 않는 `job_id` 조회 | `404 {"detail": "Job not found"}` |
+| PATCH에 수정 가능한 필드가 하나도 없음 | `400 {"detail": "No fields to update"}` |
+| `name`/`appearancePrompt` 누락·비문자열·빈 문자열·공백만 | `422` validation error |
+| Job 처리 중 예외 발생 | Job `status=failed`, `progress=0`, `result=null`, `error="Character generation failed"` 저장 (`GET /api/jobs/{id}`로 확인) |
+
+**예외 처리 공통 구조 (계층 분리)**
+
+예외 처리는 `core/exceptions.py`와 `core/exception_handlers.py`로 공통 관리한다.
+
+```text
+repository  → 저장/조회/수정/삭제 결과만 반환. 없으면 None/False. FastAPI(HTTPException)에 의존하지 않음
+service     → 비즈니스 예외 판단. CharacterNotFoundError, JobNotFoundError, NoFieldsToUpdateError 등 커스텀 예외 발생
+router      → request 수신 → service 호출 → 응답 반환. HTTPException을 직접 던지지 않음
+global handler → main.py에 등록된 app_exception_handler가 AppException을 HTTP 응답({"detail": ...})으로 변환
+```
+
+- 커스텀 예외는 `AppException`을 상속하며 `status_code`/`detail`을 가진다.
+  - `CharacterNotFoundError` (404), `JobNotFoundError` (404), `NoFieldsToUpdateError` (400), `CharacterGenerationFailedError` (500)
+- `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
+- `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
+- 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
 
 ## 추후 구현 예정
 
-- `POST /api/characters` — 캐릭터 락 세트 저장
-- `GET /api/characters` — 캐릭터 라이브러리 조회
+- RabbitMQ/Celery 기반 비동기 Job 워커 (`InMemoryJobManager` 교체)
+- ComfyUI 실제 연동 및 캐릭터 이미지 생성
 - 배경 생성 / 캐릭터 누끼 / 레이어 합성 API
+- 보이스 생성 / TTS API
 - ffmpeg 영상 렌더링 API
-- 비동기 job 상태 관리
 
 구현 순서는 `backend/docs/backend_implementation_guide.md` 15절을 참고합니다.
