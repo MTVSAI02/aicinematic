@@ -10,6 +10,10 @@ dist/
 
 # Environments (uv)
 .venv
+.venv-qwen3-tts/
+.uv-cache/
+.uv-python/
+.hf-cache/
 .env
 **/.env
 env/
