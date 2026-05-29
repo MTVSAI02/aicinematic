@@ -59,3 +59,9 @@
 .btn:not(:disabled):hover {
   opacity: 0.85;
 }
+
+.error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #e05c5c;
+}
