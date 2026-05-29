@@ -8,6 +8,16 @@ import { create } from 'zustand'
  *   tags: string,          // 외모 태그 (프롬프트 빌더 입력값)
  *   image_url: string|null, // 생성된 캐릭터 이미지
  *   locked: boolean,        // IPAdapter 얼굴 락 여부
+ *   voice_profile: {
+ *     id: string,
+ *     character_id: string,
+ *     mode: 'preset'|'clone',
+ *     label: string,
+ *     speaker: string|null,
+ *     reference_audio_url: string|null,
+ *     reference_text: string|null,
+ *     sample_audio_url: string|null,
+ *   }|null,
  * }
  */
 
@@ -45,6 +55,14 @@ const useCharacterStore = create((set) => ({
   /** 씬 편집기에서 캐릭터 선택 */
   selectCharacter: (characterId) =>
     set({ selectedCharacterId: characterId }),
+
+  /** 캐릭터에 목소리 프로필 연결 (TTS/보이스 클로닝에서 사용) */
+  setCharacterVoiceProfile: (characterId, voiceProfile) =>
+    set((state) => ({
+      characters: state.characters.map((c) =>
+        c.id === characterId ? { ...c, voice_profile: voiceProfile } : c
+      ),
+    })),
 
   /** 전체 캐릭터 목록 초기화 (서버에서 받아올 때) */
   setCharacters: (characters) => set({ characters }),

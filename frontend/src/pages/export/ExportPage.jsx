@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { mockCharacters, mockStoreScenes } from '@/api/mockData'
+import useCharacterStore from '@/store/useCharacterStore'
 import useStoryStore from '@/store/useStoryStore'
 import { AudioPanel } from './AudioPanel'
+import { VoiceClonePanel } from './VoiceClonePanel'
 import styles from './ExportPage.module.css'
 import './ExportPage.css'
 
@@ -33,6 +35,11 @@ export default function ExportPage() {
     setScenes,
     setSceneAudioMeta,
   } = useStoryStore()
+  const {
+    characters,
+    selectedCharacterId,
+    setCharacterVoiceProfile,
+  } = useCharacterStore()
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(0)
   const [done, setDone] = useState(false)
@@ -44,15 +51,16 @@ export default function ExportPage() {
   }, [scenes.length, setScenes])
 
   const displayScenes = scenes.length > 0 ? scenes : mockStoreScenes
+  const displayCharacters = characters.length > 0 ? characters : mockCharacters
   const voiceScenes = displayScenes.map(toVoiceScene)
   const currentStoryId = storyId ?? FALLBACK_STORY_ID
 
   const characterNameById = useMemo(() => {
-    return mockCharacters.reduce((result, character) => {
+    return displayCharacters.reduce((result, character) => {
       result[character.id] = character.name
       return result
     }, {})
-  }, [])
+  }, [displayCharacters])
 
   function updateSceneAudio(sceneId, audio) {
     setSceneAudioMeta(sceneId, audio.audioPath, audio.audioDurationSec)
@@ -88,6 +96,12 @@ export default function ExportPage() {
         scenes={voiceScenes}
         characterNameById={characterNameById}
         onSceneAudioGenerated={updateSceneAudio}
+      />
+
+      <VoiceClonePanel
+        characters={displayCharacters}
+        selectedCharacterId={selectedCharacterId}
+        onVoiceProfileSaved={setCharacterVoiceProfile}
       />
 
       {!jobId ? (

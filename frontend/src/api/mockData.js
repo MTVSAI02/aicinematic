@@ -4,6 +4,18 @@ export const mockCharacters = [
     name: '루나',
     voiceMode: 'preset',
     voiceLabel: '따뜻한 여자아이 목소리',
+    voice_profile: {
+      id: 'voice_char_luna',
+      character_id: 'char_luna',
+      mode: 'preset',
+      label: '따뜻한 여자아이 목소리',
+      speaker: 'Sohee',
+      reference_audio_url: null,
+      reference_text: null,
+      sample_audio_url: null,
+      created_at: null,
+      updated_at: null,
+    },
   },
 ]
 

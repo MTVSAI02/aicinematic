@@ -61,3 +61,50 @@ export async function generateSceneVoice({ storyId, scene }) {
     audioDurationSec: MOCK_AUDIO_DURATION_SEC,
   }
 }
+
+export async function uploadVoiceSample({ characterId, file, referenceText }) {
+  if (!characterId) {
+    throw new Error('characterId가 필요합니다.')
+  }
+  if (!file) {
+    throw new Error('음성 샘플 파일이 필요합니다.')
+  }
+  if (!referenceText?.trim()) {
+    throw new Error('샘플에서 말한 문장을 입력해야 합니다.')
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 900))
+
+  return {
+    characterId,
+    voiceProfile: {
+      id: `voice_${characterId}_clone`,
+      character_id: characterId,
+      mode: 'clone',
+      label: '업로드 샘플 기반 클론 목소리',
+      speaker: null,
+      reference_audio_url: URL.createObjectURL(file),
+      reference_text: referenceText.trim(),
+      sample_audio_url: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  }
+}
+
+export async function generateClonedVoice({ characterId, text }) {
+  if (!characterId) {
+    throw new Error('characterId가 필요합니다.')
+  }
+  if (!text?.trim()) {
+    throw new Error('테스트 문장을 입력해야 합니다.')
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 900))
+
+  return {
+    characterId,
+    audioPath: createMockWavDataUrl(),
+    audioDurationSec: MOCK_AUDIO_DURATION_SEC,
+  }
+}

@@ -25,6 +25,16 @@ export default function CharacterPage() {
         tags,
         image_url: null,
         locked: false,
+        voice_profile: {
+          id: null,
+          character_id: null,
+          mode: 'preset',
+          label: '기본 목소리',
+          speaker: 'Sohee',
+          reference_audio_url: null,
+          reference_text: null,
+          sample_audio_url: null,
+        },
       }
       addCharacter(mockCharacter)
       setName('')
