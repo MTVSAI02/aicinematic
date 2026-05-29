@@ -1,8 +1,26 @@
-import './App.css'
-import { ExportPage } from './pages/export/ExportPage'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import NavBar from '@/components/NavBar'
+import HomePage from '@/pages/home/HomePage'
+import StoryInputPage from '@/pages/story-input/StoryInputPage'
+import SceneCheckPage from '@/pages/scene-check/SceneCheckPage'
+import CharacterPage from '@/pages/character/CharacterPage'
+import SceneEditorPage from '@/pages/scene-editor/SceneEditorPage'
+import TimelinePage from '@/pages/timeline/TimelinePage'
+import ExportPage from '@/pages/export/ExportPage'
 
-function App() {
-  return <ExportPage />
+export default function App() {
+  return (
+    <BrowserRouter>
+      <NavBar />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/story-input" element={<StoryInputPage />} />
+        <Route path="/scene-check" element={<SceneCheckPage />} />
+        <Route path="/character" element={<CharacterPage />} />
+        <Route path="/scene-editor" element={<SceneEditorPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/export" element={<ExportPage />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
-
-export default App

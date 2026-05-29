@@ -1,0 +1,135 @@
+.page {
+  padding: 40px 24px;
+}
+
+.guide {
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  min-height: 480px;
+}
+
+.sidebar {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-y: auto;
+}
+
+.sceneList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sceneItem {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.sceneItem:hover {
+  background: var(--accent-bg);
+}
+
+.sceneOrder {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.sceneText {
+  font-size: 13px;
+  color: var(--text-h);
+  margin: 4px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.placeholder {
+  flex: 1;
+  background: var(--code-bg);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 14px;
+  min-height: 320px;
+}
+
+.panel {
+  display: flex;
+  gap: 12px;
+}
+
+.panelItem {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.panelLabel {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.panelBtn {
+  padding: 6px 14px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.panelBtn:hover { background: var(--accent); color: #fff; }
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+.btn {
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btn:hover { opacity: 0.85; }
+
+.btnSecondary {
+  padding: 10px 24px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btnSecondary:hover { background: var(--code-bg); }
