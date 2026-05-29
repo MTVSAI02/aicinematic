@@ -52,9 +52,11 @@ export async function generateSceneVoice({ storyId, scene }) {
 
   await new Promise((resolve) => setTimeout(resolve, 800))
 
+  const sceneType = scene.type ?? scene.segments?.[0]?.type ?? 'narration'
+
   return {
     sceneId: scene.id,
-    voiceType: scene.type === 'narration' ? 'narrator' : 'character',
+    voiceType: sceneType === 'narration' ? 'narrator' : 'character',
     audioPath: createMockWavDataUrl(),
     audioDurationSec: MOCK_AUDIO_DURATION_SEC,
   }

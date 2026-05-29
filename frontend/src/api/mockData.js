@@ -39,3 +39,21 @@ export const mockScenes = [
     audioDurationSec: null,
   },
 ]
+
+export const mockStoreScenes = mockScenes.map((scene) => ({
+  id: scene.id,
+  order: scene.order,
+  duration: scene.durationSec,
+  segments: [
+    {
+      type: scene.type,
+      speaker: scene.speaker,
+      text: scene.line,
+    },
+  ],
+  background_tag: null,
+  character_id: scene.speaker,
+  image_url: null,
+  audio_url: scene.audioPath,
+  audio_duration_sec: scene.audioDurationSec,
+}))

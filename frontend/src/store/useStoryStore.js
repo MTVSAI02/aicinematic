@@ -38,6 +38,24 @@ const useStoryStore = create((set) => ({
       ),
     })),
 
+  /** 특정 씬에 음성 URL과 길이 저장 (Export/TTS에서 사용) */
+  setSceneAudioMeta: (sceneId, audioUrl, audioDurationSec) =>
+    set((state) => ({
+      scenes: state.scenes.map((s) =>
+        s.id === sceneId
+          ? {
+              ...s,
+              audio_url: audioUrl,
+              audio_duration_sec: audioDurationSec,
+              duration: Math.max(
+                s.duration ?? 1,
+                audioDurationSec ? audioDurationSec + 0.5 : 1
+              ),
+            }
+          : s
+      ),
+    })),
+
   /** 특정 씬에 캐릭터 배정 (씬 편집기에서 사용) */
   assignCharacter: (sceneId, characterId) =>
     set((state) => ({

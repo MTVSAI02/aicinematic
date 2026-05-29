@@ -8,7 +8,7 @@ const PLACEHOLDER = `어린 왕자는 작은 별에 혼자 살았어요.
 
 export default function StoryInputPage() {
   const navigate = useNavigate()
-  const { storyText, setStoryText, setStoryId, setScenes } = useStoryStore()
+  const { storyText, setStoryText } = useStoryStore()
   const [loading, setLoading] = useState(false)
 
   async function handleParse() {
