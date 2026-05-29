@@ -1,34 +1,26 @@
-import { useEffect, useState } from 'react'
-import { checkHealth } from './api/health'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import NavBar from '@/components/NavBar'
+import HomePage from '@/pages/home/HomePage'
+import StoryInputPage from '@/pages/story-input/StoryInputPage'
+import SceneCheckPage from '@/pages/scene-check/SceneCheckPage'
+import CharacterPage from '@/pages/character/CharacterPage'
+import SceneEditorPage from '@/pages/scene-editor/SceneEditorPage'
+import TimelinePage from '@/pages/timeline/TimelinePage'
+import ExportPage from '@/pages/export/ExportPage'
 
-function App() {
-  const [status, setStatus] = useState('확인 중...')
-  const [detail, setDetail] = useState(null)
-
-  useEffect(() => {
-    checkHealth()
-      .then((data) => {
-        setStatus('✅ 백엔드 연결 성공')
-        setDetail(data)
-      })
-      .catch((err) => {
-        setStatus('❌ 백엔드 연결 실패')
-        setDetail({ error: err.message })
-      })
-  }, [])
-
+export default function App() {
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
-      <h1>AI Cinematic</h1>
-      <h2>{status}</h2>
-      <p>백엔드 주소: {import.meta.env.VITE_API_BASE_URL}</p>
-      {detail && (
-        <pre style={{ background: '#f4f4f4', padding: '1rem', borderRadius: 8 }}>
-          {JSON.stringify(detail, null, 2)}
-        </pre>
-      )}
-    </div>
+    <BrowserRouter>
+      <NavBar />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/story-input" element={<StoryInputPage />} />
+        <Route path="/scene-check" element={<SceneCheckPage />} />
+        <Route path="/character" element={<CharacterPage />} />
+        <Route path="/scene-editor" element={<SceneEditorPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/export" element={<ExportPage />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
-
-export default App

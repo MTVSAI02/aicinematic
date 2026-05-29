@@ -1,0 +1,61 @@
+.page {
+  padding: 40px 24px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.guide {
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.textarea {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: var(--mono);
+  background: var(--code-bg);
+  color: var(--text-h);
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.count {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.btn {
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn:not(:disabled):hover {
+  opacity: 0.85;
+}

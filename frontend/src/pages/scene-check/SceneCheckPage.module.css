@@ -1,0 +1,89 @@
+.page {
+  padding: 40px 24px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.guide {
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.order {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.seg {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 4px 0;
+  font-size: 15px;
+  color: var(--text-h);
+}
+
+.tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.narration {
+  background: var(--code-bg);
+  color: var(--text);
+}
+
+.dialogue {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 32px;
+}
+
+.btn {
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btn:hover { opacity: 0.85; }
+
+.btnSecondary {
+  padding: 10px 24px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btnSecondary:hover { background: var(--code-bg); }
