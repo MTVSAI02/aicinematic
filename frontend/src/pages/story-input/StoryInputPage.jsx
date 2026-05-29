@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useStoryStore from '@/store/useStoryStore'
+import { parseStory } from '@/api/stories'
 import styles from './StoryInputPage.module.css'
 
 const PLACEHOLDER = `어린 왕자는 작은 별에 혼자 살았어요.
@@ -8,19 +9,22 @@ const PLACEHOLDER = `어린 왕자는 작은 별에 혼자 살았어요.
 
 export default function StoryInputPage() {
   const navigate = useNavigate()
-  const { storyText, setStoryText, setStoryId, setScenes } = useStoryStore()
+  const { storyText, setStoryText, setStoryId, setStoryTitle, setScenes } = useStoryStore()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   async function handleParse() {
     if (!storyText.trim()) return
     setLoading(true)
+    setError(null)
     try {
-      // TODO: POST /stories → POST /stories/{id}/parse 연동
-      // const { id } = await storyApi.create(storyText)
-      // setStoryId(id)
-      // const scenes = await storyApi.parse(id)
-      // setScenes(scenes)
+      const result = await parseStory({ title: '새 동화', script: storyText })
+      setStoryId(result.storyId)
+      setStoryTitle(result.title)
+      setScenes(result.scenes)
       navigate('/scene-check')
+    } catch (e) {
+      setError('스토리 분석에 실패했습니다. 백엔드 서버가 실행 중인지 확인해주세요.')
     } finally {
       setLoading(false)
     }
@@ -39,6 +43,7 @@ export default function StoryInputPage() {
         onChange={(e) => setStoryText(e.target.value)}
         rows={16}
       />
+      {error && <p className={styles.error}>{error}</p>}
       <div className={styles.actions}>
         <span className={styles.count}>{storyText.length}자</span>
         <button

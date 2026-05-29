@@ -17,9 +17,10 @@ import { create } from 'zustand'
 const useStoryStore = create((set) => ({
   // 현재 스토리
   storyId: null,
+  storyTitle: '',
   storyText: '',
 
-  // 파싱된 씬 목록
+  // 파싱된 씬 목록 (백엔드 응답 기준: sceneId, order, items)
   scenes: [],
 
   // ── Actions ──────────────────────────────────
@@ -28,13 +29,15 @@ const useStoryStore = create((set) => ({
 
   setStoryId: (id) => set({ storyId: id }),
 
+  setStoryTitle: (title) => set({ storyTitle: title }),
+
   setScenes: (scenes) => set({ scenes }),
 
   /** 특정 씬의 duration 업데이트 (타임라인에서 사용) */
   updateSceneDuration: (sceneId, duration) =>
     set((state) => ({
       scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, duration } : s
+        s.sceneId === sceneId ? { ...s, duration } : s
       ),
     })),
 
@@ -42,7 +45,7 @@ const useStoryStore = create((set) => ({
   assignCharacter: (sceneId, characterId) =>
     set((state) => ({
       scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, character_id: characterId } : s
+        s.sceneId === sceneId ? { ...s, character_id: characterId } : s
       ),
     })),
 
@@ -50,7 +53,7 @@ const useStoryStore = create((set) => ({
   setSceneImageUrl: (sceneId, imageUrl) =>
     set((state) => ({
       scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, image_url: imageUrl } : s
+        s.sceneId === sceneId ? { ...s, image_url: imageUrl } : s
       ),
     })),
 
@@ -58,13 +61,13 @@ const useStoryStore = create((set) => ({
   setSceneAudioUrl: (sceneId, audioUrl) =>
     set((state) => ({
       scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, audio_url: audioUrl } : s
+        s.sceneId === sceneId ? { ...s, audio_url: audioUrl } : s
       ),
     })),
 
   /** 전체 초기화 (새 프로젝트 시작 시) */
   reset: () =>
-    set({ storyId: null, storyText: '', scenes: [] }),
+    set({ storyId: null, storyTitle: '', storyText: '', scenes: [] }),
 }))
 
 export default useStoryStore
