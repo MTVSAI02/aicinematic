@@ -57,3 +57,5 @@ backend/app/storage/*
 .AppleDouble
 .LSOverride
 Thumbs.db
+
+docs/

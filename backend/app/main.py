@@ -1,15 +1,14 @@
-"""AI Cinematic 백엔드 진입점.
-
-CORS 설정과 헬스체크 엔드포인트를 둔다.
-실행: uv run uvicorn backend.app.main:app --reload
-문서: http://localhost:8000/docs
-"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="AI Cinematic API", version="0.1.0")
+from .routers import health
 
-# 프론트(Vite 개발 서버) 에서의 호출 허용
+app = FastAPI(
+    title="Mongsil Bookstore API",
+    description="Backend API for AI-based moving storybook service",
+    version="0.1.0",
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -21,8 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(health.router)
 
-@app.get("/api/health")
-def health():
-    """프론트-백엔드 연동 확인용 헬스체크."""
-    return {"status": "ok", "service": "ai-cinematic-backend"}
+
+@app.get("/")
+def root():
+    return {"service": "Mongsil Bookstore", "status": "running", "docs": "/docs"}
