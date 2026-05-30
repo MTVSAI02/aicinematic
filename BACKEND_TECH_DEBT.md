@@ -7,14 +7,15 @@
 
 ## 1. 보류 — 방향은 동의, 지금은 과설계(YAGNI)라 미룸
 
-### 1.1 `services/job_manager.py` 분리
-- 현재: 캐릭터 생성 + 배경 후보 생성 Job 로직을 한 클래스(`InMemoryJobManager`)가 보유 (약 131줄).
-- 판단: 아직 읽을 만함. 지금 쪼개면 쓰지도 않을 계층이 늘어 오히려 복잡.
-- **분리 트리거(이때 분리한다)**:
-  - 도메인 Job 타입이 3~4개로 늘 때 (예: 음성/렌더링 Job 추가)
-  - RabbitMQ/Celery 또는 ComfyUI 실제 비동기 연동이 붙을 때
-- **분리 방향(예시)**: `InMemoryJobManager`는 Job 발급/상태 관리만 담당,
-  도메인별 작업 로직(`character_job_runner`, `background_job_runner` 등)은 따로.
+### 1.1 `services/job_manager.py` 분리 — ✅ 완료 (TTS가 3번째 도메인이 되며 트리거 발동)
+- `InMemoryJobManager`는 이제 **Job 발급/상태만**(`run()`) 담당한다.
+- 도메인별 생성 로직은 분리: `character_job_runner.py` / `background_job_runner.py` / `tts_job_runner.py`.
+- 라우터/서비스는 각 runner의 `create_*_generation_job()`을 호출한다.
+
+### 1.1b (TTS) 실제 연동 시 처리할 것 — 지금은 mock이라 안 물림
+- **재생성 원자성**: 현재 `tts_service.generate_scene_tts`는 "빈 검사 → 기존 삭제 → 새로 저장" 순서(빈 scene은 기존 보존). 실제 TTS 호출/파일/DB가 끼면 **AI 호출 성공 → 그 다음 기존 삭제/교체** 순서로 바꿔야 중간 실패 시 기존 audio 유실이 없다.
+- **알 수 없는 item type**: `VOICE_TYPE.get(type, "narrator")`라 narration/dialogue 외 값은 조용히 narrator 처리. scene 수정 API가 생겨 잘못된 type이 섞일 수 있게 되면 엄격 검증(에러/명시 처리)으로 강화.
+- (참고) emotion/emotionLabel 누락은 이미 tts_service에서 타입별 기본값으로 방어함.
 
 ### 1.2 `services/background_service.py` 분리
 - 현재: prompt suggestion + suffix 조립 + negative prompt + 배경 CRUD + 씬 연결/해제까지 한 파일 (약 174줄).

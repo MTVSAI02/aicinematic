@@ -8,8 +8,8 @@ from ..schemas.character import (
     CharacterResponse,
     CharacterUpdateRequest,
 )
+from ..services.character_job_runner import create_character_generation_job
 from ..services.character_service import character_service
-from ..services.job_manager import job_manager
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
 
@@ -29,7 +29,7 @@ def generate_character(request: CharacterGenerateRequest):
     생성 흐름은 InMemoryJobManager가 담당하며, 나중에 RabbitMQ/Celery
     publish 로직으로 교체할 수 있습니다.
     """
-    return job_manager.create_character_generation_job(request.model_dump())
+    return create_character_generation_job(request.model_dump())
 
 
 @router.get("", response_model=list[CharacterResponse], summary="캐릭터 목록 조회")
