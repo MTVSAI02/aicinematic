@@ -40,6 +40,10 @@ class SceneResponse(BaseModel):
 class StoryParseResponse(BaseModel):
     storyId: str = Field(description="story_mock_001 형식으로 자동 생성")
     title: str
+    narratorVoiceId: str | None = Field(
+        default=None,
+        description="나레이션 보이스 ID. 없으면 null (PATCH /api/stories/{storyId}/narrator-voice로 연결)",
+    )
     scenes: list[SceneResponse]
 
     model_config = ConfigDict(
@@ -47,6 +51,7 @@ class StoryParseResponse(BaseModel):
             "example": {
                 "storyId": "story_mock_001",
                 "title": "어린 왕자",
+                "narratorVoiceId": None,
                 "scenes": [
                     {
                         "sceneId": "scene_001",
@@ -68,5 +73,28 @@ class StoryParseResponse(BaseModel):
                     },
                 ],
             }
+        }
+    )
+
+
+class NarratorVoiceUpdateRequest(BaseModel):
+    """나레이션 보이스 연결/해제 요청.
+
+    voiceId가 있으면 그 보이스로 연결하고, null이면 연결을 해제한다.
+    (캐릭터 보이스 연결 PATCH /api/characters/{id}/voice 와 동일한 정책)
+    """
+
+    voiceId: str | None = Field(
+        default=None, description="연결할 보이스 ID. null이면 나레이션 보이스 해제"
+    )
+
+
+class NarratorVoiceResponse(BaseModel):
+    storyId: str
+    narratorVoiceId: str | None = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"storyId": "story_mock_001", "narratorVoiceId": "voice_mock_002"}
         }
     )

@@ -1,6 +1,11 @@
 from fastapi import APIRouter
 
-from ..schemas.story import StoryParseRequest, StoryParseResponse
+from ..schemas.story import (
+    NarratorVoiceResponse,
+    NarratorVoiceUpdateRequest,
+    StoryParseRequest,
+    StoryParseResponse,
+)
 from ..services.story_service import story_service
 
 router = APIRouter(prefix="/api/stories", tags=["stories"])
@@ -40,3 +45,21 @@ def get_story(story_id: str):
     - 존재하지 않는 storyId 요청 시 404(Story not found)를 반환합니다.
     """
     return story_service.get_story(story_id)
+
+
+@router.patch(
+    "/{story_id}/narrator-voice",
+    response_model=NarratorVoiceResponse,
+    summary="나레이션 보이스 연결/해제",
+)
+def update_narrator_voice(story_id: str, request: NarratorVoiceUpdateRequest):
+    """
+    스토리의 나레이션 보이스를 연결하거나 해제합니다.
+
+    - `voiceId`가 있으면 해당 보이스로 연결합니다(없는 보이스면 404 Voice not found).
+      단 `voiceType="narrator"`인 보이스만 허용하며, character 타입이면 400(Only a narrator-type voice...).
+    - `voiceId`가 `null`이면 나레이션 보이스를 해제합니다(보이스 존재 검증 안 함).
+    - 존재하지 않는 storyId면 404(Story not found)를 반환합니다.
+    - TTS 생성 시 narration item의 voiceId로 이 값이 복사됩니다. (dialogue는 캐릭터 보이스)
+    """
+    return story_service.update_narrator_voice(story_id, request.voiceId)

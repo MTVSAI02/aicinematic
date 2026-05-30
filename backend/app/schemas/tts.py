@@ -18,7 +18,7 @@ class TTSAudioResponse(BaseModel):
     emotionLabel: str
     voiceType: str  # narrator / character
     characterId: str | None = None  # dialogue speaker→캐릭터(name 매칭) ID, 미매칭/narration이면 null
-    voiceId: str | None = None  # 매칭 캐릭터의 연결 보이스, 없으면 null
+    voiceId: str | None = None  # dialogue=캐릭터 voiceId / narration=story.narratorVoiceId, 없으면 null
     audioUrl: str | None = None  # 현재 null (실제 합성은 AI 단계)
 
     model_config = ConfigDict(

@@ -37,6 +37,10 @@ class TTSService:
     def generate_scene_tts(self, story_id: str, scene_id: str) -> dict:
         scene = self._find_scene(story_id, scene_id)
 
+        # narration용 나레이터 보이스 (story 단위, 없으면 None)
+        story = self._story_repo.get(story_id)
+        narrator_voice_id = story.get("narratorVoiceId") if story else None
+
         # dialogue speaker → 저장된 캐릭터(name) → characterId/voiceId 매핑 준비
         chars_by_name = {
             c.get("name"): c for c in self._character_repo.list() if c.get("name")
@@ -55,8 +59,8 @@ class TTSService:
                 item_type, ("neutral", "기본")
             )
 
-            # dialogue면 speaker로 캐릭터를 찾아 characterId/voiceId 반영.
-            # narration이거나 매칭되는 캐릭터가 없으면 둘 다 None.
+            # dialogue: speaker로 캐릭터를 찾아 characterId/voiceId 반영 (매칭 없으면 None).
+            # narration: characterId는 없고, voiceId는 story.narratorVoiceId 사용 (없으면 None).
             character_id = None
             voice_id = None
             if item_type == "dialogue":
@@ -64,6 +68,8 @@ class TTSService:
                 if matched:
                     character_id = matched.get("characterId")
                     voice_id = matched.get("voiceId")  # 캐릭터에 연결된 보이스 (없으면 None)
+            elif item_type == "narration":
+                voice_id = narrator_voice_id  # 나레이터 보이스 (없으면 None)
 
             audio_targets.append(
                 {

@@ -46,27 +46,34 @@ class VoiceUpdateRequest(BaseModel):
 
 
 class VoiceResponse(BaseModel):
+    """보이스 선택 화면용 응답.
+
+    provider/model은 AI/TTS 내부 메타라 사용자 화면에 필요 없어 응답에서 제외한다.
+    (내부 repository에는 보관하지만 노출하지 않음 — 캐릭터에서 seed/model을 안 받는 것과 동일 원칙)
+    """
+
     voiceId: str
     name: str
     description: str | None = None
     voicePrompt: str | None = None
-    sampleAudioUrl: str | None = None
-    provider: str | None = None
-    model: str | None = None
-    # 생성 직후 "pending"(AI 클로닝 대기). 실제 클로닝/상태 갱신은 AI/TTS 파트가 한다.
+    voiceType: str  # narrator / character (추천 용도)
+    isPreset: bool  # True면 시스템 기본 보이스 (수정/삭제 불가)
+    # 생성 직후 "pending"(AI 클로닝 대기). preset은 "ready". 상태 갱신은 AI/TTS 파트가 한다.
     status: str
+    # 미리듣기 샘플 URL. AI/TTS 파트가 채우며 현재는 null일 수 있음.
+    sampleAudioUrl: str | None = None
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "voiceId": "voice_mock_001",
-                "name": "따뜻한 소년 목소리",
-                "description": "밝고 호기심 많은 소년 톤",
-                "voicePrompt": "warm, curious young boy voice",
+                "voiceId": "voice_preset_narrator_calm_001",
+                "name": "차분한 나레이션",
+                "description": "잔잔하고 따뜻하게 동화를 읽어주는 목소리",
+                "voicePrompt": "calm, warm, gentle narrator voice for fairy tale storytelling",
+                "voiceType": "narrator",
+                "isPreset": True,
+                "status": "ready",
                 "sampleAudioUrl": None,
-                "provider": None,
-                "model": None,
-                "status": "pending",
             }
         }
     )
