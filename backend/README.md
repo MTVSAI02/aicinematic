@@ -203,6 +203,12 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
 
+## ⚠️ 임시 코드 (실제 ComfyUI 연동 시 삭제)
+
+- `GET /api/ai/comfy-health` (`app/routers/ai_health.py`) — 프론트→백엔드→AI→ComfyUI(읽기전용) 연결 확인용 임시 엔드포인트.
+- 동작하려면 백엔드에 `COMFYUI_DEFAULT_URL`이 필요해 현재는 `uv run --env-file ai/.env uvicorn ...`로 실행한다.
+- 제거 체크리스트: 루트 [`TEMP_AI_CONNECTION_TEST.md`](../TEMP_AI_CONNECTION_TEST.md)
+
 ## 추후 구현 예정
 
 - RabbitMQ/Celery 기반 비동기 Job 워커 (`InMemoryJobManager` 교체)

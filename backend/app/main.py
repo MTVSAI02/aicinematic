@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .core.exception_handlers import app_exception_handler
 from .core.exceptions import AppException
-from .routers import characters, health, jobs, stories
+from .routers import ai_health, characters, health, jobs, stories
 
 app = FastAPI(
     title="Mongsil Bookstore API",
@@ -28,6 +28,7 @@ app.include_router(health.router)
 app.include_router(stories.router)
 app.include_router(characters.router)
 app.include_router(jobs.router)
+app.include_router(ai_health.router)
 
 
 @app.get("/")
