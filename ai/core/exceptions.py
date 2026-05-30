@@ -47,3 +47,24 @@ class ComfyUITimeoutError(ComfyUIError):
 
     def __init__(self, message: str = "ComfyUI request timed out"):
         super().__init__(message)
+
+
+class WorkflowLoadError(ComfyUIError):
+    """workflow JSON 파일을 읽지 못한 경우 (파일 없음 / JSON 파싱 실패 등)."""
+
+    def __init__(self, message: str = "Failed to load workflow JSON"):
+        super().__init__(message)
+
+
+class WorkflowMappingError(ComfyUIError):
+    """mapping JSON이 없거나, mapping이 가리키는 노드/경로가 workflow에 없는 경우."""
+
+    def __init__(self, message: str = "Failed to apply workflow mapping"):
+        super().__init__(message)
+
+
+class BackgroundWorkflowPrepareError(ComfyUIError):
+    """배경 workflow payload 준비 중 문제가 발생한 경우."""
+
+    def __init__(self, message: str = "Failed to prepare background workflow"):
+        super().__init__(message)
