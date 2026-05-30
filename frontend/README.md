@@ -50,7 +50,7 @@ AI가 만든 캐릭터·배경·음성 에셋을 사용자가 조립해 **움직
 | Health Check | 연동 대상 | 백엔드 연결 상태 확인 |
 | Story Parse | 연동 대상 | 대본 입력 후 `POST /api/stories/parse` 호출 |
 | Scene Check | 연동 대상 | 백엔드 응답의 `sceneId`, `items` 기준으로 씬 카드 표시 |
-| Character Library | 연동 대상 | 캐릭터 생성(Job)·목록/단건 조회·수정·삭제 (백엔드 mock API 연동 가능) |
+| Character Library | ✅ 연동됨 | 캐릭터 생성(Job)·목록 조회·수정·삭제·선택을 백엔드 API와 연동 완료 |
 | Voice / TTS | 개발 대상 | 씬 item 기준 음성 생성 요청 및 결과 표시 |
 | Voice Cloning | 개발 대상 | 음성 샘플 업로드, 캐릭터 voiceId 연결 |
 | Scene Editor | 개발 대상 | 배경·캐릭터 합성 결과 표시 준비 |
@@ -748,6 +748,22 @@ WAV 또는 MP3 음성 샘플을 업로드해주세요.
 
 ## 15. CharacterPage 구현 기준
 
+> **✅ 현재 구현 상태 (백엔드 Character Job API 연동 완료)**
+> - `CharacterPage`는 백엔드 Character Job API와 연동된다. (생성→Job 조회→목록 동기화, 수정, 삭제, 선택)
+> - 캐릭터는 `useCharacterStore`에서 **전역 캐시**로 관리한다. 최종 저장소는 백엔드이며, 페이지 진입 시 `GET /api/characters`로 동기화한다.
+> - 프론트는 **ComfyUI를 직접 호출하지 않는다.** 항상 `프론트 → FastAPI 백엔드 → AI/ComfyUI` 구조를 따른다.
+> - 현재 캐릭터 스키마는 `characterId`, `name`, `appearancePrompt`, `imageUrl`이다. 기존 `locked`, `tags`, `image_url` 구조는 사용하지 않는다.
+> - `imageUrl`이 `null`이면 "이미지 준비 중" placeholder를 표시한다.
+> - 생성 Job은 현재 백엔드 mock이라 보통 즉시 `completed`이며, `getJob(jobId)`를 분리해 두어 나중에 polling으로 확장 가능하다.
+> - `CharacterPage`는 조립만 담당하고, 실제 UI는 컴포넌트로 분리되어 있다:
+>   `components/characters/CharacterCreateForm.jsx`, `CharacterList.jsx`, `CharacterCard.jsx`, `CharacterEditForm.jsx`
+>   (공용 스타일은 `pages/character/CharacterPage.module.css` 모듈을 공유)
+> - 관련 파일: `src/api/characters.js`, `src/utils/apiError.js`, `src/store/useCharacterStore.js`
+> - 카드의 수정/삭제 버튼은 디자인 확정 전 **임시 UI**이며, 기존 CSS 톤(`var(--*)`)을 따른다.
+> - 생성 폼은 입력이 비면 버튼 비활성화 + 그 이유를 안내하는 visible validation 메시지를 보여준다.
+> - ⚠️ 상단 "AI 서버 연결 확인"은 **연결 테스트용 임시 컴포넌트**(`components/AiConnectionCheck.jsx`, `src/api/ai.js`, `.aiCheck`)다. ComfyUI 주소(baseUrl)는 화면에 노출하지 않는다. 실제 ComfyUI 연동 시 삭제 — 제거 체크리스트: 루트 [`TEMP_AI_CONNECTION_TEST.md`](../TEMP_AI_CONNECTION_TEST.md)
+> - 아래 본문(목소리/보이스 클로닝 등)은 이후 단계 설계이며 이번 작업 범위가 아니다.
+
 캐릭터 화면은 단순히 캐릭터 이미지만 다루는 화면이 아닙니다.
 
 캐릭터 화면은 다음 기능을 포함합니다.
@@ -857,7 +873,7 @@ src/api/scenes.js
 src/api/render.js
 ```
 
-### `src/api/characters.js` 역할 (백엔드 연동 가능)
+### `src/api/characters.js` 역할 (✅ 백엔드 연동 완료)
 
 캐릭터 생성은 비동기 Job 구조입니다. `generate`는 `jobId`를 반환하고, `getJob`으로 상태를 폴링합니다. 현재 백엔드는 mock이라 생성 직후 바로 `completed` 상태가 됩니다.
 
