@@ -10,8 +10,8 @@ from ..schemas.background import (
     BackgroundUpdateRequest,
 )
 from ..schemas.job import JobCreatedResponse
+from ..services.background_job_runner import create_background_generation_job
 from ..services.background_service import background_service
-from ..services.job_manager import job_manager
 
 router = APIRouter(prefix="/api/backgrounds", tags=["backgrounds"])
 
@@ -50,7 +50,7 @@ def generate_backgrounds(request: BackgroundGenerateRequest):
     수정한 원본 prompt)여야 한다. background only/no characters 등 suffix가 붙은
     `finalPrompt`를 그대로 보내면 suffix가 중복된다. finalPrompt는 백엔드가 조립한다.
     """
-    return job_manager.create_background_generation_job(request.model_dump())
+    return create_background_generation_job(request.model_dump())
 
 
 @router.post("", response_model=BackgroundResponse, summary="후보 1장 배경 라이브러리 저장")
