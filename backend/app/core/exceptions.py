@@ -72,3 +72,8 @@ class TTSAudioNotFoundError(AppException):
 class EmptySceneItemsError(AppException):
     status_code = 400
     detail = "Scene has no items to generate TTS"
+
+
+class VoiceNotFoundError(AppException):
+    status_code = 404
+    detail = "Voice not found"

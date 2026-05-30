@@ -18,7 +18,9 @@ def generate_scene_tts(request: TTSSceneGenerateRequest):
 
     - 실제 TTS 모델 호출 없이 mock audio(audioUrl=null)를 만들어 저장한다.
     - 감정은 item.emotion/emotionLabel을 그대로 사용한다(TTS가 새로 판단하지 않음).
-    - narration→voiceType=narrator, dialogue→voiceType=character. voiceId/characterId는 현재 null.
+    - narration→voiceType=narrator, dialogue→voiceType=character.
+      dialogue는 speaker로 저장 캐릭터(name 매칭)를 찾아 characterId/voiceId를 채운다.
+      narration이거나 매칭 캐릭터가 없으면(또는 보이스 미연결) null. 실제 합성/클로닝은 AI 단계.
     - 같은 scene에 대해 재생성하면 기존 TTS 결과를 교체한다.
     - story 없음→404, scene 없음→404, 생성할 item이 없으면→400.
     - 결과(audios)는 GET /api/jobs/{jobId} 또는 GET /api/tts 로 조회한다.
