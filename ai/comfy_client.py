@@ -16,7 +16,10 @@ HiDream-I1 + IP-Adapter for Flux 로 변경되었으나,
 workflow 실행/이미지 생성을 하지 않는다. (조회용 통로만 제공)
 """
 
+import copy
+import json
 import os
+from pathlib import Path
 
 import httpx
 
@@ -26,6 +29,8 @@ from .core.exceptions import (
     ComfyUIError,
     ComfyUIResponseError,
     ComfyUITimeoutError,
+    WorkflowLoadError,
+    WorkflowMappingError,
 )
 
 DEFAULT_TIMEOUT_SECONDS = 10
@@ -55,16 +60,23 @@ class ComfyUIClient:
     @staticmethod
     def _resolve_timeout(timeout_seconds: int | None) -> int:
         if timeout_seconds is not None:
-            return timeout_seconds
-        env_timeout = os.getenv("COMFYUI_TIMEOUT_SECONDS")
-        if env_timeout is None or not env_timeout.strip():
-            return DEFAULT_TIMEOUT_SECONDS
-        try:
-            return int(env_timeout)
-        except ValueError as exc:
+            resolved = timeout_seconds
+        else:
+            env_timeout = os.getenv("COMFYUI_TIMEOUT_SECONDS")
+            if env_timeout is None or not env_timeout.strip():
+                return DEFAULT_TIMEOUT_SECONDS
+            try:
+                resolved = int(env_timeout)
+            except ValueError as exc:
+                raise ComfyUIConfigError(
+                    f"COMFYUI_TIMEOUT_SECONDS must be an integer, got: {env_timeout!r}"
+                ) from exc
+        # 0/음수는 httpx에서 예상 밖 동작을 유발하므로 공통 예외로 막는다.
+        if resolved <= 0:
             raise ComfyUIConfigError(
-                f"COMFYUI_TIMEOUT_SECONDS must be an integer, got: {env_timeout!r}"
-            ) from exc
+                f"timeout must be a positive integer, got: {resolved}"
+            )
+        return resolved
 
     def _get(self, path: str) -> dict:
         """조회용 GET 요청 공통 처리. 외부(httpx) 예외를 공통 예외로 변환한다."""
@@ -126,3 +138,75 @@ class ComfyUIClient:
             "systemStatsAvailable": True,
             "objectInfoAvailable": True,
         }
+
+    def is_available(self) -> bool:
+        """연결 가능 여부를 bool로 반환한다 (health_check 결과를 감싼다)."""
+        return self.health_check().get("ok", False)
+
+    # ── workflow / mapping 헬퍼 (범용) ───────────────────────────
+    # 파일 로드/주입은 ComfyUI 연결이 필요 없으므로 staticmethod로 둔다.
+    # 배경 전용 래퍼는 ai/image/background.py 에 있다.
+
+    @staticmethod
+    def load_workflow_json(workflow_path) -> dict:
+        """ComfyUI workflow JSON 파일을 읽어 dict로 반환한다. 실행하지 않는다."""
+        path = Path(workflow_path)
+        if not path.is_file():
+            raise WorkflowLoadError(f"Workflow JSON not found: {workflow_path}")
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (ValueError, OSError) as exc:
+            raise WorkflowLoadError(
+                f"Workflow JSON is not valid: {workflow_path}"
+            ) from exc
+
+    @staticmethod
+    def load_mapping_json(mapping_path) -> dict:
+        """prompt 주입 위치를 정의한 mapping JSON 파일을 읽어 dict로 반환한다."""
+        path = Path(mapping_path)
+        if not path.is_file():
+            raise WorkflowMappingError(f"Mapping JSON not found: {mapping_path}")
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except (ValueError, OSError) as exc:
+            raise WorkflowMappingError(
+                f"Mapping JSON is not valid: {mapping_path}"
+            ) from exc
+
+    @staticmethod
+    def apply_mapping(workflow: dict, mapping: dict, values: dict) -> dict:
+        """mapping 기준으로 values(finalPrompt/negativePrompt 등)를 workflow에 주입한다.
+
+        mapping 예: {"finalPrompt": {"nodeId": "6", "path": ["inputs", "text"]}}
+        원본 workflow는 변경하지 않고 복사본을 반환한다.
+        대상 노드/경로가 없으면 WorkflowMappingError를 발생시킨다.
+        """
+        result = copy.deepcopy(workflow)
+        for key, value in values.items():
+            spec = mapping.get(key)
+            if not spec or "nodeId" not in spec or not spec.get("path"):
+                raise WorkflowMappingError(f"Invalid or missing mapping for '{key}'")
+
+            node_id = spec["nodeId"]
+            path = spec["path"]
+            if node_id not in result:
+                raise WorkflowMappingError(
+                    f"Node '{node_id}' not found in workflow (mapping key '{key}')"
+                )
+
+            target = result[node_id]
+            for step in path[:-1]:
+                if not isinstance(target, dict) or step not in target:
+                    raise WorkflowMappingError(
+                        f"Path {path} not found in node '{node_id}' (mapping key '{key}')"
+                    )
+                target = target[step]
+            # 마지막 key도 반드시 존재해야 한다. (mapping 오타로 새 필드가 생기는 것 방지)
+            if not isinstance(target, dict) or path[-1] not in target:
+                raise WorkflowMappingError(
+                    f"Path {path} not found in node '{node_id}' (mapping key '{key}')"
+                )
+            target[path[-1]] = value
+        return result

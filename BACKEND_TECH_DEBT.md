@@ -1,6 +1,6 @@
-# 백엔드 구조 리뷰 — 보류/결정 기록
+# 백엔드 / AI 구조 리뷰 — 보류/결정 기록
 
-백엔드 구조 리뷰에서 나온 항목들의 처리 결정을 남긴다.
+백엔드·AI 구조 리뷰에서 나온 항목들의 처리 결정을 남긴다.
 (코드 주석/README만으로는 흩어지기 쉬운 "왜 지금 안 했는가 + 언제 할 것인가"를 한곳에 모은다.)
 
 ---
@@ -21,6 +21,19 @@
 - 판단: 아직 응집도 OK. ComfyUI/LLM prompt enhancement가 붙으면 빠르게 비대해짐.
 - **분리 트리거**: 실제 ComfyUI 호출 또는 LLM prompt enhancement 도입 시.
 - **분리 방향(예시)**: `prompt_builder` / `background_library_service` / `scene_background_service`.
+
+### 1.3 `ai/comfy_client.py` 에서 workflow loader/mapper 분리
+- 현재: ComfyUI 연결/조회 클라이언트(`ComfyUIClient`)가 workflow JSON 로드 + mapping 적용까지 보유
+  (`load_workflow_json` / `load_mapping_json` / `apply_mapping`, staticmethod). 현재 규모는 읽을 만함.
+- 판단: 지금 분리하면 과설계. 다만 캐릭터/보이스 workflow까지 붙으면 이 파일이 금방 커짐.
+- **분리 트리거**: 실제 배경 workflow JSON 교체 + 캐릭터/보이스 등 **두 번째 이상 workflow**가 추가될 때.
+- **분리 방향(예시)**:
+  ```text
+  ai/comfy_client.py      # GET /system_stats, /object_info, health_check, is_available
+  ai/workflow/loader.py   # workflow/mapping JSON 로드
+  ai/workflow/mapper.py   # apply_mapping
+  ai/image/background.py  # 배경 전용 조합 로직 (그대로)
+  ```
 
 ---
 
@@ -48,11 +61,16 @@
   404 detail을 `"Story not found"`(`StoryNotFoundError`)로 통일 → 모든 라우터가 service + 공통 예외 패턴으로 일관.
 - **requirements.txt ↔ pyproject 동기화**: httpx / websocket-client / pillow / python-multipart / `uvicorn[standard]` 반영 + 버전 핀.
   (source of truth는 pyproject.toml + uv.lock, requirements.txt는 pip 보조 목록)
+- **(AI 리뷰) `apply_mapping` 마지막 path key 검증**: 마지막 key가 workflow에 없으면 `WorkflowMappingError`.
+  (mapping 오타로 새 필드가 생기는 것 방지)
+- **(AI 리뷰) timeout 양수 검증**: `COMFYUI_TIMEOUT_SECONDS`/생성자 인자가 `<= 0`이면 `ComfyUIConfigError`.
+- **(AI 리뷰) `ai/image/__init__.py` 주석 최신화**: "background.py 미구현" → 실제(연결 준비 단계 구현됨) 반영.
 
 ### 검증 스냅샷
 - import/라우트(25개) 정상
 - stories parse / 목록 / 404(`"Story not found"`) 정상
 - requirements.txt ↔ pyproject 의존성 일치
+- AI: 배경 연결 테스트 통과, mapping 오타 차단 / timeout 0·음수 차단 확인
 
 ---
 
