@@ -66,7 +66,8 @@ backend/
 │   │   ├── jobs.py            # GET /api/jobs/{job_id}
 │   │   ├── backgrounds.py     # 배경 프롬프트 추천/생성 Job/라이브러리 CRUD
 │   │   ├── scenes.py          # PATCH /api/scenes/{scene_id}/background (씬-배경 연결)
-│   │   └── tts.py             # POST /api/tts/scene, GET /api/tts, DELETE /api/tts/{audio_id}
+│   │   ├── tts.py             # POST /api/tts/scene, GET /api/tts, DELETE /api/tts/{audio_id}
+│   │   └── voices.py          # 보이스 라이브러리 CRUD + PATCH /api/characters/{id}/voice는 characters.py
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── story_parser.py    # 빈 줄 기준 씬 분해, narration/dialogue 분리 + 감정 태그/키워드
@@ -75,7 +76,8 @@ backend/
 │   │   ├── character_service.py  # 캐릭터 CRUD 비즈니스 로직 (커스텀 예외 발생)
 │   │   ├── job_service.py     # Job 조회 비즈니스 로직 (JobNotFoundError)
 │   │   ├── background_service.py  # 배경 추천/라이브러리 CRUD/씬 연결 + 프롬프트 규칙
-│   │   └── tts_service.py     # scene.items → mock audio 생성/조회/삭제 (재생성 교체)
+│   │   ├── tts_service.py     # scene.items → mock audio 생성/조회/삭제 (speaker→voiceId 반영)
+│   │   └── voice_service.py   # 보이스 라이브러리 CRUD (삭제 시 캐릭터 voiceId 캐스케이드)
 │   ├── repositories/
 │   │   ├── __init__.py
 │   │   ├── story_repo.py      # 메모리 Mock Repository
@@ -83,14 +85,16 @@ backend/
 │   │   ├── job_repo.py        # Job 상태 메모리 Mock Repository
 │   │   ├── background_candidate_repository.py  # 배경 후보(임시) 메모리 저장
 │   │   ├── background_repository.py            # 배경 라이브러리 메모리 저장
-│   │   └── tts_audio_repository.py             # TTS mock audio 메모리 저장
+│   │   ├── tts_audio_repository.py             # TTS mock audio 메모리 저장
+│   │   └── voice_repository.py                 # 보이스 라이브러리 메모리 저장
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── story.py           # StoryParseRequest, StoryParseResponse (scene backgroundId/emotion 포함)
 │   │   ├── character.py       # Character 요청/응답 모델
 │   │   ├── job.py             # JobStatus/JobType Enum, JobResponse, JobCreatedResponse
 │   │   ├── background.py      # Background 후보/라이브러리/씬연결 모델
-│   │   └── tts.py             # TTS 생성 요청/audio 응답/삭제 응답 모델
+│   │   ├── tts.py             # TTS 생성 요청/audio 응답/삭제 응답 모델
+│   │   └── voice.py           # Voice 생성/수정/응답/삭제 모델
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── exceptions.py          # AppException 및 커스텀 예외
@@ -136,6 +140,12 @@ backend/
 | POST | `/api/tts/scene` | 씬 TTS 생성 Job (mock, 즉시 completed) |
 | GET | `/api/tts?storyId=&sceneId=` | 씬별 TTS 결과 목록 조회 |
 | DELETE | `/api/tts/{audio_id}` | TTS 결과 삭제 |
+| POST | `/api/voices` | 보이스 자산 생성 (mock) |
+| GET | `/api/voices` | 보이스 라이브러리 목록 |
+| GET | `/api/voices/{voice_id}` | 보이스 단건 조회 |
+| PATCH | `/api/voices/{voice_id}` | 보이스 수정 |
+| DELETE | `/api/voices/{voice_id}` | 보이스 삭제 (+참조 캐릭터 voiceId null) |
+| PATCH | `/api/characters/{character_id}/voice` | 캐릭터에 보이스 연결 (body: voiceId) |
 
 ### 파싱 규칙
 
@@ -184,6 +194,40 @@ backend/
 - audioId 자동 생성(TTS): `audio_mock_001`, ...
 - 서버 재시작 시 데이터 초기화됨
 
+### Voice(보이스) API — 캐릭터 목소리 자산
+
+보이스는 캐릭터/배경처럼 **재사용 가능한 라이브러리 자산**이다. 보이스를 만들어 `voiceId`를 발급하고, 캐릭터가 그 `voiceId`를 참조한다.
+
+```text
+Voice 라이브러리 → voiceId 발급 → 캐릭터에 연결(character.voiceId) → TTS가 dialogue speaker로 캐릭터를 찾아 voiceId 사용
+```
+
+- **백엔드/AI 역할 분리 (중요)**: 백엔드는 **자산 정체성·참조**만 관리한다.
+  - **생성 요청(`POST /api/voices`)은 `name`(필수) + `description`/`voicePrompt`(선택)만 받는다.**
+  - `provider`/`model`/`sampleAudioUrl`/`status`는 **"실제 목소리를 어떻게 만드는가"**라 **AI/TTS 파트(김도연)가 채우는 결과 필드**다. 백엔드의 **생성(POST)·수정(PATCH) 어느 쪽도 이 필드를 받지 않는다.** (캐릭터에서 seed/style/model을 백엔드가 받지 않는 것과 동일 원칙)
+  - 생성 직후 `status="pending"`(AI 클로닝 대기). 실제 클로닝 결과(provider/model/sampleAudioUrl/status)는 **AI 통합 단계에서 AI 파트가 채운다** — 현재 백엔드엔 그 통로가 없다(TTS `audioUrl`을 백엔드가 채우지 않는 것과 동일).
+  - **수정(`PATCH /api/voices/{id}`)은 사용자 메타(`name`/`description`/`voicePrompt`)만** 바꾼다.
+  - **삭제(`DELETE /api/voices/{id}`)**: 보이스 제거 + 참조 캐릭터 voiceId null 캐스케이드(AI 무관).
+- **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404).
+- **삭제 캐스케이드**: 보이스 삭제 시 그 `voiceId`를 참조하던 모든 캐릭터의 `voiceId`를 null로 만든다(배경 삭제와 동일 정책).
+- **TTS 반영**: dialogue의 `speaker`로 저장된 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사. narration이거나 매칭 캐릭터가 없으면 null. (목소리=character.voiceId 고정, 감정=item.emotion 문장별)
+
+**생성 요청 (백엔드가 받는 것)**
+
+```json
+{ "name": "따뜻한 소년 목소리", "description": "밝고 호기심 많은 톤", "voicePrompt": "warm curious boy voice" }
+```
+
+**생성 직후 응답 (AI 결과 필드는 비어 있음)**
+
+```json
+{
+  "voiceId": "voice_mock_001", "name": "따뜻한 소년 목소리",
+  "description": "밝고 호기심 많은 톤", "voicePrompt": "warm curious boy voice",
+  "sampleAudioUrl": null, "provider": null, "model": null, "status": "pending"
+}
+```
+
 ### TTS(음성 생성) API
 
 TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emotion/speaker)를 그대로 사용하고, **실제 음성 생성 없이 mock audio**를 만든다.
@@ -197,7 +241,8 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 > - ✅ **됨**: 백엔드 mock API (scene.items → mock audio 생성/저장/조회/삭제, `tts_generate` Job). 데이터를 반환할 준비 완료.
 > - ❌ **안 됨 (AI 요청)**: 실제 TTS 모델/AI 서버 호출 없음. `audioUrl=null`인 가짜 결과만 만든다. → 실제 연동 시 `tts_service`/`job_manager`의 mock 부분을 실제 TTS 호출로 교체하고 `audioUrl`을 채운다.
 > - ❌ **안 됨 (프론트 연동)**: 프론트에 TTS를 호출하는 코드가 아직 없다. → 추후 `frontend/src/api/tts.js` + 음성 생성 버튼/재생 UI 추가 필요.
-> - ❌ **안 됨**: character voice 매핑(speaker→characterId→voiceId), 보이스 클로닝.
+> - ✅ **됨**: character voice 매핑(dialogue `speaker` → 저장 캐릭터(name 매칭) → `characterId`/`voiceId`를 audio에 복사). 보이스 라이브러리(`/api/voices`) + 캐릭터 연결(`PATCH /api/characters/{id}/voice`)도 구현됨.
+> - ❌ **안 됨**: 보이스 클로닝(voiceId에 실제 목소리 매핑 = provider/model/sampleAudioUrl/status 채우기)은 AI/TTS 파트 영역.
 >
 > 즉 이번 단계는 캐릭터/배경 때와 동일하게 **"구조·흐름만 먼저, 실제 AI·프론트 연동은 다음 단계"** 다.
 >
@@ -205,7 +250,7 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 
 - **실제 TTS 모델/AI 서버 호출 없음.** `audioUrl`은 항상 `null`(실제 음성 파일 없음). `tts_generate` Job은 mock이라 즉시 `completed`.
 - **감정은 그대로 통과**: TTS가 감정을 새로 판단하지 않고 `item.emotion`/`emotionLabel`을 복사한다. (감정 결정은 Story Parse 책임)
-- **voiceType**: narration→`narrator`, dialogue→`character`. `voiceId`/`characterId`는 **현재 모두 null** (추후 `character.voiceId` 연결). 방향: **목소리=character.voiceId(고정), 감정=item.emotion(문장별)**.
+- **voiceType**: narration→`narrator`, dialogue→`character`. dialogue는 `speaker`로 저장 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사한다. **narration이거나 매칭 캐릭터가 없으면(또는 캐릭터에 보이스 미연결) 둘 다 null.** 방향: **목소리=character.voiceId(고정), 감정=item.emotion(문장별)**. (실제 합성/클로닝은 AI 파트 → `audioUrl`은 여전히 null)
 - **itemIndex**: `scene.items`의 **원본 index 유지**. (방어적으로 text 빈 item을 제외해도 재번호하지 않음 → 프론트가 원본 item과 audio를 정확히 매칭)
 - **재생성 = 교체**: 같은 `storyId`+`sceneId`로 다시 생성하면 **기존 audio를 삭제하고 새 결과로 교체**(누적 X). 스토리 text/emotion 수정 시 이전 오디오 혼란 방지.
 - **빈 처리**: text 빈 item은 audio 대상에서 제외하고, 생성할 item이 하나도 없으면 `EmptySceneItemsError(400)`.
@@ -283,7 +328,7 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
   - 현재: `FastAPI → InMemoryJobManager → Mock Character Result`
   - 나중: `FastAPI → RabbitMQ/Celery → Worker → ComfyUI → Character Result`
 - 스타일(`stylePreset`) / `seed` / `referenceImageUrl` / `lockProfile`은 백엔드가 받지 않는다. 스타일·seed·캐릭터 고정은 ComfyUI 파트에서 관리한다고 가정한다.
-- 보이스(`voiceId`, `voiceProfile`, TTS) 관련 필드는 이번 단계에서 제외한다.
+- 캐릭터는 `voiceId`(연결된 보이스 자산, 기본 null)를 가진다. 연결은 `PATCH /api/characters/{id}/voice`로 하며, 실제 목소리 클로닝/합성은 AI/TTS 파트가 담당한다. (보이스 라이브러리는 "Voice(보이스) API" 참고)
 
 **예외 처리 기준**
 
@@ -310,6 +355,7 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
   - 캐릭터/Job: `CharacterNotFoundError` (404), `JobNotFoundError` (404), `NoFieldsToUpdateError` (400), `CharacterGenerationFailedError` (500)
   - 배경/씬: `BackgroundCandidateNotFoundError` (404), `BackgroundNotFoundError` (404), `BackgroundGenerationFailedError` (500), `StoryNotFoundError` (404), `SceneNotFoundError` (404)
   - TTS: `TTSAudioNotFoundError` (404), `TTSGenerationFailedError` (500), `EmptySceneItemsError` (400)
+  - 보이스: `VoiceNotFoundError` (404)
 - `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
@@ -329,7 +375,7 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - RabbitMQ/Celery 기반 비동기 Job 워커 (`InMemoryJobManager` 교체)
 - ComfyUI 실제 연동 및 캐릭터 이미지 생성
 - 배경 생성 / 캐릭터 누끼 / 레이어 합성 API
-- 보이스 생성 / TTS API
+- 보이스 클로닝 / 실제 TTS 합성 (mock API·voiceId 연결은 구현됨, 실제 음성 생성만 남음)
 - ffmpeg 영상 렌더링 API
 
 구현 순서는 `backend/docs/backend_implementation_guide.md` 15절을 참고합니다.

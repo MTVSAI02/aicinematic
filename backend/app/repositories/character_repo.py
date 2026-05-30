@@ -16,6 +16,7 @@ class CharacterRepository:
             "name": character_data.get("name"),
             "appearancePrompt": character_data.get("appearancePrompt"),
             "imageUrl": character_data.get("imageUrl"),
+            "voiceId": character_data.get("voiceId"),  # 보이스 라이브러리 참조 (없으면 None)
         }
         self._characters[character_id] = saved
         return saved
@@ -40,6 +41,23 @@ class CharacterRepository:
         if "imageUrl" in update_data:
             character["imageUrl"] = update_data["imageUrl"]
         return character
+
+    def set_voice(self, character_id: str, voice_id: str | None) -> dict | None:
+        """캐릭터에 voiceId를 연결/해제한다. (None이면 해제)"""
+        character = self._characters.get(character_id)
+        if not character:
+            return None
+        character["voiceId"] = voice_id
+        return character
+
+    def detach_voice(self, voice_id: str) -> int:
+        """해당 voiceId를 참조하던 모든 캐릭터의 voiceId를 None으로 만든다. (보이스 삭제 시)"""
+        count = 0
+        for character in self._characters.values():
+            if character.get("voiceId") == voice_id:
+                character["voiceId"] = None
+                count += 1
+        return count
 
     def delete(self, character_id: str) -> bool:
         if character_id in self._characters:

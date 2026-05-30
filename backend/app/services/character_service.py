@@ -1,5 +1,10 @@
-from ..core.exceptions import CharacterNotFoundError, NoFieldsToUpdateError
+from ..core.exceptions import (
+    CharacterNotFoundError,
+    NoFieldsToUpdateError,
+    VoiceNotFoundError,
+)
 from ..repositories.character_repo import character_repository
+from ..repositories.voice_repository import voice_repository
 
 
 class CharacterService:
@@ -10,8 +15,9 @@ class CharacterService:
     HTTP 변환은 글로벌 exception handler가 담당한다.
     """
 
-    def __init__(self, character_repo):
+    def __init__(self, character_repo, voice_repo):
         self._character_repo = character_repo
+        self._voice_repo = voice_repo
 
     def create_character(self, character_data: dict) -> dict:
         """이미 만들어진 캐릭터 결과를 직접 저장한다."""
@@ -39,5 +45,18 @@ class CharacterService:
         if not deleted:
             raise CharacterNotFoundError()
 
+    def update_character_voice(self, character_id: str, voice_id: str | None) -> dict:
+        """캐릭터에 보이스(voiceId)를 연결/해제한다.
 
-character_service = CharacterService(character_repository)
+        voice_id가 주어지면 보이스 존재를 검증(없으면 VoiceNotFoundError),
+        None이면 연결 해제. 캐릭터가 없으면 CharacterNotFoundError.
+        """
+        if voice_id is not None and self._voice_repo.get(voice_id) is None:
+            raise VoiceNotFoundError()
+        updated = self._character_repo.set_voice(character_id, voice_id)
+        if updated is None:
+            raise CharacterNotFoundError()
+        return updated
+
+
+character_service = CharacterService(character_repository, voice_repository)

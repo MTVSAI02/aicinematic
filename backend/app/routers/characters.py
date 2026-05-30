@@ -7,6 +7,7 @@ from ..schemas.character import (
     CharacterGenerateRequest,
     CharacterResponse,
     CharacterUpdateRequest,
+    CharacterVoiceUpdateRequest,
 )
 from ..services.character_job_runner import create_character_generation_job
 from ..services.character_service import character_service
@@ -89,3 +90,18 @@ def delete_character(character_id: str):
     """
     character_service.delete_character(character_id)
     return {"deleted": True, "characterId": character_id}
+
+
+@router.patch(
+    "/{character_id}/voice",
+    response_model=CharacterResponse,
+    summary="캐릭터에 보이스 연결",
+)
+def update_character_voice(character_id: str, request: CharacterVoiceUpdateRequest):
+    """
+    캐릭터에 보이스(라이브러리)의 voiceId를 연결한다.
+
+    - body: `{"voiceId": "voice_mock_001"}` (null이면 연결 해제)
+    - 보이스가 없으면 404(`Voice not found`), 캐릭터가 없으면 404(`Character not found`).
+    """
+    return character_service.update_character_voice(character_id, request.voiceId)

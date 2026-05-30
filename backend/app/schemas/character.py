@@ -49,11 +49,17 @@ class CharacterUpdateRequest(BaseModel):
         return _not_blank(value)
 
 
+class CharacterVoiceUpdateRequest(BaseModel):
+    # 캐릭터에 연결할 보이스(라이브러리)의 voiceId. null이면 연결 해제.
+    voiceId: str | None = None
+
+
 class CharacterResponse(BaseModel):
     characterId: str = Field(description="char_mock_001 형식으로 자동 생성")
     name: str
     appearancePrompt: str
     imageUrl: str | None = Field(default=None, description="생성된 이미지 경로. 없으면 null")
+    voiceId: str | None = Field(default=None, description="연결된 보이스 ID. 없으면 null")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -62,6 +68,7 @@ class CharacterResponse(BaseModel):
                 "name": "어린왕자",
                 "appearancePrompt": "금발 단발, 초록 외투를 입은 작은 소년",
                 "imageUrl": None,
+                "voiceId": None,
             }
         }
     )

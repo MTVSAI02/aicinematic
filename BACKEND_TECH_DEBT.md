@@ -17,6 +17,11 @@
 - **알 수 없는 item type**: `VOICE_TYPE.get(type, "narrator")`라 narration/dialogue 외 값은 조용히 narrator 처리. scene 수정 API가 생겨 잘못된 type이 섞일 수 있게 되면 엄격 검증(에러/명시 처리)으로 강화.
 - (참고) emotion/emotionLabel 누락은 이미 tts_service에서 타입별 기본값으로 방어함.
 
+### 1.1c (TTS/Voice) 실제 AI 연동 직전 체크리스트 — 코드리뷰(2026-05) 반영
+- **TTSAudio 결과 필드 확장**: 계약([TTS_AI_CONTRACT.md](TTS_AI_CONTRACT.md) §3)은 AI 응답에 `durationSec`/`error`(부분 실패)를 허용하나, `schemas/tts.py`·`tts_audio_repository.py`엔 두 필드가 없다. 지금은 mock이라 데이터가 없어 무의미하지만, 실제 AI 연결 전 두 필드를 모델/응답에 추가한다.
+- **보이스 클로닝 결과 반영 통로**: AI가 채울 `provider`/`model`/`sampleAudioUrl`/`status`를 백엔드 보이스 자산에 써넣는 콜백/내부 API가 아직 없다(생성 시 status="pending" 고정). 실제 클로닝 붙일 때 이 통로(예: `PATCH /internal/voices/{id}/cloning-result` 또는 AI 콜백)부터 만든다.
+- **speaker→character 매칭 정책**: 현재 `tts_service`는 캐릭터를 **name 기준**으로 매칭(`chars_by_name`)한다. 동명이인이면 마지막 캐릭터로 덮어쓰고, "스토리 화자명 ≠ 캐릭터명"이면 아예 안 붙는 약한 연결이다. **정석 방향은 파싱 단계에서 scene.item에 `characterId`를 직접 박아두는 것**(이름 unique 정책은 차선). 실제 사용 전 정리.
+
 ### 1.2 `services/background_service.py` 분리
 - 현재: prompt suggestion + suffix 조립 + negative prompt + 배경 CRUD + 씬 연결/해제까지 한 파일 (약 174줄).
 - 판단: 아직 응집도 OK. ComfyUI/LLM prompt enhancement가 붙으면 빠르게 비대해짐.
