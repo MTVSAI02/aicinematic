@@ -1,7 +1,16 @@
-from ..core.exceptions import CharacterGenerationFailedError
+from ..core.exceptions import (
+    BackgroundGenerationFailedError,
+    CharacterGenerationFailedError,
+)
+from ..repositories.background_candidate_repository import background_candidate_repository
 from ..repositories.character_repo import character_repository
 from ..repositories.job_repo import job_repository
 from ..schemas.job import JobStatus, JobType
+from .background_service import assemble_final_prompt, resolve_negative_prompt
+
+# mock 후보 개수. 실제로는 ComfyUI 워크플로가 몇 장 생성할지 결정한다.
+# 백엔드가 정하는 값이 아니라, 현재 mock 단계에서 "ComfyUI가 4장을 돌려준다"고 가정한 값일 뿐이다.
+MOCK_BACKGROUND_CANDIDATE_COUNT = 4
 
 
 class InMemoryJobManager:
@@ -17,9 +26,10 @@ class InMemoryJobManager:
     생성 흐름 전체를 이 매니저가 담당한다.
     """
 
-    def __init__(self, job_repo, character_repo):
+    def __init__(self, job_repo, character_repo, background_candidate_repo):
         self._job_repo = job_repo
         self._character_repo = character_repo
+        self._background_candidate_repo = background_candidate_repo
 
     def create_character_generation_job(self, request_data: dict) -> dict:
         # 1. Job 생성 (pending)
@@ -60,5 +70,62 @@ class InMemoryJobManager:
             "message": "Character generation job completed with mock result.",
         }
 
+    def create_background_generation_job(self, request_data: dict) -> dict:
+        # 1. Job 생성 (pending)
+        job = self._job_repo.create(JobType.background_generate.value)
+        job_id = job["jobId"]
 
-job_manager = InMemoryJobManager(job_repository, character_repository)
+        # 2. running 으로 전환
+        self._job_repo.update_status(job_id, JobStatus.running.value, progress=10)
+
+        try:
+            prompt = request_data.get("prompt")
+            final_prompt = assemble_final_prompt(prompt)
+            negative_prompt = resolve_negative_prompt(request_data.get("negativePrompt"))
+
+            # 3. mock 후보 생성 (이미지 생성은 ComfyUI 파트 담당이므로 imageUrl=None)
+            #    후보 개수는 백엔드가 정하지 않는다. 실제로는 ComfyUI가 생성한 만큼 받게 되며,
+            #    여기서는 mock으로 그 결과를 흉내내 MOCK_BACKGROUND_CANDIDATE_COUNT 장을 만든다.
+            candidates = []
+            for _ in range(MOCK_BACKGROUND_CANDIDATE_COUNT):
+                candidate = self._background_candidate_repo.save(
+                    {
+                        "prompt": prompt,
+                        "finalPrompt": final_prompt,
+                        "negativePrompt": negative_prompt,
+                        "imageUrl": None,
+                    }
+                )
+                candidates.append(candidate)
+
+            # 4. Job 완료 처리 (result.candidates 에는 candidateId/imageUrl 만 노출)
+            result = {
+                "prompt": prompt,
+                "finalPrompt": final_prompt,
+                "negativePrompt": negative_prompt,
+                "candidates": [
+                    {"candidateId": c["candidateId"], "imageUrl": c["imageUrl"]}
+                    for c in candidates
+                ],
+            }
+            self._job_repo.complete(job_id, result=result)
+        except Exception:  # noqa: BLE001
+            self._job_repo.fail(job_id, BackgroundGenerationFailedError.detail)
+            return {
+                "jobId": job_id,
+                "status": JobStatus.failed.value,
+                "message": BackgroundGenerationFailedError.detail,
+            }
+
+        return {
+            "jobId": job_id,
+            "status": JobStatus.completed.value,
+            "message": "Background generation job completed with mock candidates.",
+        }
+
+
+job_manager = InMemoryJobManager(
+    job_repository,
+    character_repository,
+    background_candidate_repository,
+)

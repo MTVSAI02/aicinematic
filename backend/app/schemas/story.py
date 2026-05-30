@@ -28,6 +28,9 @@ class StoryItemResponse(BaseModel):
 class SceneResponse(BaseModel):
     sceneId: str = Field(description="scene_001, scene_002 형식으로 자동 생성")
     order: int = Field(description="1부터 순서대로 부여")
+    backgroundId: str | None = Field(
+        default=None, description="연결된 배경 ID. 없으면 null (PATCH /api/scenes/{sceneId}/background로 연결)"
+    )
     items: list[StoryItemResponse]
 
 

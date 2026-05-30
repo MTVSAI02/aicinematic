@@ -17,9 +17,22 @@ class JobStatus(str, Enum):
 
 
 class JobType(str, Enum):
-    """작업 유형. 이번 단계에서는 character_generate만 사용한다."""
+    """작업 유형."""
 
     character_generate = "character_generate"
+    background_generate = "background_generate"
+
+
+class JobCreatedResponse(BaseModel):
+    """Job 생성 요청(예: 캐릭터/배경 generate)의 즉시 응답.
+
+    생성 작업 종류와 무관하게 jobId/status/message만 돌려준다.
+    상세 결과는 GET /api/jobs/{jobId} 로 조회한다.
+    """
+
+    jobId: str = Field(description="job_mock_001 형식으로 자동 생성")
+    status: str = Field(description="생성 Job 상태")
+    message: str
 
 
 class JobResponse(BaseModel):
