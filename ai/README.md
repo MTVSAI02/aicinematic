@@ -67,6 +67,16 @@ uv run --env-file ai/.env python ai/test_background_connection.py
 
 > 두 테스트 모두 **실제 이미지를 생성하지 않는다.** `POST /prompt`를 호출하지 않고, 조회용 API(`/system_stats`, `/object_info`)만 사용한다.
 
+### 백엔드/프론트 경유 연결 확인 (임시 브릿지)
+
+`check_background_comfy_connection()`은 임시 백엔드 엔드포인트로도 노출되어, 프론트에서 전체 왕복을 한 번에 확인할 수 있다.
+
+- `GET /api/ai/background-comfy-health` (`backend/app/routers/ai_health.py`) → `ai.image.background.check_background_comfy_connection()` 호출
+- 경로: **프론트 → 백엔드 → `ai.image.background` → ComfyUI(읽기전용, `COMFYUI_GPU1_URL`)**
+- 프론트엔드 버튼: 배경 페이지의 "배경 AI 서버 연결 확인"
+- 이미지 생성/`POST /prompt` 없음. 이 백엔드/프론트 브릿지는 **임시 코드**이며 제거 추적은 루트 [`TEMP_AI_CONNECTION_TEST.md`](../TEMP_AI_CONNECTION_TEST.md).
+  (백엔드가 동작하려면 `COMFYUI_GPU1_URL`이 필요해 `uv run --env-file ai/.env uvicorn ...`로 실행)
+
 ## 아직 구현하지 않은 것
 - 실제 배경 이미지 생성(`POST /prompt` 실행 / workflow 실행), 결과 이미지 수집/저장
 - 실제 배경 workflow JSON (현재 placeholder)

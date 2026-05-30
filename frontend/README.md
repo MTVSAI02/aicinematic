@@ -51,6 +51,7 @@ AI가 만든 캐릭터·배경·음성 에셋을 사용자가 조립해 **움직
 | Story Parse | 연동 대상 | 대본 입력 후 `POST /api/stories/parse` 호출 |
 | Scene Check | 연동 대상 | 백엔드 응답의 `sceneId`, `items` 기준으로 씬 카드 표시 |
 | Character Library | ✅ 연동됨 | 캐릭터 생성(Job)·목록 조회·수정·삭제·선택을 백엔드 API와 연동 완료 |
+| Background Library | ✅ 연동됨 | 배경 프롬프트 추천·후보 생성(Job)·선택 저장·수정·삭제·씬 연결을 백엔드 API와 연동 완료 (`/background`) |
 | Voice / TTS | 개발 대상 | 씬 item 기준 음성 생성 요청 및 결과 표시 |
 | Voice Cloning | 개발 대상 | 음성 샘플 업로드, 캐릭터 voiceId 연결 |
 | Scene Editor | 개발 대상 | 배경·캐릭터 합성 결과 표시 준비 |
@@ -803,6 +804,22 @@ WAV 또는 MP3 음성 샘플을 업로드해주세요.
   voiceId: 'voice_001',
 }
 ```
+
+---
+
+## 15.5 BackgroundPage 구현 기준 (✅ 백엔드 Background API 연동 완료)
+
+> - 라우트 `/background` (`App.jsx`, `NavBar`에 "배경" 추가). 배경 상태는 **`useBackgroundStore`**(캐릭터와 별도 store).
+> - **배경은 2단계 구조**: `후보(candidateId, 임시)` → 1장 선택 저장 → `배경(backgroundId, 라이브러리)`. **씬에는 candidateId가 아니라 backgroundId만** 연결한다.
+> - **역할 분리**: BackgroundPage는 배경 **라이브러리(생성/저장/수정/삭제)** 만 담당한다. **씬 ↔ 배경 연결은 Scene Editor(`/scene-editor`)** 가 담당한다 (씬별로 라이브러리의 배경을 골라 `PATCH /api/scenes/{sceneId}/background` 호출). 캐릭터도 같은 방식으로 추후 Scene Editor에서 배정한다.
+> - **promptInput만 전송**: `generate`에는 사용자가 수정한 **`promptInput`만** 보낸다. `count`도 보내지 않는다(개수는 백엔드/ComfyUI 결정).
+> - **finalPrompt 미리보기는 실시간 계산(전송 X)**: store는 백엔드가 붙이는 suffix(배경 규칙)만 `promptSuffix`로 보관하고, 미리보기는 항상 **`현재 promptInput + promptSuffix`** 로 계산한다 → 프롬프트를 수정하면 미리보기도 즉시 갱신(stale 방지). 실제 finalPrompt 조립은 백엔드가 한다. (백엔드 suffix를 프론트에 하드코딩하지 않음 — 추천 응답에서 추출)
+> - **초기 로딩 실패는 에러로 표시**: `getBackgrounds`/`getStories` 실패를 "빈 목록"으로 숨기지 않고, "불러오지 못했습니다 …" 에러 메시지로 보여준다(백엔드 다운과 데이터 없음을 구분). BackgroundPage·`StorySceneSelect`·SceneEditor 모두 동일.
+> - 프론트는 **ComfyUI를 직접 호출하지 않는다.** `프론트 → FastAPI 백엔드` 만.
+> - `imageUrl`이 `null`이면 "이미지 준비 중" placeholder.
+> - 컴포넌트 분리: `components/backgrounds/`의 `BackgroundPromptPanel`, `BackgroundCandidateGrid`, `BackgroundCandidateCard`, `BackgroundSaveForm`, `BackgroundLibrary`, `BackgroundCard`, `StorySceneSelect`(스토리/씬 드롭다운) (공용 스타일 `pages/background/BackgroundPage.module.css`).
+> - 관련 파일: `src/api/backgrounds.js`, `src/store/useBackgroundStore.js`, `src/utils/apiError.js`(배경/스토리/씬 메시지 추가).
+> - storyId/sceneId는 **`GET /api/stories` 기반 드롭다운**(`StorySceneSelect`)으로 고른다(ID 직접 입력 X). 나중에 props/route state로 주입할 수 있게 store에 분리해 둠.
 
 ---
 

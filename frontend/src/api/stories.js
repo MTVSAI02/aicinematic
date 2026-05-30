@@ -13,3 +13,12 @@ export async function parseStory({ title, script }) {
 
   return res.json()
 }
+
+// GET /api/stories — 저장된 스토리 목록 (배경 페이지의 스토리/씬 선택 드롭다운용)
+export async function getStories() {
+  const res = await fetch(`${BASE_URL}/api/stories`)
+  if (!res.ok) {
+    throw new Error(`스토리 목록 조회 실패: HTTP ${res.status}`)
+  }
+  return res.json()
+}

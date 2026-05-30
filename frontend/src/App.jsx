@@ -4,6 +4,7 @@ import HomePage from '@/pages/home/HomePage'
 import StoryInputPage from '@/pages/story-input/StoryInputPage'
 import SceneCheckPage from '@/pages/scene-check/SceneCheckPage'
 import CharacterPage from '@/pages/character/CharacterPage'
+import BackgroundPage from '@/pages/background/BackgroundPage'
 import SceneEditorPage from '@/pages/scene-editor/SceneEditorPage'
 import TimelinePage from '@/pages/timeline/TimelinePage'
 import ExportPage from '@/pages/export/ExportPage'
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/story-input" element={<StoryInputPage />} />
         <Route path="/scene-check" element={<SceneCheckPage />} />
         <Route path="/character" element={<CharacterPage />} />
+        <Route path="/background" element={<BackgroundPage />} />
         <Route path="/scene-editor" element={<SceneEditorPage />} />
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/export" element={<ExportPage />} />
