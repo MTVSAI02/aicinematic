@@ -48,6 +48,16 @@
   white-space: nowrap;
 }
 
+/* 파싱된 감정 (태그/키워드로 감지) */
+.emotion {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
 .narration {
   background: var(--code-bg);
   color: var(--text);

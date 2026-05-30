@@ -34,6 +34,9 @@ export default function SceneCheckPage() {
                 <span className={`${styles.tag} ${styles[item.type]}`}>
                   {item.type === 'dialogue' ? item.speaker : '내레이션'}
                 </span>
+                {item.emotionLabel && (
+                  <span className={styles.emotion}>🎭 {item.emotionLabel}</span>
+                )}
                 {item.text}
               </p>
             ))}
