@@ -11,6 +11,7 @@ from .routers import (
     jobs,
     scenes,
     stories,
+    tts,
 )
 
 app = FastAPI(
@@ -39,6 +40,7 @@ app.include_router(jobs.router)
 app.include_router(ai_health.router)
 app.include_router(backgrounds.router)
 app.include_router(scenes.router)
+app.include_router(tts.router)
 
 
 @app.get("/")
