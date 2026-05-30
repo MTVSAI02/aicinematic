@@ -9,8 +9,9 @@ router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 @router.get("/{job_id}", response_model=JobResponse, summary="Job 상태 조회")
 def get_job(job_id: str):
     """
-    캐릭터 생성 작업의 상태를 조회합니다.
+    비동기 작업(Job) 상태를 조회합니다.
 
+    - type: `character_generate` / `background_generate` / `tts_generate`
     - jobId 예시: `job_mock_001`
     - status: `pending`, `running`, `completed`, `failed`
     - 존재하지 않는 jobId 요청 시 404(`Job not found`)를 반환합니다.

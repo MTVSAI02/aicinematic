@@ -21,6 +21,7 @@ class JobType(str, Enum):
 
     character_generate = "character_generate"
     background_generate = "background_generate"
+    tts_generate = "tts_generate"
 
 
 class JobCreatedResponse(BaseModel):

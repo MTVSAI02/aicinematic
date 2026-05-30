@@ -57,3 +57,18 @@ class StoryNotFoundError(AppException):
 class SceneNotFoundError(AppException):
     status_code = 404
     detail = "Scene not found"
+
+
+class TTSGenerationFailedError(AppException):
+    status_code = 500
+    detail = "TTS generation failed"
+
+
+class TTSAudioNotFoundError(AppException):
+    status_code = 404
+    detail = "TTS audio not found"
+
+
+class EmptySceneItemsError(AppException):
+    status_code = 400
+    detail = "Scene has no items to generate TTS"

@@ -65,28 +65,32 @@ backend/
 │   │   ├── characters.py      # POST /api/characters/generate, 캐릭터 CRUD
 │   │   ├── jobs.py            # GET /api/jobs/{job_id}
 │   │   ├── backgrounds.py     # 배경 프롬프트 추천/생성 Job/라이브러리 CRUD
-│   │   └── scenes.py          # PATCH /api/scenes/{scene_id}/background (씬-배경 연결)
+│   │   ├── scenes.py          # PATCH /api/scenes/{scene_id}/background (씬-배경 연결)
+│   │   └── tts.py             # POST /api/tts/scene, GET /api/tts, DELETE /api/tts/{audio_id}
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── story_parser.py    # 빈 줄 기준 씬 분해, narration/dialogue 분리
+│   │   ├── story_parser.py    # 빈 줄 기준 씬 분해, narration/dialogue 분리 + 감정 태그/키워드
 │   │   ├── story_service.py   # 스토리 파싱/저장/조회 (StoryNotFoundError)
-│   │   ├── job_manager.py     # InMemoryJobManager (캐릭터/배경 Job, 나중에 RabbitMQ/Celery로 교체)
+│   │   ├── job_manager.py     # InMemoryJobManager (캐릭터/배경/TTS Job, 나중에 RabbitMQ/Celery로 교체)
 │   │   ├── character_service.py  # 캐릭터 CRUD 비즈니스 로직 (커스텀 예외 발생)
 │   │   ├── job_service.py     # Job 조회 비즈니스 로직 (JobNotFoundError)
-│   │   └── background_service.py  # 배경 추천/라이브러리 CRUD/씬 연결 + 프롬프트 규칙
+│   │   ├── background_service.py  # 배경 추천/라이브러리 CRUD/씬 연결 + 프롬프트 규칙
+│   │   └── tts_service.py     # scene.items → mock audio 생성/조회/삭제 (재생성 교체)
 │   ├── repositories/
 │   │   ├── __init__.py
 │   │   ├── story_repo.py      # 메모리 Mock Repository
 │   │   ├── character_repo.py  # 캐릭터 메모리 Mock Repository
 │   │   ├── job_repo.py        # Job 상태 메모리 Mock Repository
 │   │   ├── background_candidate_repository.py  # 배경 후보(임시) 메모리 저장
-│   │   └── background_repository.py            # 배경 라이브러리 메모리 저장
+│   │   ├── background_repository.py            # 배경 라이브러리 메모리 저장
+│   │   └── tts_audio_repository.py             # TTS mock audio 메모리 저장
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   ├── story.py           # StoryParseRequest, StoryParseResponse (scene backgroundId 포함)
+│   │   ├── story.py           # StoryParseRequest, StoryParseResponse (scene backgroundId/emotion 포함)
 │   │   ├── character.py       # Character 요청/응답 모델
-│   │   ├── job.py             # JobStatus/JobType Enum, JobResponse
-│   │   └── background.py      # Background 후보/라이브러리/씬연결 모델
+│   │   ├── job.py             # JobStatus/JobType Enum, JobResponse, JobCreatedResponse
+│   │   ├── background.py      # Background 후보/라이브러리/씬연결 모델
+│   │   └── tts.py             # TTS 생성 요청/audio 응답/삭제 응답 모델
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── exceptions.py          # AppException 및 커스텀 예외
@@ -115,7 +119,7 @@ backend/
 | GET | `/api/stories` | 저장된 스토리 목록 조회 |
 | GET | `/api/stories/{story_id}` | 저장된 스토리 단건 조회 |
 | POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (mock, 즉시 completed) |
-| GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / background_generate) |
+| GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / background_generate / tts_generate) |
 | GET | `/api/characters` | 캐릭터 목록 조회 |
 | POST | `/api/characters` | 캐릭터 결과 직접 저장 |
 | GET | `/api/characters/{character_id}` | 캐릭터 단건 조회 |
@@ -129,6 +133,9 @@ backend/
 | PATCH | `/api/backgrounds/{background_id}` | 배경 수정 (name만) |
 | DELETE | `/api/backgrounds/{background_id}` | 배경 삭제 (+참조 씬 backgroundId null) |
 | PATCH | `/api/scenes/{scene_id}/background` | 씬에 배경 연결 (body: storyId, backgroundId) |
+| POST | `/api/tts/scene` | 씬 TTS 생성 Job (mock, 즉시 completed) |
+| GET | `/api/tts?storyId=&sceneId=` | 씬별 TTS 결과 목록 조회 |
+| DELETE | `/api/tts/{audio_id}` | TTS 결과 삭제 |
 
 ### 파싱 규칙
 
@@ -174,7 +181,46 @@ backend/
 - characterId 자동 생성: `char_mock_001`, `char_mock_002`, ...
 - jobId 자동 생성: `job_mock_001`, `job_mock_002`, ...
 - backgroundId 자동 생성: `bg_mock_001`, ...  / 배경 후보: `bg_candidate_001`, ...
+- audioId 자동 생성(TTS): `audio_mock_001`, ...
 - 서버 재시작 시 데이터 초기화됨
+
+### TTS(음성 생성) API
+
+TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emotion/speaker)를 그대로 사용하고, **실제 음성 생성 없이 mock audio**를 만든다.
+
+> #### 📍 현재 단계 (중요): "백엔드 mock 구조"까지만
+>
+> ```text
+> [프론트] ──✖ 아직 호출 안 함 ──▶ [백엔드 TTS API] ──✖ AI 호출 안 함(mock) ──▶ [AI/TTS]
+> ```
+>
+> - ✅ **됨**: 백엔드 mock API (scene.items → mock audio 생성/저장/조회/삭제, `tts_generate` Job). 데이터를 반환할 준비 완료.
+> - ❌ **안 됨 (AI 요청)**: 실제 TTS 모델/AI 서버 호출 없음. `audioUrl=null`인 가짜 결과만 만든다. → 실제 연동 시 `tts_service`/`job_manager`의 mock 부분을 실제 TTS 호출로 교체하고 `audioUrl`을 채운다.
+> - ❌ **안 됨 (프론트 연동)**: 프론트에 TTS를 호출하는 코드가 아직 없다. → 추후 `frontend/src/api/tts.js` + 음성 생성 버튼/재생 UI 추가 필요.
+> - ❌ **안 됨**: character voice 매핑(speaker→characterId→voiceId), 보이스 클로닝.
+>
+> 즉 이번 단계는 캐릭터/배경 때와 동일하게 **"구조·흐름만 먼저, 실제 AI·프론트 연동은 다음 단계"** 다.
+>
+> **백엔드 ↔ AI/TTS 요청·응답 JSON 계약**(팀원 전달용): 루트 [`TTS_AI_CONTRACT.md`](../TTS_AI_CONTRACT.md)
+
+- **실제 TTS 모델/AI 서버 호출 없음.** `audioUrl`은 항상 `null`(실제 음성 파일 없음). `tts_generate` Job은 mock이라 즉시 `completed`.
+- **감정은 그대로 통과**: TTS가 감정을 새로 판단하지 않고 `item.emotion`/`emotionLabel`을 복사한다. (감정 결정은 Story Parse 책임)
+- **voiceType**: narration→`narrator`, dialogue→`character`. `voiceId`/`characterId`는 **현재 모두 null** (추후 `character.voiceId` 연결). 방향: **목소리=character.voiceId(고정), 감정=item.emotion(문장별)**.
+- **itemIndex**: `scene.items`의 **원본 index 유지**. (방어적으로 text 빈 item을 제외해도 재번호하지 않음 → 프론트가 원본 item과 audio를 정확히 매칭)
+- **재생성 = 교체**: 같은 `storyId`+`sceneId`로 다시 생성하면 **기존 audio를 삭제하고 새 결과로 교체**(누적 X). 스토리 text/emotion 수정 시 이전 오디오 혼란 방지.
+- **빈 처리**: text 빈 item은 audio 대상에서 제외하고, 생성할 item이 하나도 없으면 `EmptySceneItemsError(400)`.
+- **조회/생성 검증 차이**: `POST /api/tts/scene`은 story/scene을 검증(없으면 404). `GET /api/tts`는 저장소 조회라 검증 없이 없으면 빈 배열 `[]`.
+
+**TTSAudio 구조**
+
+```json
+{
+  "audioId": "audio_mock_001", "storyId": "story_mock_001", "sceneId": "scene_001",
+  "itemIndex": 0, "type": "narration", "speaker": null, "text": "...",
+  "emotion": "calm", "emotionLabel": "잔잔함",
+  "voiceType": "narrator", "characterId": null, "voiceId": null, "audioUrl": null
+}
+```
 
 ### 배경(Background) API
 
@@ -263,6 +309,7 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - 커스텀 예외는 `AppException`을 상속하며 `status_code`/`detail`을 가진다.
   - 캐릭터/Job: `CharacterNotFoundError` (404), `JobNotFoundError` (404), `NoFieldsToUpdateError` (400), `CharacterGenerationFailedError` (500)
   - 배경/씬: `BackgroundCandidateNotFoundError` (404), `BackgroundNotFoundError` (404), `BackgroundGenerationFailedError` (500), `StoryNotFoundError` (404), `SceneNotFoundError` (404)
+  - TTS: `TTSAudioNotFoundError` (404), `TTSGenerationFailedError` (500), `EmptySceneItemsError` (400)
 - `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
