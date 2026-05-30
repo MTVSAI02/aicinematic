@@ -42,8 +42,8 @@ export default function CharacterPage() {
         <button className={styles.btnSecondary} onClick={() => navigate('/scene-check')}>
           ← 씬 확인
         </button>
-        <button className={styles.btn} onClick={() => navigate('/scene-editor')}>
-          씬 편집 →
+        <button className={styles.btn} onClick={() => navigate('/background')}>
+          배경 →
         </button>
       </div>
     </div>

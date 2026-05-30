@@ -15,3 +15,15 @@ export async function getComfyHealth() {
   }
   return res.json()
 }
+
+// GET /api/ai/background-comfy-health — 배경 전용 경로 연결 확인 (읽기전용)
+// 프론트 → 백엔드 → ai.image.background → ComfyUI(COMFYUI_GPU1_URL) 읽기전용
+export async function getBackgroundComfyHealth() {
+  const res = await fetch(`${BASE_URL}/api/ai/background-comfy-health`)
+  if (!res.ok) {
+    const error = new Error(`HTTP ${res.status}`)
+    error.status = res.status
+    throw error
+  }
+  return res.json()
+}

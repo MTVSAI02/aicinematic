@@ -22,6 +22,12 @@
 - **분리 트리거**: 실제 ComfyUI 호출 또는 LLM prompt enhancement 도입 시.
 - **분리 방향(예시)**: `prompt_builder` / `background_library_service` / `scene_background_service`.
 
+### 1.3b (프론트) `SceneEditorPage` 컴포넌트 분리
+- 현재: 스토리 조회 + 배경 조회 + 씬 선택 + 배경 연결 + 캔버스 placeholder가 한 파일.
+- 판단: 지금은 참을 만함. 캐릭터 배치/합성/미리보기가 들어오면 빠르게 커짐.
+- **분리 트리거**: SceneEditor에 캐릭터 배정 또는 합성 미리보기가 추가될 때.
+- **분리 방향(예시)**: `SceneStorySidebar` / `SceneCanvasPreview` / `SceneBackgroundPanel` / `SceneCharacterPanel`.
+
 ### 1.3 `ai/comfy_client.py` 에서 workflow loader/mapper 분리
 - 현재: ComfyUI 연결/조회 클라이언트(`ComfyUIClient`)가 workflow JSON 로드 + mapping 적용까지 보유
   (`load_workflow_json` / `load_mapping_json` / `apply_mapping`, staticmethod). 현재 규모는 읽을 만함.

@@ -7,7 +7,12 @@ import { getApiErrorMessage } from '@/utils/apiError'
 // 기존 디자인 톤을 그대로 쓰기 위해 캐릭터 페이지의 공용 스타일 모듈을 공유한다.
 import styles from '@/pages/character/CharacterPage.module.css'
 
-export default function AiConnectionCheck() {
+// check: 연결 확인 API 함수(기본 getComfyHealth), label: 버튼 문구, okText: 성공 문구
+export default function AiConnectionCheck({
+  check = getComfyHealth,
+  label = 'AI 서버 연결 확인',
+  okText = 'AI 서버 연결됨 ✅',
+}) {
   const [status, setStatus] = useState(null)
   const [checking, setChecking] = useState(false)
 
@@ -15,7 +20,7 @@ export default function AiConnectionCheck() {
     setChecking(true)
     setStatus(null)
     try {
-      setStatus(await getComfyHealth())
+      setStatus(await check())
     } catch (e) {
       setStatus({ ok: false, error: getApiErrorMessage(e) })
     } finally {
@@ -30,14 +35,12 @@ export default function AiConnectionCheck() {
         onClick={handleCheck}
         disabled={checking}
       >
-        {checking ? 'AI 연결 확인 중...' : 'AI 서버 연결 확인'}
+        {checking ? '연결 확인 중...' : label}
       </button>
       {status && (
         <span className={status.ok ? styles.status : styles.error}>
           {/* ComfyUI 주소(baseUrl)는 프론트 화면에 노출하지 않는다. */}
-          {status.ok
-            ? 'AI 서버 연결됨 ✅'
-            : `AI 서버 연결 실패: ${status.error ?? '알 수 없음'}`}
+          {status.ok ? okText : `연결 실패: ${status.error ?? '알 수 없음'}`}
         </span>
       )}
     </div>

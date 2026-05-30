@@ -26,7 +26,7 @@ ComfyUI의 **읽기전용** API(`/system_stats`, `/object_info`)만 호출하는
 ## 삭제 대상 체크리스트
 
 ### 백엔드
-- [ ] `backend/app/routers/ai_health.py` — 파일 전체 (`GET /api/ai/comfy-health`)
+- [ ] `backend/app/routers/ai_health.py` — 파일 전체 (`GET /api/ai/comfy-health`, `GET /api/ai/background-comfy-health`)
 - [ ] `backend/app/main.py`
   - [ ] `from .routers import ai_health, ...` 에서 `ai_health` 제거
   - [ ] `app.include_router(ai_health.router)` 줄 제거
@@ -35,11 +35,14 @@ ComfyUI의 **읽기전용** API(`/system_stats`, `/object_info`)만 호출하는
   - 실제 연동 단계에서 AI 설정(env)을 backend config로 정식 편입할지 함께 정리한다.
 
 ### 프론트엔드
-- [ ] `frontend/src/api/ai.js` — 파일 전체 (`getComfyHealth`)
-- [ ] `frontend/src/components/AiConnectionCheck.jsx` — 파일 전체 (연결 확인 버튼 컴포넌트)
+- [ ] `frontend/src/api/ai.js` — 파일 전체 (`getComfyHealth`, `getBackgroundComfyHealth`)
+- [ ] `frontend/src/components/AiConnectionCheck.jsx` — 파일 전체 (연결 확인 버튼 컴포넌트, check/label/okText props)
 - [ ] `frontend/src/pages/character/CharacterPage.jsx`
   - [ ] `import AiConnectionCheck from '@/components/AiConnectionCheck'`
   - [ ] `<AiConnectionCheck />` 렌더링 (`{/* 임시: AI(ComfyUI) 연결 확인 ... */}`)
+- [ ] `frontend/src/pages/background/BackgroundPage.jsx`
+  - [ ] `import AiConnectionCheck` / `import { getBackgroundComfyHealth }`
+  - [ ] `<AiConnectionCheck check={getBackgroundComfyHealth} ... />` 렌더링 (`{/* 임시: 배경 전용 경로 연결 확인 ... */}`)
 - [ ] `frontend/src/pages/character/CharacterPage.module.css` — `.aiCheck` 클래스
 
 ## 유지해도 되는 것 (임시 아님)
