@@ -10,7 +10,9 @@ AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔�
 > - **AI/TTS(김도연)**: ① 보이스 클로닝(`voiceId`에 실제 목소리 매핑 = `provider`/`model`/`sampleAudioUrl`/`status` 채우기), ② `text`를 emotion·voice로 합성해 `audioUrl` 반환  ← **이 두 가지가 AI 영역**
 
 > **voiceId가 흐르는 길**
-> `POST /api/voices`(보이스 자산 생성, voiceId 발급) → `PATCH /api/characters/{id}/voice`(캐릭터에 voiceId 연결) → `POST /api/tts/scene`(dialogue speaker로 캐릭터 찾아 그 voiceId를 audio에 복사) → AI는 그 voiceId의 목소리로 합성.
+> `POST /api/voices`(보이스 자산 생성, voiceId 발급) → 연결 → `POST /api/tts/scene`(audio에 voiceId 복사) → AI는 그 voiceId의 목소리로 합성.
+> - **dialogue**: `PATCH /api/characters/{id}/voice`로 캐릭터에 연결 → TTS가 speaker로 캐릭터 찾아 그 `voiceId` 복사.
+> - **narration**: `PATCH /api/stories/{id}/narrator-voice`로 스토리에 연결 → TTS가 story의 `narratorVoiceId` 복사.
 
 ---
 
@@ -64,7 +66,7 @@ AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔�
       "emotionLabel": "잔잔함",
       "voiceType": "narrator",
       "characterId": null,
-      "voiceId": null
+      "voiceId": "voice_mock_002"
     },
     {
       "audioId": "audio_mock_002",
@@ -89,7 +91,7 @@ AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔�
 | `text` | **합성할 문장.** 이걸 음성으로 만든다. |
 | `emotion` | **감정 스타일 키(영문).** 음성 스타일에 적용. (`emotionLabel`은 표시용이라 무시 가능) |
 | `voiceType` | `narrator`(내레이션) / `character`(대사) — 기본 목소리 갈래 |
-| `voiceId` | 캐릭터에 보이스가 연결돼 있으면 그 `voiceId`(예: `voice_mock_001`). **§1의 보이스 자산 ID.** 없으면 null → AI는 `voiceType` 기준 기본 목소리 사용 |
+| `voiceId` | **§1의 보이스 자산 ID.** 없으면 null → AI는 `voiceType` 기준 기본 목소리 사용. 출처: **dialogue = 매칭 캐릭터의 `voiceId`**, **narration = story의 `narratorVoiceId`** |
 | `speaker` | 대사의 화자명 (narration이면 null) |
 | `characterId` | dialogue의 `speaker`로 **매칭된 저장 캐릭터 ID**. narration이거나 매칭 캐릭터가 없으면 null. (매칭 키 = speaker 이름 == 캐릭터 name) |
 | `itemIndex` | 원본 scene.items 인덱스 (참고용, 재번호 안 함) |
@@ -151,7 +153,7 @@ AI 파트가 자유롭게 선택한다.
 ## 5. 핵심 요약 (3줄)
 1. **보이스 자산**: 백엔드가 `voiceId`+메타를 발급 → AI가 그 voiceId에 실제 목소리를 **클로닝**(provider/model/sampleAudioUrl/status 채움).
 2. **합성**: 백엔드가 scene 단위 `items`(text + emotion + voiceType + voiceId + audioId)를 보내면, AI가 각 item을 합성해 **`audioId`마다 `audioUrl`**을 돌려준다.
-3. **감정 = `emotion`(영문 키, 문장별), 목소리 = `voiceId`(캐릭터 고정) / 없으면 `voiceType` 기본.**
+3. **감정 = `emotion`(영문 키, 문장별), 목소리 = `voiceId`(dialogue=캐릭터 / narration=story.narratorVoiceId) / 없으면 `voiceType` 기본.**
 
 ---
 

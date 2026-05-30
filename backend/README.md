@@ -61,7 +61,7 @@ backend/
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── health.py          # GET /api/health
-│   │   ├── stories.py         # POST /api/stories/parse, GET /api/stories, GET /api/stories/{id}
+│   │   ├── stories.py         # POST /api/stories/parse, GET /api/stories, GET /api/stories/{id}, PATCH .../narrator-voice
 │   │   ├── characters.py      # POST /api/characters/generate, 캐릭터 CRUD
 │   │   ├── jobs.py            # GET /api/jobs/{job_id}
 │   │   ├── backgrounds.py     # 배경 프롬프트 추천/생성 Job/라이브러리 CRUD
@@ -122,6 +122,7 @@ backend/
 | POST | `/api/stories/parse` | 대본을 씬으로 분해 후 메모리 저장 |
 | GET | `/api/stories` | 저장된 스토리 목록 조회 |
 | GET | `/api/stories/{story_id}` | 저장된 스토리 단건 조회 |
+| PATCH | `/api/stories/{story_id}/narrator-voice` | 나레이션 보이스 연결/해제 (body: voiceId, null이면 해제) |
 | POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (mock, 즉시 completed) |
 | GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / background_generate / tts_generate) |
 | GET | `/api/characters` | 캐릭터 목록 조회 |
@@ -207,10 +208,12 @@ Voice 라이브러리 → voiceId 발급 → 캐릭터에 연결(character.voice
   - `provider`/`model`/`sampleAudioUrl`/`status`는 **"실제 목소리를 어떻게 만드는가"**라 **AI/TTS 파트(김도연)가 채우는 결과 필드**다. 백엔드의 **생성(POST)·수정(PATCH) 어느 쪽도 이 필드를 받지 않는다.** (캐릭터에서 seed/style/model을 백엔드가 받지 않는 것과 동일 원칙)
   - 생성 직후 `status="pending"`(AI 클로닝 대기). 실제 클로닝 결과(provider/model/sampleAudioUrl/status)는 **AI 통합 단계에서 AI 파트가 채운다** — 현재 백엔드엔 그 통로가 없다(TTS `audioUrl`을 백엔드가 채우지 않는 것과 동일).
   - **수정(`PATCH /api/voices/{id}`)은 사용자 메타(`name`/`description`/`voicePrompt`)만** 바꾼다.
-  - **삭제(`DELETE /api/voices/{id}`)**: 보이스 제거 + 참조 캐릭터 voiceId null 캐스케이드(AI 무관).
+  - **삭제(`DELETE /api/voices/{id}`)**: 보이스 제거 + 참조 캐릭터 `voiceId`·스토리 `narratorVoiceId` null 캐스케이드(AI 무관).
 - **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404).
-- **삭제 캐스케이드**: 보이스 삭제 시 그 `voiceId`를 참조하던 모든 캐릭터의 `voiceId`를 null로 만든다(배경 삭제와 동일 정책).
-- **TTS 반영**: dialogue의 `speaker`로 저장된 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사. narration이거나 매칭 캐릭터가 없으면 null. (목소리=character.voiceId 고정, 감정=item.emotion 문장별)
+- **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404. (narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠)
+- **삭제 캐스케이드**: 보이스 삭제 시 그 `voiceId`를 참조하던 **모든 캐릭터의 `voiceId`**와 **스토리의 `narratorVoiceId`**를 null로 만든다(배경 삭제와 동일 정책).
+- **TTS 반영(dialogue)**: dialogue의 `speaker`로 저장된 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사. 매칭 캐릭터가 없으면 null. (목소리=character.voiceId 고정, 감정=item.emotion 문장별)
+- **TTS 반영(narration)**: narration은 audio의 voiceId로 **story.`narratorVoiceId`**를 복사한다. 미설정이면 null.
 
 **생성 요청 (백엔드가 받는 것)**
 
@@ -250,7 +253,10 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 
 - **실제 TTS 모델/AI 서버 호출 없음.** `audioUrl`은 항상 `null`(실제 음성 파일 없음). `tts_generate` Job은 mock이라 즉시 `completed`.
 - **감정은 그대로 통과**: TTS가 감정을 새로 판단하지 않고 `item.emotion`/`emotionLabel`을 복사한다. (감정 결정은 Story Parse 책임)
-- **voiceType**: narration→`narrator`, dialogue→`character`. dialogue는 `speaker`로 저장 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사한다. **narration이거나 매칭 캐릭터가 없으면(또는 캐릭터에 보이스 미연결) 둘 다 null.** 방향: **목소리=character.voiceId(고정), 감정=item.emotion(문장별)**. (실제 합성/클로닝은 AI 파트 → `audioUrl`은 여전히 null)
+- **voiceType / voiceId**: narration→`narrator`, dialogue→`character`.
+  - **dialogue**: `speaker`로 저장 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 복사. 매칭 캐릭터 없거나 보이스 미연결이면 null.
+  - **narration**: `characterId`는 항상 null, `voiceId`는 story.`narratorVoiceId` 복사(미설정이면 null).
+  - 방향: **목소리=voiceId(캐릭터/나레이터 고정), 감정=item.emotion(문장별)**. (실제 합성/클로닝은 AI 파트 → `audioUrl`은 여전히 null)
 - **itemIndex**: `scene.items`의 **원본 index 유지**. (방어적으로 text 빈 item을 제외해도 재번호하지 않음 → 프론트가 원본 item과 audio를 정확히 매칭)
 - **재생성 = 교체**: 같은 `storyId`+`sceneId`로 다시 생성하면 **기존 audio를 삭제하고 새 결과로 교체**(누적 X). 스토리 text/emotion 수정 시 이전 오디오 혼란 방지.
 - **빈 처리**: text 빈 item은 audio 대상에서 제외하고, 생성할 item이 하나도 없으면 `EmptySceneItemsError(400)`.

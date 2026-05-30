@@ -1,5 +1,6 @@
-from ..core.exceptions import StoryNotFoundError
+from ..core.exceptions import StoryNotFoundError, VoiceNotFoundError
 from ..repositories.story_repo import story_repository
+from ..repositories.voice_repository import voice_repository
 from .story_parser import parse_script_to_scenes
 
 
@@ -10,8 +11,9 @@ class StoryService:
     파싱/저장/조회를 이 서비스가 담당하고, 없는 스토리는 공통 예외로 변환한다.
     """
 
-    def __init__(self, story_repo):
+    def __init__(self, story_repo, voice_repo):
         self._story_repo = story_repo
+        self._voice_repo = voice_repo
 
     def parse_and_save(self, title: str, script: str) -> dict:
         scenes = parse_script_to_scenes(script)
@@ -26,5 +28,21 @@ class StoryService:
             raise StoryNotFoundError()
         return story
 
+    def update_narrator_voice(self, story_id: str, voice_id: str | None) -> dict:
+        """나레이션 보이스를 연결/해제한다.
 
-story_service = StoryService(story_repository)
+        voiceId가 있으면 그 보이스 존재를 검증(없으면 VoiceNotFoundError)하고,
+        null이면 검증 없이 해제한다. (캐릭터 보이스 연결과 동일 정책)
+        """
+        if self._story_repo.get(story_id) is None:
+            raise StoryNotFoundError()
+        if voice_id is not None and self._voice_repo.get(voice_id) is None:
+            raise VoiceNotFoundError()
+        updated = self._story_repo.set_narrator_voice(story_id, voice_id)
+        return {
+            "storyId": updated["storyId"],
+            "narratorVoiceId": updated["narratorVoiceId"],
+        }
+
+
+story_service = StoryService(story_repository, voice_repository)
