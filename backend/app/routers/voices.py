@@ -39,8 +39,9 @@ def update_voice(voice_id: str, request: VoiceUpdateRequest):
     """
     보이스 메타데이터를 수정한다.
 
-    - 수정 가능한 필드가 없으면 400(No fields to update).
     - 없으면 404(Voice not found).
+    - 기본 제공(preset) 보이스면 400(Default voice cannot be modified).
+    - 수정 가능한 필드가 없으면 400(No fields to update).
     """
     return voice_service.update_voice(voice_id, request.model_dump(exclude_unset=True))
 
@@ -51,6 +52,7 @@ def delete_voice(voice_id: str):
     보이스를 삭제한다.
 
     - 없으면 404(Voice not found).
-    - 이 voiceId를 참조하던 모든 캐릭터의 voiceId를 null로 만든다.
+    - 기본 제공(preset) 보이스면 400(Default voice cannot be deleted).
+    - 이 voiceId를 참조하던 모든 캐릭터의 voiceId와 스토리의 narratorVoiceId를 null로 만든다.
     """
     return voice_service.delete_voice(voice_id)

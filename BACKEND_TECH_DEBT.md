@@ -21,6 +21,7 @@
 - **TTSAudio 결과 필드 확장**: 계약([TTS_AI_CONTRACT.md](TTS_AI_CONTRACT.md) §3)은 AI 응답에 `durationSec`/`error`(부분 실패)를 허용하나, `schemas/tts.py`·`tts_audio_repository.py`엔 두 필드가 없다. 지금은 mock이라 데이터가 없어 무의미하지만, 실제 AI 연결 전 두 필드를 모델/응답에 추가한다.
 - **보이스 클로닝 결과 반영 통로**: AI가 채울 `provider`/`model`/`sampleAudioUrl`/`status`를 백엔드 보이스 자산에 써넣는 콜백/내부 API가 아직 없다(생성 시 status="pending" 고정). 실제 클로닝 붙일 때 이 통로(예: `PATCH /internal/voices/{id}/cloning-result` 또는 AI 콜백)부터 만든다.
 - **speaker→character 매칭 정책**: 현재 `tts_service`는 캐릭터를 **name 기준**으로 매칭(`chars_by_name`)한다. 동명이인이면 마지막 캐릭터로 덮어쓰고, "스토리 화자명 ≠ 캐릭터명"이면 아예 안 붙는 약한 연결이다. **정석 방향은 파싱 단계에서 scene.item에 `characterId`를 직접 박아두는 것**(이름 unique 정책은 차선). 실제 사용 전 정리.
+- **preset 보호가 service 계층에만 있음(defense-in-depth)**: `voice_service`는 preset 수정/삭제를 막지만 `voice_repository.update/delete` 자체는 안 막는다. 현재 라우터→service 단일 경로라 안전하나, 위 "클로닝 결과 반영 통로"(AI 콜백/내부 API)가 repository를 직접 만지게 되면 우회 가능. 그 통로를 만들 때 **repo update/delete에도 isPreset 가드**를 함께 둔다.
 
 ### 1.2 `services/background_service.py` 분리
 - 현재: prompt suggestion + suffix 조립 + negative prompt + 배경 CRUD + 씬 연결/해제까지 한 파일 (약 174줄).

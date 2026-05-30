@@ -1,4 +1,9 @@
-from ..core.exceptions import NoFieldsToUpdateError, VoiceNotFoundError
+from ..core.exceptions import (
+    DefaultVoiceCannotBeDeletedError,
+    DefaultVoiceCannotBeModifiedError,
+    NoFieldsToUpdateError,
+    VoiceNotFoundError,
+)
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
@@ -28,16 +33,24 @@ class VoiceService:
         return voice
 
     def update_voice(self, voice_id: str, update_data: dict) -> dict:
+        voice = self._voice_repo.get(voice_id)
+        if voice is None:
+            raise VoiceNotFoundError()
+        # 기본 제공(preset) 보이스는 수정 불가
+        if voice.get("isPreset"):
+            raise DefaultVoiceCannotBeModifiedError()
         if not update_data:
             raise NoFieldsToUpdateError()
-        updated = self._voice_repo.update(voice_id, update_data)
-        if updated is None:
-            raise VoiceNotFoundError()
-        return updated
+        return self._voice_repo.update(voice_id, update_data)
 
     def delete_voice(self, voice_id: str) -> dict:
-        if not self._voice_repo.delete(voice_id):
+        voice = self._voice_repo.get(voice_id)
+        if voice is None:
             raise VoiceNotFoundError()
+        # 기본 제공(preset) 보이스는 삭제 불가
+        if voice.get("isPreset"):
+            raise DefaultVoiceCannotBeDeletedError()
+        self._voice_repo.delete(voice_id)
         # 참조 해제(배경 삭제와 동일 정책): 이 voiceId를 쓰던
         # - 캐릭터의 voiceId를 null로
         # - 스토리의 narratorVoiceId를 null로

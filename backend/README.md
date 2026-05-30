@@ -195,25 +195,44 @@ backend/
 - audioId 자동 생성(TTS): `audio_mock_001`, ...
 - 서버 재시작 시 데이터 초기화됨
 
-### Voice(보이스) API — 캐릭터 목소리 자산
+### Voice(보이스) API — 캐릭터·나레이션 목소리 자산
 
-보이스는 캐릭터/배경처럼 **재사용 가능한 라이브러리 자산**이다. 보이스를 만들어 `voiceId`를 발급하고, 캐릭터가 그 `voiceId`를 참조한다.
+보이스는 캐릭터/배경처럼 **재사용 가능한 라이브러리 자산**이다. 보이스를 만들어 `voiceId`를 발급하고, 캐릭터(`character.voiceId`)와 스토리 나레이션(`story.narratorVoiceId`)이 그 `voiceId`를 참조한다.
 
 ```text
-Voice 라이브러리 → voiceId 발급 → 캐릭터에 연결(character.voiceId) → TTS가 dialogue speaker로 캐릭터를 찾아 voiceId 사용
+Voice 라이브러리 → voiceId 발급
+  ├─ 캐릭터에 연결(character.voiceId)        → TTS가 dialogue speaker로 캐릭터를 찾아 voiceId 사용
+  └─ 스토리에 연결(story.narratorVoiceId)    → TTS가 narration item에 voiceId 사용
+기본 나레이터 보이스 4개는 서버 시작 시 preset으로 seed된다(아래 표).
 ```
 
 - **백엔드/AI 역할 분리 (중요)**: 백엔드는 **자산 정체성·참조**만 관리한다.
   - **생성 요청(`POST /api/voices`)은 `name`(필수) + `description`/`voicePrompt`(선택)만 받는다.**
-  - `provider`/`model`/`sampleAudioUrl`/`status`는 **"실제 목소리를 어떻게 만드는가"**라 **AI/TTS 파트(김도연)가 채우는 결과 필드**다. 백엔드의 **생성(POST)·수정(PATCH) 어느 쪽도 이 필드를 받지 않는다.** (캐릭터에서 seed/style/model을 백엔드가 받지 않는 것과 동일 원칙)
+  - `provider`/`model`/`sampleAudioUrl`/`status`는 **"실제 목소리를 어떻게 만드는가"**라 **AI/TTS 파트(김도연)가 채우는 결과 필드**다. 백엔드의 **생성(POST)·수정(PATCH) 어느 쪽도 이 필드를 받지 않는다.** (캐릭터에서 seed/style/model을 백엔드가 받지 않는 것과 동일 원칙) 그중 `provider`/`model`은 사용자 화면에 불필요해 **응답에서도 제외**(내부 보관만), `sampleAudioUrl`/`status`는 미리듣기·선택 가능 여부 판단에 필요해 응답에 포함한다.
+  - **자산 구분 필드**: `voiceType`(narrator/character, 추천 용도) + `isPreset`(시스템 기본 보이스 여부). 사용자 생성 보이스는 `voiceType="character"`, `isPreset=false`.
   - 생성 직후 `status="pending"`(AI 클로닝 대기). 실제 클로닝 결과(provider/model/sampleAudioUrl/status)는 **AI 통합 단계에서 AI 파트가 채운다** — 현재 백엔드엔 그 통로가 없다(TTS `audioUrl`을 백엔드가 채우지 않는 것과 동일).
   - **수정(`PATCH /api/voices/{id}`)은 사용자 메타(`name`/`description`/`voicePrompt`)만** 바꾼다.
   - **삭제(`DELETE /api/voices/{id}`)**: 보이스 제거 + 참조 캐릭터 `voiceId`·스토리 `narratorVoiceId` null 캐스케이드(AI 무관).
 - **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404).
-- **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404. (narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠)
+- **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_preset_narrator_calm_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404. **`voiceType="narrator"`인 보이스만 연결 가능**(character 타입이면 400 Invalid narrator voice) — 즉 현재는 preset 4개만 narrator로 붙는다. (narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠)
 - **삭제 캐스케이드**: 보이스 삭제 시 그 `voiceId`를 참조하던 **모든 캐릭터의 `voiceId`**와 **스토리의 `narratorVoiceId`**를 null로 만든다(배경 삭제와 동일 정책).
 - **TTS 반영(dialogue)**: dialogue의 `speaker`로 저장된 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사. 매칭 캐릭터가 없으면 null. (목소리=character.voiceId 고정, 감정=item.emotion 문장별)
 - **TTS 반영(narration)**: narration은 audio의 voiceId로 **story.`narratorVoiceId`**를 복사한다. 미설정이면 null.
+
+**기본 나레이션 보이스 (preset 4개, 메모리 seed)**
+
+narration은 화자가 없어 캐릭터로 목소리를 못 붙이므로, 사용자가 바로 고를 수 있는 **기본 나레이터 보이스 4개**를 서버 시작 시 메모리에 seed한다(고정 ID라 재시작/생성 순서와 무관하게 같은 ID로 참조). `GET /api/voices`에 사용자 보이스와 함께 반환되며, 프론트는 `voiceType=="narrator" && isPreset==true`로 골라 "기본 나레이션" 섹션에 보여준다.
+
+| voiceId | 이름 |
+|---|---|
+| `voice_preset_narrator_calm_001` | 차분한 나레이션 |
+| `voice_preset_narrator_bright_001` | 밝은 나레이션 |
+| `voice_preset_narrator_soft_001` | 부드러운 나레이션 |
+| `voice_preset_narrator_serious_001` | 진지한 나레이션 |
+
+- preset은 `voiceType="narrator"`, `isPreset=true`, `status="ready"`, `sampleAudioUrl=null`로 seed된다.
+- **선택은 가능(status=ready)하지만 미리듣기 샘플(`sampleAudioUrl`)은 아직 null** — 실제 샘플 음성 생성은 AI/TTS 파트 몫(채워지면 프론트 미리듣기 버튼 활성화).
+- **보호 정책**: preset(`isPreset=true`)은 **수정·삭제 불가**. `PATCH` → 400(Default voice cannot be modified), `DELETE` → 400(Default voice cannot be deleted).
 
 **생성 요청 (백엔드가 받는 것)**
 
@@ -221,15 +240,17 @@ Voice 라이브러리 → voiceId 발급 → 캐릭터에 연결(character.voice
 { "name": "따뜻한 소년 목소리", "description": "밝고 호기심 많은 톤", "voicePrompt": "warm curious boy voice" }
 ```
 
-**생성 직후 응답 (AI 결과 필드는 비어 있음)**
+**생성 직후 응답 (사용자 생성 → voiceType=character, isPreset=false)**
 
 ```json
 {
   "voiceId": "voice_mock_001", "name": "따뜻한 소년 목소리",
   "description": "밝고 호기심 많은 톤", "voicePrompt": "warm curious boy voice",
-  "sampleAudioUrl": null, "provider": null, "model": null, "status": "pending"
+  "voiceType": "character", "isPreset": false, "status": "pending", "sampleAudioUrl": null
 }
 ```
+
+> `provider`/`model`은 AI/TTS 내부 메타라 **응답에 노출하지 않는다**(내부 repository엔 보관). 사용자 보이스 선택 화면엔 불필요하기 때문.
 
 ### TTS(음성 생성) API
 
@@ -361,7 +382,7 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
   - 캐릭터/Job: `CharacterNotFoundError` (404), `JobNotFoundError` (404), `NoFieldsToUpdateError` (400), `CharacterGenerationFailedError` (500)
   - 배경/씬: `BackgroundCandidateNotFoundError` (404), `BackgroundNotFoundError` (404), `BackgroundGenerationFailedError` (500), `StoryNotFoundError` (404), `SceneNotFoundError` (404)
   - TTS: `TTSAudioNotFoundError` (404), `TTSGenerationFailedError` (500), `EmptySceneItemsError` (400)
-  - 보이스: `VoiceNotFoundError` (404)
+  - 보이스: `VoiceNotFoundError` (404), `DefaultVoiceCannotBeModifiedError` (400), `DefaultVoiceCannotBeDeletedError` (400), `InvalidNarratorVoiceError` (400)
 - `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).

@@ -12,7 +12,7 @@ AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔�
 > **voiceId가 흐르는 길**
 > `POST /api/voices`(보이스 자산 생성, voiceId 발급) → 연결 → `POST /api/tts/scene`(audio에 voiceId 복사) → AI는 그 voiceId의 목소리로 합성.
 > - **dialogue**: `PATCH /api/characters/{id}/voice`로 캐릭터에 연결 → TTS가 speaker로 캐릭터 찾아 그 `voiceId` 복사.
-> - **narration**: `PATCH /api/stories/{id}/narrator-voice`로 스토리에 연결 → TTS가 story의 `narratorVoiceId` 복사.
+> - **narration**: `PATCH /api/stories/{id}/narrator-voice`로 스토리에 연결(`voiceType="narrator"` 보이스만 허용 → 현재는 preset 4개) → TTS가 story의 `narratorVoiceId` 복사.
 
 ---
 
@@ -28,10 +28,10 @@ AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔�
   "name": "따뜻한 소년 목소리",
   "description": "밝고 호기심 많은 소년 톤",
   "voicePrompt": "warm, curious young boy voice",
-  "sampleAudioUrl": null,
-  "provider": null,
-  "model": null,
-  "status": "pending"
+  "voiceType": "character",
+  "isPreset": false,
+  "status": "pending",
+  "sampleAudioUrl": null
 }
 ```
 
@@ -39,11 +39,26 @@ AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔�
 |---|---|---|
 | `voiceId` | 백엔드 | 자산 식별자(발급). **참조 키** |
 | `name` / `description` / `voicePrompt` | 백엔드/사용자 | 원하는 목소리에 대한 메타·의도(캐릭터 `appearancePrompt`와 같은 성격) |
-| `provider` / `model` / `sampleAudioUrl` | **AI/TTS** | 클로닝에 사용한 제공자/모델, 샘플 음성 URL — **AI가 채운다** |
-| `status` | **AI/TTS** | 생성 직후 `"pending"`(클로닝 대기). 클로닝 완료 시 AI가 `"ready"` 등으로 갱신 |
+| `voiceType` / `isPreset` | 백엔드 | 추천 용도(narrator/character) / 시스템 기본 보이스 여부 |
+| `provider` / `model` | **AI/TTS** | 클로닝에 쓴 제공자/모델 — **AI가 채운다.** 내부 보관용이라 `GET /api/voices` 응답엔 노출 안 함 |
+| `sampleAudioUrl` | **AI/TTS** | 미리듣기 샘플 음성 URL — **AI가 채운다** |
+| `status` | **AI/TTS** | 생성 직후 `"pending"`(클로닝 대기). 클로닝 완료 시 AI가 `"ready"` 등으로 갱신 (preset은 seed 시 `"ready"`) |
 
-- 백엔드는 `voiceId` + 메타(name/description/voicePrompt)만 정한다. **"실제 목소리를 어떻게 만드는가"(provider/model/클로닝)는 AI 영역**이라 생성/수정 요청으로 받지 않는다.
+- 백엔드는 `voiceId` + 메타(name/description/voicePrompt/voiceType/isPreset)만 정한다. **"실제 목소리를 어떻게 만드는가"(provider/model/클로닝)는 AI 영역**이라 생성/수정 요청으로 받지 않는다.
 - ⚠️ 현재 백엔드엔 AI가 클로닝 결과(provider/model/sampleAudioUrl/status)를 써넣는 **통로가 아직 없다.** 보이스 클로닝 연동 시, AI 결과를 보이스 자산에 반영하는 엔드포인트/콜백을 추가한다.
+
+### 1.1 기본 나레이션 보이스 preset (AI가 샘플·클로닝 채울 대상)
+
+백엔드가 **기본 나레이터 보이스 4개**를 고정 voiceId로 메모리 seed한다. narration은 화자가 없어 캐릭터로 못 붙으므로, 사용자가 이 중 하나를 골라 `story.narratorVoiceId`로 쓴다. 현재 mock 자산이라 `sampleAudioUrl=null`.
+
+| 고정 voiceId | 이름 | voicePrompt(영문 의도) |
+|---|---|---|
+| `voice_preset_narrator_calm_001` | 차분한 나레이션 | calm, warm, gentle narrator voice for fairy tale storytelling |
+| `voice_preset_narrator_bright_001` | 밝은 나레이션 | bright, friendly, cheerful narrator voice for children story |
+| `voice_preset_narrator_soft_001` | 부드러운 나레이션 | soft, cozy, gentle storytelling voice |
+| `voice_preset_narrator_serious_001` | 진지한 나레이션 | serious, calm, stable narrator voice |
+
+**AI/TTS 파트가 할 일**: 위 4개 voiceId 각각에 대해 ① 실제 클로닝(provider/model/status), ② **짧은 미리듣기 샘플(2~3초) 합성 후 `sampleAudioUrl` 채우기.** 채워지면 프론트 미리듣기 버튼이 활성화된다.
 
 ---
 
@@ -66,7 +81,7 @@ AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔�
       "emotionLabel": "잔잔함",
       "voiceType": "narrator",
       "characterId": null,
-      "voiceId": "voice_mock_002"
+      "voiceId": "voice_preset_narrator_calm_001"
     },
     {
       "audioId": "audio_mock_002",

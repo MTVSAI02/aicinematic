@@ -77,3 +77,18 @@ class EmptySceneItemsError(AppException):
 class VoiceNotFoundError(AppException):
     status_code = 404
     detail = "Voice not found"
+
+
+class DefaultVoiceCannotBeModifiedError(AppException):
+    status_code = 400
+    detail = "Default voice cannot be modified."
+
+
+class DefaultVoiceCannotBeDeletedError(AppException):
+    status_code = 400
+    detail = "Default voice cannot be deleted."
+
+
+class InvalidNarratorVoiceError(AppException):
+    status_code = 400
+    detail = "Only a narrator-type voice can be connected as narrator."
