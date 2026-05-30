@@ -1,8 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from ..schemas.story import StoryParseRequest, StoryParseResponse
-from ..services.story_parser import parse_script_to_scenes
-from ..repositories.story_repo import story_repository
+from ..services.story_service import story_service
 
 router = APIRouter(prefix="/api/stories", tags=["stories"])
 
@@ -21,10 +20,7 @@ def parse_story(request: StoryParseRequest):
     파싱 결과는 메모리 Mock Repository에 저장되며 storyId로 조회할 수 있습니다.
     서버 재시작 시 데이터는 초기화됩니다.
     """
-    scenes = parse_script_to_scenes(request.script)
-    story_data = {"title": request.title, "scenes": scenes}
-    saved = story_repository.save(story_data)
-    return saved
+    return story_service.parse_and_save(request.title, request.script)
 
 
 @router.get("", response_model=list[StoryParseResponse], summary="스토리 목록 조회")
@@ -32,7 +28,7 @@ def list_stories():
     """
     메모리 Mock Repository에 저장된 스토리 목록을 전부 반환합니다.
     """
-    return story_repository.list()
+    return story_service.list_stories()
 
 
 @router.get("/{story_id}", response_model=StoryParseResponse, summary="스토리 단건 조회")
@@ -41,9 +37,6 @@ def get_story(story_id: str):
     storyId로 저장된 스토리 하나를 조회합니다.
 
     - storyId 예시: `story_mock_001`
-    - 존재하지 않는 storyId 요청 시 404를 반환합니다.
+    - 존재하지 않는 storyId 요청 시 404(Story not found)를 반환합니다.
     """
-    story = story_repository.get(story_id)
-    if not story:
-        raise HTTPException(status_code=404, detail=f"{story_id} not found")
-    return story
+    return story_service.get_story(story_id)

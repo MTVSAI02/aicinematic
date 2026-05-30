@@ -32,3 +32,28 @@ class NoFieldsToUpdateError(AppException):
 class CharacterGenerationFailedError(AppException):
     status_code = 500
     detail = "Character generation failed"
+
+
+class BackgroundCandidateNotFoundError(AppException):
+    status_code = 404
+    detail = "Background candidate not found"
+
+
+class BackgroundNotFoundError(AppException):
+    status_code = 404
+    detail = "Background not found"
+
+
+class BackgroundGenerationFailedError(AppException):
+    status_code = 500
+    detail = "Background generation failed"
+
+
+class StoryNotFoundError(AppException):
+    status_code = 404
+    detail = "Story not found"
+
+
+class SceneNotFoundError(AppException):
+    status_code = 404
+    detail = "Scene not found"

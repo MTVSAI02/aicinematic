@@ -18,6 +18,7 @@ def parse_script_to_scenes(script: str) -> list[dict]:
             scenes.append({
                 "sceneId": f"scene_{order:03d}",
                 "order": order,
+                "backgroundId": None,
                 "items": items,
             })
 

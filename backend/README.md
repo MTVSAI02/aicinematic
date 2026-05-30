@@ -63,23 +63,30 @@ backend/
 │   │   ├── health.py          # GET /api/health
 │   │   ├── stories.py         # POST /api/stories/parse, GET /api/stories, GET /api/stories/{id}
 │   │   ├── characters.py      # POST /api/characters/generate, 캐릭터 CRUD
-│   │   └── jobs.py            # GET /api/jobs/{job_id}
+│   │   ├── jobs.py            # GET /api/jobs/{job_id}
+│   │   ├── backgrounds.py     # 배경 프롬프트 추천/생성 Job/라이브러리 CRUD
+│   │   └── scenes.py          # PATCH /api/scenes/{scene_id}/background (씬-배경 연결)
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── story_parser.py    # 빈 줄 기준 씬 분해, narration/dialogue 분리
-│   │   ├── job_manager.py     # InMemoryJobManager (나중에 RabbitMQ/Celery로 교체)
+│   │   ├── story_service.py   # 스토리 파싱/저장/조회 (StoryNotFoundError)
+│   │   ├── job_manager.py     # InMemoryJobManager (캐릭터/배경 Job, 나중에 RabbitMQ/Celery로 교체)
 │   │   ├── character_service.py  # 캐릭터 CRUD 비즈니스 로직 (커스텀 예외 발생)
-│   │   └── job_service.py     # Job 조회 비즈니스 로직 (JobNotFoundError)
+│   │   ├── job_service.py     # Job 조회 비즈니스 로직 (JobNotFoundError)
+│   │   └── background_service.py  # 배경 추천/라이브러리 CRUD/씬 연결 + 프롬프트 규칙
 │   ├── repositories/
 │   │   ├── __init__.py
 │   │   ├── story_repo.py      # 메모리 Mock Repository
 │   │   ├── character_repo.py  # 캐릭터 메모리 Mock Repository
-│   │   └── job_repo.py        # Job 상태 메모리 Mock Repository
+│   │   ├── job_repo.py        # Job 상태 메모리 Mock Repository
+│   │   ├── background_candidate_repository.py  # 배경 후보(임시) 메모리 저장
+│   │   └── background_repository.py            # 배경 라이브러리 메모리 저장
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   ├── story.py           # StoryParseRequest, StoryParseResponse 등
+│   │   ├── story.py           # StoryParseRequest, StoryParseResponse (scene backgroundId 포함)
 │   │   ├── character.py       # Character 요청/응답 모델
-│   │   └── job.py             # JobStatus Enum, JobResponse
+│   │   ├── job.py             # JobStatus/JobType Enum, JobResponse
+│   │   └── background.py      # Background 후보/라이브러리/씬연결 모델
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── exceptions.py          # AppException 및 커스텀 예외
@@ -108,12 +115,20 @@ backend/
 | GET | `/api/stories` | 저장된 스토리 목록 조회 |
 | GET | `/api/stories/{story_id}` | 저장된 스토리 단건 조회 |
 | POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (mock, 즉시 completed) |
-| GET | `/api/jobs/{job_id}` | 캐릭터 생성 Job 상태 조회 |
+| GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / background_generate) |
 | GET | `/api/characters` | 캐릭터 목록 조회 |
 | POST | `/api/characters` | 캐릭터 결과 직접 저장 |
 | GET | `/api/characters/{character_id}` | 캐릭터 단건 조회 |
 | PATCH | `/api/characters/{character_id}` | 캐릭터 부분 수정 (name/appearancePrompt/imageUrl) |
 | DELETE | `/api/characters/{character_id}` | 캐릭터 삭제 |
+| POST | `/api/backgrounds/prompt-suggestions` | 씬 기반 배경 프롬프트 추천 (이미지 생성 X) |
+| POST | `/api/backgrounds/generate` | 배경 후보 4장 생성 Job (mock, 즉시 completed) |
+| POST | `/api/backgrounds` | 후보 1장 → 배경 라이브러리 저장 |
+| GET | `/api/backgrounds` | 저장된 배경 목록 조회 |
+| GET | `/api/backgrounds/{background_id}` | 저장된 배경 단건 조회 |
+| PATCH | `/api/backgrounds/{background_id}` | 배경 수정 (name만) |
+| DELETE | `/api/backgrounds/{background_id}` | 배경 삭제 (+참조 씬 backgroundId null) |
+| PATCH | `/api/scenes/{scene_id}/background` | 씬에 배경 연결 (body: storyId, backgroundId) |
 
 ### 파싱 규칙
 
@@ -128,7 +143,25 @@ backend/
 - storyId 자동 생성: `story_mock_001`, `story_mock_002`, ...
 - characterId 자동 생성: `char_mock_001`, `char_mock_002`, ...
 - jobId 자동 생성: `job_mock_001`, `job_mock_002`, ...
+- backgroundId 자동 생성: `bg_mock_001`, ...  / 배경 후보: `bg_candidate_001`, ...
 - 서버 재시작 시 데이터 초기화됨
+
+### 배경(Background) API
+
+배경은 캐릭터와 달리 **생성 결과를 바로 저장하지 않는다.** 후보 4장 중 1장을 골라 저장한다.
+
+```text
+프롬프트 추천 → 후보 4장 생성(Job) → [후보 임시] → 1장 선택 저장 → [배경 라이브러리] ← 씬은 backgroundId만 참조
+```
+
+- **2단계 저장소**: 후보(`bg_candidate_*`, 임시) → 선택 저장(`bg_mock_*`, 라이브러리)
+- 배경은 특정 씬 소유물이 아니라 **여러 스토리/씬에서 재사용**하는 자산. 씬은 `backgroundId`만 참조한다(candidateId 직접 연결 금지).
+- **프롬프트 규칙(LLM 전, 규칙 기반)**: `finalPrompt = {prompt}, storybook background, soft painterly style, clean composition, background only, no characters`. 기본 negativePrompt = `characters, people, animals, text, watermark, blurry, low quality`. → 배경엔 사람/동물 금지(캐릭터는 별도 라이브러리).
+- **⚠️ generate `prompt` 계약**: `POST /api/backgrounds/generate`의 `prompt`는 **맨 프롬프트**(suggestedPrompt 또는 사용자가 수정한 원본)여야 한다. suffix가 붙은 `finalPrompt`를 보내면 중복된다. **finalPrompt 조립은 백엔드 책임**. → 프론트는 `promptInput`(전송용)과 `finalPromptPreview`(표시용) 상태를 분리하고, `generateBackground({ prompt })`에 finalPrompt를 넣지 않는다. (가드는 두지 않고 계약으로 관리. 실수가 반복되면 "prompt에 backend suffix 포함 시 422"로 막는 방향 검토)
+- **suggestedPrompt**: scene.items의 narration(없으면 dialogue) → sourceText → 키워드 사전(사막/별빛/숲/바다…) 매칭, 없으면 기본값. **정답이 아니라 초안**이며 사용자가 수정.
+- **수정**: MVP는 `name`만. **삭제**: 참조하던 모든 scene의 backgroundId를 null로 정리.
+- **Job**: `JobType.background_generate`로 기존 `InMemoryJobManager` + Job API 재사용. 현재 mock이라 즉시 `completed`.
+- 실제 ComfyUI 호출/이미지 생성 없음(`imageUrl=null`). scene 응답에 `backgroundId`(optional, 기본 null) 추가됨.
 
 ### 캐릭터 / Job API
 
@@ -198,10 +231,15 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 ```
 
 - 커스텀 예외는 `AppException`을 상속하며 `status_code`/`detail`을 가진다.
-  - `CharacterNotFoundError` (404), `JobNotFoundError` (404), `NoFieldsToUpdateError` (400), `CharacterGenerationFailedError` (500)
+  - 캐릭터/Job: `CharacterNotFoundError` (404), `JobNotFoundError` (404), `NoFieldsToUpdateError` (400), `CharacterGenerationFailedError` (500)
+  - 배경/씬: `BackgroundCandidateNotFoundError` (404), `BackgroundNotFoundError` (404), `BackgroundGenerationFailedError` (500), `StoryNotFoundError` (404), `SceneNotFoundError` (404)
 - `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
+
+## 구조 리뷰 / 기술부채 기록
+
+보류한 리팩터(분리 트리거 포함)와 팀 결정은 루트 [`BACKEND_TECH_DEBT.md`](../BACKEND_TECH_DEBT.md)에 정리되어 있다.
 
 ## ⚠️ 임시 코드 (실제 ComfyUI 연동 시 삭제)
 
