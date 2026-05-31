@@ -1,0 +1,103 @@
+import { useState } from 'react'
+import useCharacterStore from '@/store/useCharacterStore'
+import * as characterApi from '@/api/characters'
+import { getApiErrorMessage } from '@/utils/apiError'
+// 캐릭터 페이지 공용 스타일 모듈 공유 (기존 디자인 톤 유지)
+import styles from '@/pages/character/CharacterPage.module.css'
+
+// Job 상태별 안내 문구. (현재 백엔드는 mock 이라 보통 바로 completed)
+const JOB_STATUS_TEXT = {
+  pending: '생성 대기 중입니다.',
+  running: '캐릭터를 생성 중입니다.',
+  completed: '캐릭터 생성이 완료되었습니다.',
+  failed: '캐릭터 생성에 실패했습니다.',
+}
+
+export default function CharacterCreateForm() {
+  const setCharacters = useCharacterStore((s) => s.setCharacters)
+
+  const [name, setName] = useState('')
+  const [appearancePrompt, setAppearancePrompt] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [jobStatus, setJobStatus] = useState(null)
+  const [error, setError] = useState('')
+
+  const trimmedName = name.trim()
+  const trimmedPrompt = appearancePrompt.trim()
+  const canSubmit = !!trimmedName && !!trimmedPrompt && !loading
+
+  // 사용자에게 비활성화 이유를 알려주는 visible validation 메시지
+  const validationMessage = loading
+    ? ''
+    : !trimmedName
+      ? '캐릭터 이름을 입력해주세요.'
+      : !trimmedPrompt
+        ? '캐릭터 외형 설명을 입력해주세요.'
+        : ''
+
+  async function handleCreate() {
+    if (!canSubmit) return
+    setLoading(true)
+    setError('')
+    setJobStatus(null)
+    try {
+      // 1. 생성 Job 요청 → jobId 수신
+      const job = await characterApi.generateCharacter({
+        name: trimmedName,
+        appearancePrompt: trimmedPrompt,
+      })
+
+      // 2. Job 상태 조회 (현재는 1회. pending/running polling 은 추후 도입)
+      const jobDetail = await characterApi.getJob(job.jobId)
+      setJobStatus(jobDetail.status)
+
+      // 3. 완료되면 캐릭터 목록 다시 동기화
+      if (jobDetail.status === 'completed') {
+        const list = await characterApi.getCharacters()
+        setCharacters(list)
+        setName('')
+        setAppearancePrompt('')
+      } else if (jobDetail.status === 'failed') {
+        setError(getApiErrorMessage({ detail: jobDetail.error }))
+      }
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className={styles.form}>
+      <label className={styles.label}>
+        이름
+        <input
+          className={styles.input}
+          placeholder="어린왕자"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </label>
+      <label className={styles.label}>
+        외형 설명
+        <input
+          className={styles.input}
+          placeholder="금발 단발, 초록 외투를 입은 작은 소년"
+          value={appearancePrompt}
+          onChange={(e) => setAppearancePrompt(e.target.value)}
+        />
+      </label>
+      <button className={styles.btn} onClick={handleCreate} disabled={!canSubmit}>
+        {loading ? '생성 중...' : '캐릭터 생성'}
+      </button>
+
+      {validationMessage && <p className={styles.validation}>{validationMessage}</p>}
+      {jobStatus && (
+        <p className={styles.status}>
+          {JOB_STATUS_TEXT[jobStatus] ?? `상태: ${jobStatus}`}
+        </p>
+      )}
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
+  )
+}

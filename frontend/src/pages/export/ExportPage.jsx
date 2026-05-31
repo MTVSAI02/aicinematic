@@ -9,22 +9,27 @@ import './ExportPage.css'
 
 const FALLBACK_STORY_ID = 'story_001'
 
+function getCharacterId(character) {
+  return character.characterId ?? character.id
+}
+
 function toVoiceScene(scene) {
-  const firstSegment = scene.segments?.[0] ?? {
+  const segments = scene.items ?? scene.segments ?? []
+  const firstSegment = segments[0] ?? {
     type: 'narration',
     speaker: null,
     text: '',
   }
 
   return {
-    id: scene.id,
+    id: scene.sceneId ?? scene.id,
     order: scene.order,
     type: firstSegment.type,
     speaker: firstSegment.speaker,
-    line: scene.segments?.map((segment) => segment.text).join(' ') ?? '',
-    durationSec: scene.duration,
-    audioPath: scene.audio_url,
-    audioDurationSec: scene.audio_duration_sec,
+    line: segments.map((segment) => segment.text).join(' '),
+    durationSec: scene.duration ?? scene.durationSec ?? 3,
+    audioPath: scene.audioUrl ?? scene.audio_url,
+    audioDurationSec: scene.audioDurationSec ?? scene.audio_duration_sec,
   }
 }
 
@@ -57,7 +62,7 @@ export default function ExportPage() {
 
   const characterNameById = useMemo(() => {
     return displayCharacters.reduce((result, character) => {
-      result[character.id] = character.name
+      result[getCharacterId(character)] = character.name
       return result
     }, {})
   }, [displayCharacters])

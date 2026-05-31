@@ -6,6 +6,8 @@ const NAV_ITEMS = [
   { to: '/story-input', label: '스토리 입력' },
   { to: '/scene-check', label: '씬 확인' },
   { to: '/character', label: '캐릭터' },
+  { to: '/voice', label: '보이스' },
+  { to: '/background', label: '배경' },
   { to: '/scene-editor', label: '씬 편집' },
   { to: '/timeline', label: '타임라인' },
   { to: '/export', label: '출력' },

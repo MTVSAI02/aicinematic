@@ -4,6 +4,10 @@ import {
   uploadVoiceSample,
 } from '@/api/voiceApi'
 
+function getCharacterId(character) {
+  return character.characterId ?? character.id
+}
+
 export function VoiceClonePanel({
   characters,
   selectedCharacterId,
@@ -20,7 +24,9 @@ export function VoiceClonePanel({
   const [isGenerating, setIsGenerating] = useState(false)
   const [testAudio, setTestAudio] = useState(null)
 
-  const selectedCharacter = characters.find((character) => character.id === characterId)
+  const selectedCharacter = characters.find(
+    (character) => getCharacterId(character) === characterId,
+  )
 
   async function handleUploadSample() {
     setIsUploading(true)
@@ -92,7 +98,7 @@ export function VoiceClonePanel({
             onChange={(event) => setCharacterId(event.target.value)}
           >
             {characters.map((character) => (
-              <option key={character.id} value={character.id}>
+              <option key={getCharacterId(character)} value={getCharacterId(character)}>
                 {character.name}
               </option>
             ))}

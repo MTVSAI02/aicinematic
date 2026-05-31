@@ -1,88 +1,81 @@
 import { create } from 'zustand'
 
-/**
- * 씬 스키마 (RULES.md 단일 계약 기준)
- *
- * SceneSegment: { type: 'narration'|'dialogue', speaker: string|null, text: string }
- * Scene: {
- *   id: string, order: number, duration: number,
- *   segments: SceneSegment[],
- *   background_tag: string|null,
- *   character_id: string|null,
- *   image_url: string|null,
- *   audio_url: string|null,
- * }
- */
+function matchesScene(scene, sceneId) {
+  return scene.sceneId === sceneId || scene.id === sceneId
+}
+
+function getDuration(scene) {
+  return scene.duration ?? scene.durationSec ?? 1
+}
 
 const useStoryStore = create((set) => ({
-  // 현재 스토리
   storyId: null,
+  storyTitle: '',
   storyText: '',
-
-  // 파싱된 씬 목록
   scenes: [],
-
-  // ── Actions ──────────────────────────────────
 
   setStoryText: (text) => set({ storyText: text }),
 
   setStoryId: (id) => set({ storyId: id }),
 
+  setStoryTitle: (title) => set({ storyTitle: title }),
+
   setScenes: (scenes) => set({ scenes }),
 
-  /** 특정 씬의 duration 업데이트 (타임라인에서 사용) */
   updateSceneDuration: (sceneId, duration) =>
     set((state) => ({
-      scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, duration } : s
+      scenes: state.scenes.map((scene) =>
+        matchesScene(scene, sceneId) ? { ...scene, duration } : scene,
       ),
     })),
 
-  /** 특정 씬에 음성 URL과 길이 저장 (Export/TTS에서 사용) */
   setSceneAudioMeta: (sceneId, audioUrl, audioDurationSec) =>
     set((state) => ({
-      scenes: state.scenes.map((s) =>
-        s.id === sceneId
+      scenes: state.scenes.map((scene) =>
+        matchesScene(scene, sceneId)
           ? {
-              ...s,
+              ...scene,
+              audioUrl,
               audio_url: audioUrl,
+              audioDurationSec,
               audio_duration_sec: audioDurationSec,
               duration: Math.max(
-                s.duration ?? 1,
-                audioDurationSec ? audioDurationSec + 0.5 : 1
+                getDuration(scene),
+                audioDurationSec ? audioDurationSec + 0.5 : 1,
               ),
             }
-          : s
+          : scene,
       ),
     })),
 
-  /** 특정 씬에 캐릭터 배정 (씬 편집기에서 사용) */
   assignCharacter: (sceneId, characterId) =>
     set((state) => ({
-      scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, character_id: characterId } : s
+      scenes: state.scenes.map((scene) =>
+        matchesScene(scene, sceneId)
+          ? { ...scene, characterId, character_id: characterId }
+          : scene,
       ),
     })),
 
-  /** 특정 씬에 생성된 이미지 URL 저장 */
   setSceneImageUrl: (sceneId, imageUrl) =>
     set((state) => ({
-      scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, image_url: imageUrl } : s
+      scenes: state.scenes.map((scene) =>
+        matchesScene(scene, sceneId)
+          ? { ...scene, imageUrl, image_url: imageUrl }
+          : scene,
       ),
     })),
 
-  /** 특정 씬에 음성 URL 저장 */
   setSceneAudioUrl: (sceneId, audioUrl) =>
     set((state) => ({
-      scenes: state.scenes.map((s) =>
-        s.id === sceneId ? { ...s, audio_url: audioUrl } : s
+      scenes: state.scenes.map((scene) =>
+        matchesScene(scene, sceneId)
+          ? { ...scene, audioUrl, audio_url: audioUrl }
+          : scene,
       ),
     })),
 
-  /** 전체 초기화 (새 프로젝트 시작 시) */
-  reset: () =>
-    set({ storyId: null, storyText: '', scenes: [] }),
+  reset: () => set({ storyId: null, storyTitle: '', storyText: '', scenes: [] }),
 }))
 
 export default useStoryStore

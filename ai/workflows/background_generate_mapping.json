@@ -1,0 +1,11 @@
+{
+  "_comment": "finalPrompt / negativePrompt 가 background_generate.json 의 어느 노드/경로에 들어가는지 정의한다. 실제 workflow 로 교체할 때 nodeId 를 그 workflow 구조에 맞게 수정한다. (코드는 수정하지 않고 이 매핑만 바꾼다.)",
+  "finalPrompt": {
+    "nodeId": "6",
+    "path": ["inputs", "text"]
+  },
+  "negativePrompt": {
+    "nodeId": "7",
+    "path": ["inputs", "text"]
+  }
+}

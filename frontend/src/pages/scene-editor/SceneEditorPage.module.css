@@ -104,6 +104,66 @@
 
 .panelBtn:hover { background: var(--accent); color: #fff; }
 
+/* 씬↔배경 연결 (skeleton) 추가분 */
+.sidebarHead {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 13px;
+  width: 100%;
+}
+
+.sceneItemActive { background: var(--accent-bg); }
+
+.bgBadge {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.bgPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.muted { font-size: 13px; color: var(--text); }
+
+.link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+}
+
+.message { font-size: 13px; color: var(--accent); margin-top: 8px; }
+.errorText { font-size: 13px; color: var(--danger); margin-top: 8px; }
+.pad { padding: 12px 16px; }
+
 .actions {
   display: flex;
   justify-content: space-between;

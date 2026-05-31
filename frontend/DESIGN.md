@@ -21,6 +21,7 @@
 | `var(--accent)` | 브랜드 컬러 (보라), CTA 버튼, 활성 탭 |
 | `var(--accent-bg)` | accent 연한 배경 (뱃지, hover) |
 | `var(--accent-border)` | accent 테두리 (focus ring 등) |
+| `var(--danger)` | 에러·위험 텍스트 (실패 메시지, 삭제 경고 등) |
 | `var(--social-bg)` | 소셜 버튼처럼 반투명한 배경 |
 | `var(--shadow)` | 카드 hover 그림자 |
 
@@ -35,6 +36,7 @@
 --accent:       #aa3bff
 --accent-bg:    rgba(170, 59, 255, 0.1)
 --accent-border:rgba(170, 59, 255, 0.5)
+--danger:       #c0392b
 ```
 
 ### Dark 값 (`prefers-color-scheme: dark` 자동 적용)
@@ -48,6 +50,7 @@
 --accent:       #c084fc
 --accent-bg:    rgba(192, 132, 252, 0.15)
 --accent-border:rgba(192, 132, 252, 0.5)
+--danger:       #e05c5c
 ```
 
 ---

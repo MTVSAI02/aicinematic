@@ -198,7 +198,7 @@ aicinematic/
 │       ├── components/api/store/
 ├── backend/           # FastAPI
 │   └── app/{routers,services,repositories,schemas,storage}/
-├── ai/                # AI 엔진 연동 (image, voice, video, ...)
+├── ai/                # AI 엔진 연동: comfy_client(ComfyUI), image/배경, workflows, ... → ai/README.md
 ├── pyproject.toml     # 백엔드 의존성 (uv)
 ├── uv.lock
 └── .nvmrc / .python-version

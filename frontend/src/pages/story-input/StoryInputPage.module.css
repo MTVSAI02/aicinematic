@@ -9,6 +9,56 @@
   margin-bottom: 16px;
 }
 
+.help {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.helpList {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.helpList li { margin: 2px 0; }
+
+.help code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* 제목 입력 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.titleInput {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--text-h);
+  box-sizing: border-box;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
 .textarea {
   width: 100%;
   padding: 16px;
@@ -58,4 +108,10 @@
 
 .btn:not(:disabled):hover {
   opacity: 0.85;
+}
+
+.error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--danger);
 }
