@@ -1,0 +1,17 @@
+{
+  "_comment": "ControlNet 포즈·표정 워크플로 — 고혜원 담당. ComfyUI에서 Export한 JSON으로 교체 예정.",
+  "_status": "TODO: ComfyUI에서 실제 워크플로 JSON 붙여넣기",
+  "inputs": {
+    "input_image": null,
+    "pose_reference": null,
+    "expression_prompt": "",
+    "negative_prompt": "",
+    "controlnet_strength": 0.8,
+    "seed": 0,
+    "steps": 30,
+    "cfg": 7.0,
+    "model": "sdxl_base_1.0",
+    "controlnet_model": "controlnet-openpose-sdxl-1.0"
+  },
+  "nodes": []
+}
