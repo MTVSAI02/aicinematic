@@ -55,3 +55,15 @@ export function assignVoiceToCharacter(characterId, payload) {
     method: 'PATCH',
   })
 }
+
+// PATCH /api/scenes/{sceneId}/character — 씬에 캐릭터 연결 (배경 연결과 동일 패턴)
+// payload: { storyId, characterId, sceneAppearancePrompt? }
+//   characterId: null 이면 연결 해제
+//   sceneAppearancePrompt: face_lock.py 의 scene_appearance_prompt 로 전달됨
+//   예) "서있는 자세, 밝은 표정, 야외"
+export function assignCharacterToScene(sceneId, { storyId, characterId, sceneAppearancePrompt }) {
+  return request(`/api/scenes/${sceneId}/character`, {
+    ...jsonBody({ storyId, characterId, sceneAppearancePrompt }),
+    method: 'PATCH',
+  })
+}
