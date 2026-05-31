@@ -19,6 +19,9 @@ workflow 실행/이미지 생성을 하지 않는다. (조회용 통로만 제�
 import copy
 import json
 import os
+import random
+import time
+import urllib.parse
 from pathlib import Path
 
 import httpx
@@ -78,11 +81,14 @@ class ComfyUIClient:
             )
         return resolved
 
+    # 리버스 프록시가 User-Agent 없으면 403 반환하므로 공통 헤더에 포함
+    _DEFAULT_HEADERS = {"User-Agent": "Mozilla/5.0"}
+
     def _get(self, path: str) -> dict:
         """조회용 GET 요청 공통 처리. 외부(httpx) 예외를 공통 예외로 변환한다."""
         url = f"{self.base_url}{path}"
         try:
-            response = httpx.get(url, timeout=self.timeout_seconds)
+            response = httpx.get(url, headers=self._DEFAULT_HEADERS, timeout=self.timeout_seconds)
         except httpx.TimeoutException as exc:
             raise ComfyUITimeoutError(f"ComfyUI request timed out: GET {url}") from exc
         except httpx.RequestError as exc:
@@ -142,6 +148,76 @@ class ComfyUIClient:
     def is_available(self) -> bool:
         """연결 가능 여부를 bool로 반환한다 (health_check 결과를 감싼다)."""
         return self.health_check().get("ok", False)
+
+    # ── 워크플로 실행 ─────────────────────────────────────────────
+
+    def _post(self, path: str, data: dict) -> dict:
+        """POST 요청 공통 처리."""
+        url = f"{self.base_url}{path}"
+        try:
+            response = httpx.post(
+                url, json=data, headers=self._DEFAULT_HEADERS, timeout=self.timeout_seconds
+            )
+        except httpx.TimeoutException as exc:
+            raise ComfyUITimeoutError(f"ComfyUI request timed out: POST {url}") from exc
+        except httpx.RequestError as exc:
+            raise ComfyUIConnectionError(f"Failed to connect: POST {url}") from exc
+        if response.status_code != 200:
+            raise ComfyUIResponseError(
+                f"ComfyUI returned {response.status_code}: POST {url}\n{response.text[:300]}"
+            )
+        return response.json()
+
+    def queue_prompt(self, workflow: dict) -> str:
+        """워크플로를 ComfyUI 큐에 등록하고 prompt_id를 반환한다."""
+        result = self._post("/prompt", {"prompt": workflow})
+        return result["prompt_id"]
+
+    def wait_for_result(
+        self, prompt_id: str, timeout: int = 300, poll_interval: int = 5
+    ) -> list[dict]:
+        """생성 완료까지 폴링. 완료된 이미지 info dict 목록 반환."""
+        start = time.time()
+        while time.time() - start < timeout:
+            history = self._get(f"/history/{prompt_id}")
+            if prompt_id in history:
+                entry = history[prompt_id]
+                status = entry.get("status", {})
+
+                if status.get("status_str") == "error":
+                    for msg_type, msg_data in status.get("messages", []):
+                        if msg_type == "execution_error":
+                            err = msg_data.get("exception_message", "알 수 없는 오류")
+                            node = msg_data.get("node_type", "?")
+                            raise ComfyUIError(
+                                f"ComfyUI 실행 오류 [{node}]: {err.strip()}"
+                            )
+
+                outputs = entry.get("outputs", {})
+                images = []
+                for node_output in outputs.values():
+                    if "images" in node_output:
+                        images.extend(node_output["images"])
+                return images
+
+            time.sleep(poll_interval)
+
+        raise ComfyUITimeoutError(f"생성 시간 초과 ({timeout}초)")
+
+    def download_image(self, filename: str, subfolder: str = "") -> bytes:
+        """GET /view — 생성된 이미지를 bytes로 다운로드한다."""
+        url = (
+            f"{self.base_url}/view"
+            f"?filename={urllib.parse.quote(filename)}"
+            f"&subfolder={subfolder}&type=output"
+        )
+        try:
+            response = httpx.get(url, headers=self._DEFAULT_HEADERS, timeout=60)
+        except httpx.RequestError as exc:
+            raise ComfyUIConnectionError(f"이미지 다운로드 실패: {filename}") from exc
+        if response.status_code != 200:
+            raise ComfyUIResponseError(f"이미지 다운로드 실패 ({response.status_code}): {filename}")
+        return response.content
 
     # ── workflow / mapping 헬퍼 (범용) ───────────────────────────
     # 파일 로드/주입은 ComfyUI 연결이 필요 없으므로 staticmethod로 둔다.
@@ -210,3 +286,50 @@ class ComfyUIClient:
                 )
             target[path[-1]] = value
         return result
+
+
+# ── 모듈 레벨 API (character.py / face_lock.py 등에서 import해서 사용) ──────────
+
+# character_generate 워크플로 노드 ID (ai/workflows/character_generate.json 기준)
+_CHAR_NODE_PROMPT = "171"   # PrimitiveStringMultiline — 사용자 프롬프트
+_CHAR_NODE_REFINE = "177"   # PrimitiveBoolean         — Gemma 정제 ON/OFF
+_CHAR_NODE_SAMPLER = "108"  # SamplerCustom            — noise_seed
+
+_WORKFLOWS_DIR = Path(__file__).parent / "workflows"
+
+
+def run_workflow(workflow_name: str, inputs: dict) -> dict:
+    """워크플로를 실행하고 결과를 반환한다.
+
+    Args:
+        workflow_name: ai/workflows/ 안의 JSON 파일명 (확장자 제외).
+                       예) "character_generate"
+        inputs:        워크플로별 파라미터 dict.
+                       character_generate 기준:
+                         - positive_prompt (str) : 생성 프롬프트
+                         - seed (int, optional)  : 재현 시드 (생략 시 랜덤)
+
+    Returns:
+        {"images": [bytes, ...]}  — 생성된 이미지의 raw bytes 목록
+    """
+    workflow_path = _WORKFLOWS_DIR / f"{workflow_name}.json"
+    workflow = ComfyUIClient.load_workflow_json(workflow_path)
+
+    if workflow_name == "character_generate":
+        workflow[_CHAR_NODE_PROMPT]["inputs"]["value"] = inputs.get("positive_prompt", "")
+        workflow[_CHAR_NODE_REFINE]["inputs"]["value"] = False  # 영어 프롬프트 직접 사용
+        workflow[_CHAR_NODE_SAMPLER]["inputs"]["noise_seed"] = inputs.get(
+            "seed", random.randint(0, 2**32 - 1)
+        )
+    else:
+        raise WorkflowMappingError(f"지원하지 않는 워크플로: {workflow_name}")
+
+    client = ComfyUIClient()
+    prompt_id = client.queue_prompt(workflow)
+    image_infos = client.wait_for_result(prompt_id)
+
+    image_bytes_list = [
+        client.download_image(info["filename"], info.get("subfolder", ""))
+        for info in image_infos
+    ]
+    return {"images": image_bytes_list}
