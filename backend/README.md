@@ -404,5 +404,6 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - 배경 생성 / 캐릭터 누끼 / 레이어 합성 API
 - 보이스 클로닝 / 실제 TTS 합성 (mock API·voiceId 연결은 구현됨, 실제 음성 생성만 남음)
 - ffmpeg 영상 렌더링 API
+- **Series/Episode 확장** — story를 향후 Series(작품/회차 묶음)의 한 episode로 확장 가능. 현재 전역 라이브러리 구조(캐릭터·배경·보이스 + story.narratorVoiceId / scene.backgroundId / character.voiceId)가 그대로 상위 공유로 이어지므로 지금 구조를 바꿀 필요는 없다. 다회차 제작이 실제로 필요해질 때 착수. 상세 설계 초안: `docs/series_episode_extension_docs_prompt.md`
 
 구현 순서는 `backend/docs/backend_implementation_guide.md` 15절을 참고합니다.

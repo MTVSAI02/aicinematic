@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
+import { getApiErrorMessage } from '@/utils/apiError'
 import AiConnectionCheck from '@/components/AiConnectionCheck'
 import CharacterCreateForm from '@/components/characters/CharacterCreateForm'
 import CharacterList from '@/components/characters/CharacterList'
@@ -10,14 +11,19 @@ import styles from './CharacterPage.module.css'
 export default function CharacterPage() {
   const navigate = useNavigate()
   const setCharacters = useCharacterStore((s) => s.setCharacters)
+  const [loadError, setLoadError] = useState('')
 
   // 페이지 진입 시 백엔드 캐릭터 목록으로 store 동기화 (최종 저장소는 백엔드)
   useEffect(() => {
     characterApi
       .getCharacters()
-      .then(setCharacters)
-      .catch(() => {
-        // 초기 목록 로딩 실패는 빈 목록으로 처리 (생성/연결확인에서 에러가 드러남)
+      .then((list) => {
+        setCharacters(list)
+        setLoadError('')
+      })
+      .catch((e) => {
+        // 실패를 "빈 목록"으로 숨기지 않고 에러로 표시 (데이터 없음 vs 서버 오류 구분)
+        setLoadError(`캐릭터 목록을 불러오지 못했습니다. ${getApiErrorMessage(e)}`)
       })
   }, [setCharacters])
 
@@ -35,6 +41,7 @@ export default function CharacterPage() {
 
       <section className={styles.section}>
         <h2>캐릭터 라이브러리</h2>
+        {loadError && <p className={styles.error}>{loadError}</p>}
         <CharacterList />
       </section>
 
@@ -42,8 +49,8 @@ export default function CharacterPage() {
         <button className={styles.btnSecondary} onClick={() => navigate('/scene-check')}>
           ← 씬 확인
         </button>
-        <button className={styles.btn} onClick={() => navigate('/background')}>
-          배경 →
+        <button className={styles.btn} onClick={() => navigate('/voice')}>
+          보이스 →
         </button>
       </div>
     </div>

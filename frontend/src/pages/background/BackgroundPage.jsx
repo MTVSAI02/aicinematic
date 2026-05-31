@@ -68,8 +68,8 @@ export default function BackgroundPage() {
       </section>
 
       <div className={styles.pageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/character')}>
-          ← 캐릭터
+        <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
+          ← 보이스
         </button>
         <button className={styles.btn} onClick={() => navigate('/scene-editor')}>
           씬 편집 →

@@ -16,6 +16,12 @@ export function getApiErrorMessage(error) {
     if (detail === 'Background generation failed') return '배경 생성에 실패했습니다.'
     if (detail === 'Story not found') return '스토리를 찾을 수 없습니다.'
     if (detail === 'Scene not found') return '씬을 찾을 수 없습니다.'
+    // 보이스 관련
+    if (detail === 'Voice not found') return '보이스를 찾을 수 없습니다.'
+    if (detail === 'Default voice cannot be modified.') return '기본 보이스는 수정할 수 없습니다.'
+    if (detail === 'Default voice cannot be deleted.') return '기본 보이스는 삭제할 수 없습니다.'
+    if (detail === 'Only a narrator-type voice can be connected as narrator.')
+      return '나레이션에는 나레이션용 보이스만 연결할 수 있습니다.'
     return detail
   }
 
