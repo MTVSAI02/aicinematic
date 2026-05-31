@@ -279,10 +279,10 @@
   margin: 4px 0 0;
 }
 
-/* 에러 메시지 (DESIGN.md에 danger 토큰이 없어 위험색은 직접 지정) */
+/* 에러 메시지 (DESIGN.md의 --danger 토큰 사용) */
 .error {
   font-size: 13px;
-  color: #c0392b;
+  color: var(--danger);
   margin: 4px 0 0;
 }
 
