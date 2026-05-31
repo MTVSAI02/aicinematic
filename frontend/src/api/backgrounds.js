@@ -1,34 +1,7 @@
 // 백엔드 Background / Scene Background API 호출 함수.
 // 프론트는 ComfyUI를 직접 호출하지 않고, 반드시 FastAPI 백엔드만 호출한다.
-// 백엔드 주소는 .env 의 VITE_API_BASE_URL 값을 사용한다 (characters.js 와 동일).
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
-
-async function request(path, options) {
-  const res = await fetch(`${BASE_URL}${path}`, options)
-
-  let data = null
-  try {
-    data = await res.json()
-  } catch {
-    // 응답 본문이 JSON이 아니면 data는 null 유지
-  }
-
-  if (!res.ok) {
-    const error = new Error(`HTTP ${res.status}`)
-    error.status = res.status
-    error.detail = data?.detail
-    throw error
-  }
-
-  return data
-}
-
-function jsonBody(payload) {
-  return {
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  }
-}
+// 공통 fetch 래퍼는 utils/request.js 를 사용한다.
+import { request, jsonBody } from '@/utils/request'
 
 // POST /api/backgrounds/prompt-suggestions — 씬 기반 배경 프롬프트 추천
 export function suggestBackgroundPrompt({ storyId, sceneId }) {

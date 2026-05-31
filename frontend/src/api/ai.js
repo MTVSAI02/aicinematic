@@ -3,27 +3,21 @@
 // AI 연동 상태 확인용 API.
 // 프론트는 ComfyUI를 직접 호출하지 않고, 백엔드를 통해서만 AI 상태를 확인한다.
 // (프론트 → 백엔드 → AI client → ComfyUI 읽기전용)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
+import { request } from '@/utils/request'
 
 // GET /api/ai/comfy-health — ComfyUI 연결 확인 (이미지 생성 아님, 읽기전용)
-export async function getComfyHealth() {
-  const res = await fetch(`${BASE_URL}/api/ai/comfy-health`)
-  if (!res.ok) {
-    const error = new Error(`HTTP ${res.status}`)
-    error.status = res.status
-    throw error
-  }
-  return res.json()
+export function getComfyHealth() {
+  return request('/api/ai/comfy-health')
 }
 
 // GET /api/ai/background-comfy-health — 배경 전용 경로 연결 확인 (읽기전용)
 // 프론트 → 백엔드 → ai.image.background → ComfyUI(COMFYUI_GPU1_URL) 읽기전용
-export async function getBackgroundComfyHealth() {
-  const res = await fetch(`${BASE_URL}/api/ai/background-comfy-health`)
-  if (!res.ok) {
-    const error = new Error(`HTTP ${res.status}`)
-    error.status = res.status
-    throw error
-  }
-  return res.json()
+export function getBackgroundComfyHealth() {
+  return request('/api/ai/background-comfy-health')
+}
+
+// GET /api/ai/voice-comfy-health — 보이스(TTS) 전용 경로 연결 확인 (읽기전용)
+// 프론트 → 백엔드 → ai.voice.voice → ComfyUI(COMFYUI_VOICE_URL) 읽기전용
+export function getVoiceComfyHealth() {
+  return request('/api/ai/voice-comfy-health')
 }

@@ -1,24 +1,25 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
+// 백엔드 Story API 호출 함수.
+// 공통 fetch 래퍼는 utils/request.js 를 사용한다 (실패 시 error.detail 보존).
+import { request, jsonBody } from '@/utils/request'
 
-export async function parseStory({ title, script }) {
-  const res = await fetch(`${BASE_URL}/api/stories/parse`, {
+// POST /api/stories/parse — 대본을 씬으로 분해 후 저장
+export function parseStory({ title, script }) {
+  return request('/api/stories/parse', {
+    ...jsonBody({ title, script }),
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, script }),
   })
-
-  if (!res.ok) {
-    throw new Error(`스토리 파싱 실패: HTTP ${res.status}`)
-  }
-
-  return res.json()
 }
 
-// GET /api/stories — 저장된 스토리 목록 (배경 페이지의 스토리/씬 선택 드롭다운용)
-export async function getStories() {
-  const res = await fetch(`${BASE_URL}/api/stories`)
-  if (!res.ok) {
-    throw new Error(`스토리 목록 조회 실패: HTTP ${res.status}`)
-  }
-  return res.json()
+// GET /api/stories — 저장된 스토리 목록 (배경/보이스 페이지의 스토리 선택 드롭다운용)
+export function getStories() {
+  return request('/api/stories')
+}
+
+// PATCH /api/stories/{storyId}/narrator-voice — 나레이션 보이스 연결/해제
+// payload: { voiceId: "voice_preset_narrator_calm_001" } 또는 { voiceId: null }(해제)
+export function assignNarratorVoiceToStory(storyId, payload) {
+  return request(`/api/stories/${storyId}/narrator-voice`, {
+    ...jsonBody(payload),
+    method: 'PATCH',
+  })
 }

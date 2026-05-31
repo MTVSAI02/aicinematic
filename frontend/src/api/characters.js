@@ -1,36 +1,7 @@
 // 백엔드 Character / Job API 호출 함수.
 // 프론트는 ComfyUI를 직접 호출하지 않고, 반드시 FastAPI 백엔드만 호출한다.
-// 백엔드 주소는 .env 의 VITE_API_BASE_URL 값을 사용한다 (health.js / stories.js 와 동일).
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
-
-// 공통 fetch 래퍼. 실패 시 백엔드 detail 을 담은 에러를 throw 한다.
-async function request(path, options) {
-  const res = await fetch(`${BASE_URL}${path}`, options)
-
-  let data = null
-  try {
-    data = await res.json()
-  } catch {
-    data = null
-  }
-
-  if (!res.ok) {
-    const error = new Error(`HTTP ${res.status}`)
-    error.status = res.status
-    error.detail = data?.detail
-    throw error
-  }
-
-  return data
-}
-
-function jsonBody(payload) {
-  return {
-    method: undefined, // caller가 지정
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  }
-}
+// 공통 fetch 래퍼는 utils/request.js 를 사용한다.
+import { request, jsonBody } from '@/utils/request'
 
 // POST /api/characters/generate — 캐릭터 생성 Job 요청
 export function generateCharacter(payload) {
@@ -74,4 +45,13 @@ export function updateCharacter(characterId, payload) {
 // DELETE /api/characters/{characterId} — 캐릭터 삭제
 export function deleteCharacter(characterId) {
   return request(`/api/characters/${characterId}`, { method: 'DELETE' })
+}
+
+// PATCH /api/characters/{characterId}/voice — 캐릭터에 보이스 연결/해제
+// payload: { voiceId: "voice_mock_001" } 또는 { voiceId: null }(해제)
+export function assignVoiceToCharacter(characterId, payload) {
+  return request(`/api/characters/${characterId}/voice`, {
+    ...jsonBody(payload),
+    method: 'PATCH',
+  })
 }

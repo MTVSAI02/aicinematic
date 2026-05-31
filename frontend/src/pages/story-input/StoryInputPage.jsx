@@ -11,16 +11,21 @@ const EMOTION_LABELS = '기본 · 잔잔함 · 기쁨 · 슬픔 · 화남 · 무
 
 export default function StoryInputPage() {
   const navigate = useNavigate()
-  const { storyText, setStoryText, setStoryId, setStoryTitle, setScenes } = useStoryStore()
+  const { storyText, setStoryText, storyTitle, setStoryId, setStoryTitle, setScenes } =
+    useStoryStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const trimmedTitle = storyTitle.trim()
+  const trimmedText = storyText.trim()
+  const canParse = !!trimmedTitle && !!trimmedText && !loading
+
   async function handleParse() {
-    if (!storyText.trim()) return
+    if (!canParse) return
     setLoading(true)
     setError(null)
     try {
-      const result = await parseStory({ title: '새 동화', script: storyText })
+      const result = await parseStory({ title: trimmedTitle, script: storyText })
       setStoryId(result.storyId)
       setStoryTitle(result.title)
       setScenes(result.scenes)
@@ -49,6 +54,17 @@ export default function StoryInputPage() {
         </ul>
       </div>
 
+      <label className={styles.field}>
+        제목
+        <input
+          className={styles.titleInput}
+          placeholder="예: 어린 왕자"
+          value={storyTitle}
+          onChange={(e) => setStoryTitle(e.target.value)}
+          maxLength={60}
+        />
+      </label>
+
       <textarea
         className={styles.textarea}
         placeholder={PLACEHOLDER}
@@ -59,14 +75,13 @@ export default function StoryInputPage() {
       {error && <p className={styles.error}>{error}</p>}
       <div className={styles.actions}>
         <span className={styles.count}>{storyText.length}자</span>
-        <button
-          className={styles.btn}
-          onClick={handleParse}
-          disabled={!storyText.trim() || loading}
-        >
+        <button className={styles.btn} onClick={handleParse} disabled={!canParse}>
           {loading ? '분석 중...' : '씬 분해하기 →'}
         </button>
       </div>
+      {!loading && !trimmedTitle && (
+        <p className={styles.guide}>제목을 입력하면 “씬 분해하기”가 활성화됩니다.</p>
+      )}
     </div>
   )
 }

@@ -52,8 +52,8 @@ AI가 만든 캐릭터·배경·음성 에셋을 사용자가 조립해 **움직
 | Scene Check | 연동 대상 | 백엔드 응답의 `sceneId`, `items` 기준으로 씬 카드 표시 |
 | Character Library | ✅ 연동됨 | 캐릭터 생성(Job)·목록 조회·수정·삭제·선택을 백엔드 API와 연동 완료 |
 | Background Library | ✅ 연동됨 | 배경 프롬프트 추천·후보 생성(Job)·선택 저장·수정·삭제·씬 연결을 백엔드 API와 연동 완료 (`/background`) |
-| Voice / TTS | 개발 대상 | 씬 item 기준 음성 생성 요청 및 결과 표시 |
-| Voice Cloning | 개발 대상 | 음성 샘플 업로드, 캐릭터 voiceId 연결 |
+| Voice Mapping | ✅ 연동됨 | 나레이션(`story.narratorVoiceId`)·캐릭터(`character.voiceId`)에 보이스 연결, 보이스 라이브러리 CRUD를 백엔드 API와 연동 완료 (`/voice`) |
+| Voice / TTS 합성 | 개발 대상 | 씬 item 기준 음성 생성 요청 및 결과(audioUrl) 재생 — AI 연동 이후 단계 |
 | Scene Editor | 개발 대상 | 배경·캐릭터 합성 결과 표시 준비 |
 | Timeline | 개발 대상 | 씬 순서, 길이, 음성 길이 반영 |
 | Export | 개발 대상 | 렌더링 진행률과 결과 다운로드 표시 |
@@ -187,11 +187,23 @@ frontend/
 /                  → 홈 / 내 작업
 /story-input       → 스토리 입력
 /scene-check       → 씬 확인·수정
-/character         → 캐릭터 생성·라이브러리·보이스 클로닝
-/scene-editor      → 씬 편집기
+/character         → 캐릭터 생성·라이브러리
+/background        → 배경 생성·라이브러리
+/scene-editor      → 씬 편집기 (배경↔씬 연결)
+/voice             → 보이스 매핑 (나레이션·캐릭터에 보이스 연결, 보이스 라이브러리)
 /timeline          → 타임라인
 /export            → 렌더링·다운로드
 ```
+
+### `/voice` 보이스 매핑 페이지
+
+- 2단 레이아웃: **왼쪽**(연결 대상 = 나레이션 + 등장 캐릭터), **오른쪽**(보이스 라이브러리 + 생성 폼).
+- 보이스는 **Voice Library 자산**으로 관리한다. 나레이션은 `story.narratorVoiceId`, 캐릭터는 `character.voiceId`를 사용한다.
+- 등장 캐릭터는 `story.scenes[].items[]`의 dialogue `speaker`를 중복 없이 추출해 저장된 캐릭터와 **name 기준 매칭**한다. 매칭 안 되면 "저장된 캐릭터 없음" 안내.
+- 기본 narrator preset 4개(`isPreset=true`)는 **수정/삭제 버튼을 숨긴다.** 나레이션엔 `voiceType="narrator"`, 캐릭터엔 `voiceType="character"` 보이스만 연결 버튼이 활성화된다.
+- `sampleAudioUrl`이 있으면 미리듣기(audio), 없으면 **"샘플 준비 중"(비활성)**. 실제 샘플·클로닝·TTS 합성은 AI 단계라 프론트는 다루지 않는다.
+- 프론트는 `provider`/`model`을 입력/표시하지 않고, **AI/TTS 서버를 직접 호출하지 않으며 FastAPI 백엔드만** 호출한다.
+- 진입: `/voice?storyId=story_mock_001`처럼 query param이 있으면 자동 선택, 없으면 스토리 드롭다운(`GET /api/stories`)에서 선택.
 
 프론트 화면 흐름은 아래 순서를 우선 유지합니다.
 
