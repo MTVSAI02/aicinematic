@@ -152,6 +152,10 @@ backend/
 | PATCH | `/api/scenes/{scene_id}/character` | 씬에 캐릭터 추가/수정 (**씬당 다중**; body: storyId, characterId, sceneAppearancePrompt?) |
 | DELETE | `/api/scenes/{scene_id}/character/{character_id}` | 씬에서 캐릭터 1명 제거 (query: storyId) |
 
+| GET | `/api/stories/{story_id}/timeline` | 타임라인 조회 (order 정렬, duration, totalDuration, readyStatus, textPreview, background/character summary) |
+| PATCH | `/api/stories/{story_id}/timeline` | 타임라인 저장 (**전체 scene 목록**; body `scenes:[{sceneId,duration}]`. 순서는 스토리 원본 고정 — duration만 저장) |
+| GET | `/api/stories/{story_id}/render-plan` | 렌더 플랜(2차 ffmpeg 렌더용 데이터: duration/배경/캐릭터 layout/자막). 실제 렌더 X |
+
 | GET | `/api/tts?storyId=&sceneId=` | 씬별 TTS 결과 목록 조회 |
 | DELETE | `/api/tts/{audio_id}` | TTS 결과 삭제 |
 | POST | `/api/voices` | 보이스 자산 생성 (mock) |
@@ -413,6 +417,20 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
+
+## 타임라인 (Timeline)
+
+- 타임라인은 **story 단위**로 scene 재생 길이(`duration`)를 관리한다. 순서(`order`)는 **스토리 원본 고정** — 타임라인에서 변경하지 않는다.
+- **스토리보드 기반**이다 — 프리미어식 멀티트랙 편집기가 아니다(자유 배치/오디오 파형 편집 X, **순서 재정렬 X**, duration 조절 O).
+  - 순서 재정렬을 뺀 이유: 각 씬의 텍스트·보이스·감정이 스토리 순서에 묶여 있어, 재배치하면 서사 흐름이 깨진다. 타임라인의 역할은 재생 길이 조절 + 준비 상태 확인.
+- 조회 `GET /api/stories/{storyId}/timeline`, 저장 `PATCH /api/stories/{storyId}/timeline`.
+  - 저장은 **전체 scene 목록**을 받는다(부분 업데이트 X). body는 `scenes:[{sceneId,duration}]`. `order`는 받지 않으며 **원본 그대로 유지**된다.
+  - `duration`: 기본 3.0, 범위 **1.0~30.0**(위반 422). 누락/초과/중복 scene 목록 → 400, 없는 sceneId → 404.
+- `readyStatus`는 백엔드 계산: `hasBackground`(backgroundId 유무) / `hasCharacters`(연결 수>0) / `hasText`(item text 유무). `hasAudio`는 이번 범위 아님.
+- `totalDuration`은 scene duration 합. `textPreview`는 첫 narration(없으면 dialogue) 80자.
+- scene의 `duration`(및 파싱 시 고정된 `order`)은 dev_persist(`SEED_DEV`)로 **재시작 후에도 유지**된다.
+- **render plan**(`build_render_plan` + `GET /api/stories/{storyId}/render-plan`)은 **2차 ffmpeg 렌더가 그대로 쓸 데이터**(duration/배경 imageUrl/캐릭터 layout/자막)를 모으는 구조다.
+  - ⚠️ **Voice/TTS는 이번 범위 제외.** ffmpeg 렌더링은 **제외가 아니라 2차(무음 mp4 MVP)** 로 분리 — 1차는 데이터/플랜까지만, mp4 생성 안 함.
 
 ## 비동기 Job / 저장 구조
 

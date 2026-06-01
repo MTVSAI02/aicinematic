@@ -59,6 +59,13 @@ class SceneNotFoundError(AppException):
     detail = "Scene not found"
 
 
+class TimelineValidationError(AppException):
+    """타임라인 PATCH 요청이 story의 scene 집합과 맞지 않을 때 (전체 목록 누락/초과/중복)."""
+
+    status_code = 400
+    detail = "Timeline request must include exactly all scenes of the story (once each)."
+
+
 class TTSGenerationFailedError(AppException):
     status_code = 500
     detail = "TTS generation failed"
