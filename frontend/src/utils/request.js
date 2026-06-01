@@ -1,7 +1,7 @@
 // 백엔드(FastAPI) 호출 공통 fetch 래퍼.
 // 프론트는 ComfyUI/AI 서버를 직접 호출하지 않고, 반드시 이 BASE_URL(백엔드)만 호출한다.
 // 실패 시 백엔드의 detail 을 error.detail 에 담아 throw → utils/apiError.js 가 사용자 문구로 변환.
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export async function request(path, options) {
   const res = await fetch(`${BASE_URL}${path}`, options)

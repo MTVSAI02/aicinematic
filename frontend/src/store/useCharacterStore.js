@@ -8,7 +8,8 @@ const useCharacterStore = create((set) => ({
   characters: [],
   selectedCharacterId: null,
 
-  setCharacters: (characters) => set({ characters }),
+  setCharacters: (characters) =>
+    set({ characters: Array.isArray(characters) ? characters : [] }),
 
   addCharacter: (character) =>
     set((state) => ({

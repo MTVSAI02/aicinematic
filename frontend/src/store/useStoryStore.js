@@ -20,7 +20,7 @@ const useStoryStore = create((set) => ({
 
   setStoryTitle: (title) => set({ storyTitle: title }),
 
-  setScenes: (scenes) => set({ scenes }),
+  setScenes: (scenes) => set({ scenes: Array.isArray(scenes) ? scenes : [] }),
 
   updateSceneDuration: (sceneId, duration) =>
     set((state) => ({
