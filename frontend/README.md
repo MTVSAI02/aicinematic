@@ -96,25 +96,11 @@ cd frontend
 npm install
 ```
 
-### 4.2 환경변수 생성
+### 4.2 환경변수
 
-```bash
-cp .env.example .env
-```
+`frontend/.env`(gitignore)를 만들고 `VITE_API_BASE_URL`(백엔드 서버 주소)를 설정합니다.
 
-Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-### 4.3 환경변수 값
-
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-백엔드 주소는 코드에 하드코딩하지 말고 항상 `.env`의 `VITE_API_BASE_URL`을 사용합니다.
+백엔드 주소는 코드에 하드코딩하지 말고 항상 `.env`의 `VITE_API_BASE_URL`을 사용합니다. (값은 팀에서 공유)
 
 ### 4.4 개발 서버 실행
 
@@ -160,8 +146,7 @@ frontend/
 │   ├── App.jsx
 │   ├── main.jsx
 │   └── index.css
-├── .env
-├── .env.example
+├── .env                  # 로컬 환경변수(gitignore). VITE_API_BASE_URL 등
 ├── package.json
 └── README.md
 ```
@@ -767,7 +752,7 @@ WAV 또는 MP3 음성 샘플을 업로드해주세요.
 > - 프론트는 **ComfyUI를 직접 호출하지 않는다.** 항상 `프론트 → FastAPI 백엔드 → AI/ComfyUI` 구조를 따른다.
 > - 현재 캐릭터 스키마는 `characterId`, `name`, `appearancePrompt`, `imageUrl`이다. 기존 `locked`, `tags`, `image_url` 구조는 사용하지 않는다.
 > - `imageUrl`이 `null`이면 "이미지 준비 중" placeholder를 표시한다.
-> - 생성 Job은 현재 백엔드 mock이라 보통 즉시 `completed`이며, `getJob(jobId)`를 분리해 두어 나중에 polling으로 확장 가능하다.
+> - 생성 Job은 **비동기**다. `generate`가 `jobId`(`pending`)를 반환하면 `utils/pollJob.js`로 `completed/failed`까지 폴링한다. (`api/jobs.js`의 `getJob` 공통 사용)
 > - `CharacterPage`는 조립만 담당하고, 실제 UI는 컴포넌트로 분리되어 있다:
 >   `components/characters/CharacterCreateForm.jsx`, `CharacterList.jsx`, `CharacterCard.jsx`, `CharacterEditForm.jsx`
 >   (공용 스타일은 `pages/character/CharacterPage.module.css` 모듈을 공유)
@@ -904,7 +889,7 @@ src/api/render.js
 
 ### `src/api/characters.js` 역할 (✅ 백엔드 연동 완료)
 
-캐릭터 생성은 비동기 Job 구조입니다. `generate`는 `jobId`를 반환하고, `getJob`으로 상태를 폴링합니다. 현재 백엔드는 mock이라 생성 직후 바로 `completed` 상태가 됩니다.
+캐릭터 생성은 **비동기 Job**입니다. `generate`는 `jobId`(`status="pending"`)를 반환하고, `utils/pollJob.js`로 `running`→`completed/failed`까지 폴링합니다. ComfyUI 실제 생성은 백그라운드에서 진행되며, `completed`면 캐릭터 목록을 다시 불러옵니다.
 
 ```js
 export async function generateCharacter({ name, appearancePrompt }) {

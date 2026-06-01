@@ -12,6 +12,21 @@
 - 도메인별 생성 로직은 분리: `character_job_runner.py` / `background_job_runner.py` / `tts_job_runner.py`.
 - 라우터/서비스는 각 runner의 `create_*_generation_job()`을 호출한다.
 
+### 1.1d 진짜 비동기 전환 — ✅ 완료 (ComfyUI 실제 생성 전환에 따라, 2026-06)
+- `InMemoryJobManager`에 **`run_async()`**(ThreadPoolExecutor 백그라운드) 추가. `run()`(동기)은 TTS·짧은 작업용으로 유지.
+- 캐릭터/배경 generate → `run_async`(pending 즉시 반환), TTS → `run`(동기). 프론트는 `utils/pollJob.js`로 폴링.
+- 캐릭터 orphan 방지: `reserve_id → generate → create`(성공 후 저장).
+- ⚠️ **MVP 한계(기록)**: in-memory ThreadPoolExecutor → 서버 재시작 시 pending/running Job 유실, 단일 프로세스 한정. **배포 트리거**: 멀티 프로세스/영속성 필요 시 Redis Queue/Celery/RQ로 교체(`job_manager`만 publish 버전으로).
+
+### 1.1e 저장 책임 경계 (AI ↔ Backend) — 🔜 2차 정석 (배경 붙기 전 확정)
+- 현재 임시: AI(`ai/character_ctrl/character.py`)가 `storage`에 직접 저장 + 상대경로(`Path("backend/app/storage/...")`, cwd 의존 위험).
+- 정석 계약: **AI는 bytes/metadata만 반환, Backend가 `core/config` 경로로 저장 + URL/repository**.
+- backend 측은 `core/config.py`(STORAGE_ROOT 절대경로)로 이미 정리됨. **트리거**: 배경/보이스 실제 생성 붙기 직전 — AI 직접 저장·상대경로 제거(혜원 협의).
+
+### (혜원 AI 모듈 — 기준 전달) comfy_client 분리 등
+- `comfy_client.py`가 health + queue + polling + download + runner를 다 가짐 → `comfy_health_client` / `comfy_workflow_runner` 분리.
+- `test_generate.py`(/prompt·/history·/view + 하드코딩 URL) 격리/문서화, seed `hash()` 재현성. → AI 모듈 영역, 계약(1.1e)만 공동.
+
 ### 1.1b (TTS) 실제 연동 시 처리할 것 — 지금은 mock이라 안 물림
 - **재생성 원자성**: 현재 `tts_service.generate_scene_tts`는 "빈 검사 → 기존 삭제 → 새로 저장" 순서(빈 scene은 기존 보존). 실제 TTS 호출/파일/DB가 끼면 **AI 호출 성공 → 그 다음 기존 삭제/교체** 순서로 바꿔야 중간 실패 시 기존 audio 유실이 없다.
 - **알 수 없는 item type**: `VOICE_TYPE.get(type, "narrator")`라 narration/dialogue 외 값은 조용히 narrator 처리. scene 수정 API가 생겨 잘못된 type이 섞일 수 있게 되면 엄격 검증(에러/명시 처리)으로 강화.

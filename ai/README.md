@@ -20,7 +20,7 @@ ai/
 
 ## 환경변수 (`ai/.env`)
 
-`ai/.env.example`을 복사해 `ai/.env`를 만든다. (`ai/.env`는 gitignore)
+`ai/.env`(gitignore)를 직접 만들고 아래 변수를 채운다. (ComfyUI 서버 URL 값은 팀에서 공유, 코드/문서엔 하드코딩하지 않는다)
 
 | 변수 | 용도 |
 |---|---|
