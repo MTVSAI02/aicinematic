@@ -12,10 +12,10 @@ export function suggestBackgroundPrompt({ storyId, sceneId }) {
 }
 
 // POST /api/backgrounds/generate — 배경 후보 생성 Job
-// 주의: finalPrompt 가 아니라 사용자가 수정한 promptInput 만 보낸다. count 는 보내지 않는다.
-export function generateBackground({ prompt, negativePrompt }) {
+// 사용자 prompt만 보낸다. finalPrompt 조립·negativePrompt·후보 개수는 백엔드/AI 서버가 담당.
+export function generateBackground({ prompt }) {
   return request('/api/backgrounds/generate', {
-    ...jsonBody({ prompt, negativePrompt }),
+    ...jsonBody({ prompt }),
     method: 'POST',
   })
 }

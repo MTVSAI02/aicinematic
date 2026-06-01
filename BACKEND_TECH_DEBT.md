@@ -23,6 +23,13 @@
 - 정석 계약: **AI는 bytes/metadata만 반환, Backend가 `core/config` 경로로 저장 + URL/repository**.
 - backend 측은 `core/config.py`(STORAGE_ROOT 절대경로)로 이미 정리됨. **트리거**: 배경/보이스 실제 생성 붙기 직전 — AI 직접 저장·상대경로 제거(혜원 협의).
 
+### 1.1f AI 연동 방식 통일 (in-process vs HTTP AI 서버) — 🔜 추후
+- **현재 두 방식 공존**:
+  - 캐릭터: Backend가 **in-process `ai/` 패키지**(`generate_character` → `comfy_workflow_runner`)로 ComfyUI를 (사실상) 직접 호출.
+  - 배경: Backend가 **HTTP로 우리 AI FastAPI 서버**(`AI_SERVER_URL`/generate) 호출 → AI 서버가 ComfyUI 호출.
+- **목표 구조**: `Backend → 우리 AI FastAPI 서버 → 외부 ComfyUI/TTS` 로 **통일**. (Backend는 외부 ComfyUI를 직접 안 봄)
+- **결정**: 배경은 이번에 AI 서버 방식으로 붙임. 캐릭터는 이미 동작 중이라 당장 안 갈아엎고, **추후 캐릭터도 AI FastAPI 서버 호출 방식으로 통일**. (이 항목이 그 트리거 기록)
+
 ### (혜원 AI 모듈 — 기준 전달) comfy_client 분리 등
 - `comfy_client.py`가 health + queue + polling + download + runner를 다 가짐 → `comfy_health_client` / `comfy_workflow_runner` 분리.
 - `test_generate.py`(/prompt·/history·/view + 하드코딩 URL) 격리/문서화, seed `hash()` 재현성. → AI 모듈 영역, 계약(1.1e)만 공동.

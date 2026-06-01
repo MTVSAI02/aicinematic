@@ -14,9 +14,9 @@ function extractSuffix(suggestedPrompt, finalPrompt) {
 
 export default function BackgroundPromptPanel() {
   const {
-    storyId, sceneId, promptInput, negativePrompt, sourceText,
+    storyId, sceneId, promptInput, sourceText,
     promptSuffix, loading, error,
-    setPromptInput, setPromptSuffix, setNegativePrompt,
+    setPromptInput, setPromptSuffix,
     setSourceText, setCandidates, setCurrentJobId, setSelectedCandidateId,
     setLoading, setError, resetCandidates,
   } = useBackgroundStore()
@@ -39,7 +39,6 @@ export default function BackgroundPromptPanel() {
       setPromptInput(res.suggestedPrompt)        // 사용자가 수정할 원본 프롬프트
       // 백엔드가 붙인 suffix(배경 규칙)를 추출해 보관 → 미리보기는 promptInput 기준 실시간 계산
       setPromptSuffix(extractSuffix(res.suggestedPrompt, res.finalPrompt))
-      setNegativePrompt(res.negativePrompt)
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
@@ -53,11 +52,10 @@ export default function BackgroundPromptPanel() {
     setLoading(true)
     resetCandidates()
     try {
-      // 주의: finalPrompt 가 아니라 promptInput 만 보낸다. count 도 보내지 않는다.
+      // 사용자 prompt만 보낸다(finalPrompt 조립)
       // 비동기: 즉시 jobId 반환 → completed/failed 까지 폴링
       const job = await backgroundApi.generateBackground({
         prompt: promptInput.trim(),
-        negativePrompt: negativePrompt || undefined,
       })
       setCurrentJobId(job.jobId)
 
@@ -65,7 +63,11 @@ export default function BackgroundPromptPanel() {
       setCandidates(finished.result?.candidates ?? [])
       setSelectedCandidateId(null)
     } catch (e) {
-      setError(getApiErrorMessage(e))
+      if (e.timedOut) {
+        setError('배경 생성이 오래 걸리고 있어요. 잠시 후 다시 시도해주세요.')
+      } else {
+        setError(getApiErrorMessage(e))
+      }
     } finally {
       setLoading(false)
     }
@@ -121,9 +123,6 @@ export default function BackgroundPromptPanel() {
           finalPrompt 미리보기 (현재 프롬프트 기준 · 전송되지 않음 · 실제 조립은 백엔드)
           <div className={styles.preview}>{finalPromptPreview}</div>
         </div>
-      )}
-      {negativePrompt && (
-        <p className={styles.cardMeta}>negativePrompt: {negativePrompt}</p>
       )}
 
       <button className={styles.btn} onClick={handleGenerate} disabled={!canGenerate}>
