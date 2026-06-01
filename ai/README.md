@@ -11,11 +11,9 @@ ai/
 ├── core/exceptions.py         # AIError → ComfyUIError → (Config/Connection/Response/Timeout/WorkflowLoad/WorkflowMapping/BackgroundWorkflowPrepare)
 ├── image/
 │   └── background.py          # 배경 생성 ComfyUI 연동 (연결 준비 단계)
-├── workflows/
-│   ├── background_generate.json          # 배경 workflow (현재 placeholder + TODO)
-│   └── background_generate_mapping.json  # finalPrompt/negativePrompt 주입 위치 매핑
-├── test_comfy_connection.py        # 공통 ComfyUI 연결 확인
-└── test_background_connection.py   # 배경 연동 준비 확인
+└── workflows/
+    ├── background_generate.json          # 배경 workflow (현재 placeholder + TODO)
+    └── background_generate_mapping.json  # finalPrompt/negativePrompt 주입 위치 매핑
 ```
 
 ## 환경변수 (`ai/.env`)
@@ -42,7 +40,6 @@ ai/
 - `build_background_workflow_payload(finalPrompt, negativePrompt)` — 주입 payload 준비
   - 현재 workflow가 placeholder면 주입을 보류하고 `{"workflowReady": False, ...}` 반환. 실제 workflow JSON으로 교체하면 자동으로 `workflowReady: True`로 주입된다.
 - `prepare_background_generation(...)` — 위 함수의 별칭(준비까지만)
-- `check_background_comfy_connection()` — 배경 ComfyUI 연결 확인 (읽기전용, **POST /prompt 호출 없음**)
 
 ### mapping JSON
 `finalPrompt`/`negativePrompt`가 workflow의 어느 노드/경로에 들어가는지 정의한다.
@@ -55,27 +52,12 @@ workflow 구조가 바뀌어도 **코드 수정 없이 mapping JSON의 nodeId만
 }
 ```
 
-## 실행 / 테스트
+## 연결 확인(health-check) 정리 안내
 
-```bash
-# 공통 연결 확인
-uv run --env-file ai/.env python ai/test_comfy_connection.py
-
-# 배경 연동 준비 확인 (base URL / 연결 / workflow·mapping 로드 / payload 구성 / 생성 미실행)
-uv run --env-file ai/.env python ai/test_background_connection.py
-```
-
-> 두 테스트 모두 **실제 이미지를 생성하지 않는다.** `POST /prompt`를 호출하지 않고, 조회용 API(`/system_stats`, `/object_info`)만 사용한다.
-
-### 백엔드/프론트 경유 연결 확인 (임시 브릿지)
-
-`check_background_comfy_connection()`은 임시 백엔드 엔드포인트로도 노출되어, 프론트에서 전체 왕복을 한 번에 확인할 수 있다.
-
-- `GET /api/ai/background-comfy-health` (`backend/app/routers/ai_health.py`) → `ai.image.background.check_background_comfy_connection()` 호출
-- 경로: **프론트 → 백엔드 → `ai.image.background` → ComfyUI(읽기전용, `COMFYUI_GPU1_URL`)**
-- 프론트엔드 버튼: 배경 페이지의 "배경 AI 서버 연결 확인"
-- 이미지 생성/`POST /prompt` 없음. 이 백엔드/프론트 브릿지는 **임시 코드**이며 제거 추적은 루트 [`TEMP_AI_CONNECTION_TEST.md`](../TEMP_AI_CONNECTION_TEST.md).
-  (백엔드가 동작하려면 `COMFYUI_GPU1_URL`이 필요해 `uv run --env-file ai/.env uvicorn ...`로 실행)
+배경/캐릭터가 외부 AI FastAPI 서버 방식으로 전환되면서, ComfyUI를 직접 찔러보던
+임시 연결 확인 코드(`test_comfy_connection.py` / `test_background_connection.py` /
+`check_background_comfy_connection()` / `GET /api/ai/background-comfy-health`)는 **제거했다.**
+보이스(TTS)는 아직 실제 연동 테스트 전이라 `voice-comfy-health` 경로만 남겨둔다.
 
 ## 아직 구현하지 않은 것
 - 실제 배경 이미지 생성(`POST /prompt` 실행 / workflow 실행), 결과 이미지 수집/저장

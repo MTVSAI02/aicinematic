@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
 import { getApiErrorMessage } from '@/utils/apiError'
-import AiConnectionCheck from '@/components/AiConnectionCheck'
 import CharacterCreateForm from '@/components/characters/CharacterCreateForm'
 import CharacterList from '@/components/characters/CharacterList'
 import styles from './CharacterPage.module.css'
@@ -28,8 +27,6 @@ export default function CharacterPage() {
   return (
     <div className={styles.page}>
       <h1>캐릭터</h1>
-
-      <AiConnectionCheck />
 
       <section className={styles.section}>
         <h2>새 캐릭터 생성</h2>
