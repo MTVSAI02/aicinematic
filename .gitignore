@@ -59,3 +59,6 @@ backend/app/storage/*
 Thumbs.db
 
 docs/
+
+# ===== 기타 =====
+RULES.md
