@@ -44,7 +44,11 @@ def connect_scene_character(scene_id: str, request: SceneCharacterUpdateRequest)
     - 반환: 그 씬의 전체 캐릭터 목록.
     """
     return character_service.connect_scene_character(
-        request.storyId, scene_id, request.characterId, request.sceneAppearancePrompt
+        request.storyId,
+        scene_id,
+        request.characterId,
+        request.sceneAppearancePrompt,
+        request.layout.model_dump() if request.layout else None,
     )
 
 

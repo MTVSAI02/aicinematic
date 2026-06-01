@@ -9,6 +9,7 @@ import {
 } from '@/api/characters'
 import { getApiErrorMessage } from '@/utils/apiError'
 import useCharacterStore from '@/store/useCharacterStore'
+import SceneStage from '@/components/scene-editor/SceneStage'
 import styles from './SceneEditorPage.module.css'
 
 // 씬 편집(skeleton). 현재는 "씬 ↔ 배경 연결"만 실제 동작한다.
@@ -36,6 +37,8 @@ export default function SceneEditorPage() {
   const [error, setError] = useState('')
 
   const [loadError, setLoadError] = useState('')
+  // 캐릭터 배치 자동 저장 상태 (저장 버튼이 없으므로 사용자에게 저장 여부를 보여준다)
+  const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | error
 
   useEffect(() => {
     Promise.all([getStories(), getBackgrounds(), getCharacters()])
@@ -54,6 +57,17 @@ export default function SceneEditorPage() {
   const selectedStory = stories.find((s) => s.storyId === storyId)
   const scenes = selectedStory?.scenes ?? []
   const selectedScene = scenes.find((sc) => sc.sceneId === sceneId)
+
+  // 합성 미리보기용: 선택 씬의 배경 imageUrl + 연결 캐릭터(이미지 포함, 이미지 없는 건 제외)
+  const sceneBackgroundUrl = backgrounds.find(
+    (b) => b.backgroundId === selectedScene?.backgroundId,
+  )?.imageUrl
+  const sceneCharacters = (selectedScene?.characters ?? [])
+    .map((ch) => ({
+      ...ch,
+      imageUrl: characters.find((c) => c.characterId === ch.characterId)?.imageUrl,
+    }))
+    .filter((ch) => ch.imageUrl)
 
   function handleStoryChange(value) {
     setStoryId(value)
@@ -103,6 +117,49 @@ export default function SceneEditorPage() {
       setSceneAppearancePrompt('')
       setMessage('캐릭터가 씬에 추가되었습니다.')
     } catch (e) {
+      setError(getApiErrorMessage(e))
+    }
+  }
+
+  // 드래그/리사이즈 종료 시 호출: 화면 즉시 반영(스냅백 방지) + layout 저장
+  // stories 상태에서 특정 캐릭터의 layout 만 교체 (optimistic 적용 / 실패 시 rollback 공용)
+  function applyLayoutToStories(charId, lay) {
+    setStories((prev) =>
+      prev.map((s) =>
+        s.storyId !== storyId
+          ? s
+          : {
+              ...s,
+              scenes: s.scenes.map((sc) =>
+                sc.sceneId !== sceneId
+                  ? sc
+                  : {
+                      ...sc,
+                      characters: (sc.characters ?? []).map((ch) =>
+                        ch.characterId === charId ? { ...ch, layout: lay } : ch,
+                      ),
+                    },
+              ),
+            },
+      ),
+    )
+  }
+
+  async function handleLayoutChange(characterId, layout) {
+    // 실패 시 되돌릴 이전 layout 캡처
+    const prevLayout = stories
+      .find((s) => s.storyId === storyId)
+      ?.scenes.find((sc) => sc.sceneId === sceneId)
+      ?.characters?.find((ch) => ch.characterId === characterId)?.layout
+
+    applyLayoutToStories(characterId, layout) // optimistic
+    setSaveStatus('saving')
+    try {
+      await assignCharacterToScene(sceneId, { storyId, characterId, layout })
+      setSaveStatus('saved')
+    } catch (e) {
+      applyLayoutToStories(characterId, prevLayout) // 저장 실패 → 이전 위치로 복구
+      setSaveStatus('error')
       setError(getApiErrorMessage(e))
     }
   }
@@ -173,9 +230,22 @@ export default function SceneEditorPage() {
             <div className={styles.placeholder}>씬을 선택하면 편집 영역이 표시돼요.</div>
           ) : (
             <>
-              <div className={styles.placeholder}>
-                씬 {selectedScene.order} — 합성 미리보기 (준비 중)
-              </div>
+              <SceneStage
+                backgroundUrl={sceneBackgroundUrl}
+                characters={sceneCharacters}
+                onLayoutChange={handleLayoutChange}
+              />
+              <p
+                className={styles.muted}
+                style={{ fontSize: 12, marginTop: 6, minHeight: 18 }}
+                aria-live="polite"
+              >
+                {saveStatus === 'saving' && '위치 저장 중…'}
+                {saveStatus === 'saved' && '✓ 자동 저장됨'}
+                {saveStatus === 'error' && '⚠ 저장 실패 — 잠시 후 다시 시도해 주세요'}
+                {saveStatus === 'idle' &&
+                  '캐릭터를 드래그·크기조절·회전하면 자동 저장됩니다 (별도 저장 버튼 없음)'}
+              </p>
               <div className={styles.panel}>
                 <div className={styles.bgPanel}>
                   <span className={styles.panelLabel}>배경</span>

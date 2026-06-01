@@ -53,14 +53,14 @@ export function assignVoiceToCharacter(characterId, payload) {
   })
 }
 
-// PATCH /api/scenes/{sceneId}/character — 씬에 캐릭터 연결 (배경 연결과 동일 패턴)
-// payload: { storyId, characterId, sceneAppearancePrompt? }
-//   characterId: null 이면 연결 해제
-//   sceneAppearancePrompt: face_lock.py 의 scene_appearance_prompt 로 전달됨
-//   예) "서있는 자세, 밝은 표정, 야외"
-export function assignCharacterToScene(sceneId, { storyId, characterId, sceneAppearancePrompt }) {
+// PATCH /api/scenes/{sceneId}/character — 씬에 캐릭터 연결/배치 (배경 연결과 동일 패턴)
+// payload: { storyId, characterId, sceneAppearancePrompt?, layout? }
+//   sceneAppearancePrompt / layout 은 전달된 것만 갱신된다(부분 갱신).
+//   layout: 합성 미리보기 배치 { x, y, scale, zIndex, flipX } (정규화 0~1).
+//   드래그/리사이즈 저장 시엔 { storyId, characterId, layout } 만 보낸다(prompt 안 건드림).
+export function assignCharacterToScene(sceneId, { storyId, characterId, sceneAppearancePrompt, layout }) {
   return request(`/api/scenes/${sceneId}/character`, {
-    ...jsonBody({ storyId, characterId, sceneAppearancePrompt }),
+    ...jsonBody({ storyId, characterId, sceneAppearancePrompt, layout }),
     method: 'PATCH',
   })
 }
