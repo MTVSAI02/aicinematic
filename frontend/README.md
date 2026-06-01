@@ -843,6 +843,20 @@ finalDurationSec = max(userDurationSec, audioDurationSec + 0.4)
 
 프론트에서는 이 계산 결과를 표시하고, 최종 확정 값은 백엔드 렌더링 API가 다시 검증할 수 있습니다.
 
+### 실제 구현 (1차 — 코드 기준)
+
+- `/timeline` 은 **스토리보드 기반 타임라인**이다. 멀티트랙/자유배치/오디오 파형 편집은 지원하지 않는다.
+- **재생 길이(duration)** 만 조절한다. **씬 순서는 스토리 원본 고정**(재배치 UI 없음) — 서사 흐름이 텍스트·보이스에 묶여 있어 의도적으로 뺐다. Voice/TTS 및 ffmpeg/mp4 렌더링도 이번 범위 제외(렌더는 2차).
+- API: `GET /api/stories/{storyId}/timeline` 조회, `PATCH /api/stories/{storyId}/timeline` 저장(`src/api/timeline.js`).
+  - 저장은 **전체 scene 목록**을 보낸다. body는 `[{sceneId, duration}]` — 순서는 보내지도, 바꾸지도 않는다(원본 고정).
+- duration: 프론트에서 **1.0~30.0 clamp**, 0.5초 단위(`DurationControl`). 백엔드도 422로 검증.
+- `readyStatus`(배경/캐릭터/텍스트) 를 카드·상세에 뱃지로 표시. `totalDuration` 은 로컬 합산 표시.
+- 저장: **optimistic update** + **debounce(연타 합산, 350ms)** + **최신 요청만 반영**(늦게 온 stale 응답 무시, `saveSeq` 가드) + 실패 시 마지막 저장값으로 **rollback** + 저장 상태(저장 중/완료/실패) 표시.
+- 카드는 **클릭 = 상세 선택**. 드래그/순서 변경 UI는 없다.
+- 합성 미리보기(`SceneComposite`): 배경 위에 캐릭터를 씬 편집에서 저장한 `layout`(정규화 좌표)대로 겹쳐 카드/상세 썸네일에 동일 배치로 렌더(읽기전용).
+- 컴포넌트: `pages/timeline/TimelinePage.jsx` + `components/timeline/`(TimelineSceneCard / TimelineSceneDetail / DurationControl / SceneComposite / Timeline.module.css, 디자인 토큰 사용).
+- storyId 는 `useStoryStore` 에서 가져온다(없으면 "스토리 먼저 입력" 안내). storyId 가 바뀌면 선택 씬을 첫 씬으로 리셋한다.
+
 ---
 
 ## 17. ExportPage 구현 기준
