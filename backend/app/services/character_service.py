@@ -10,6 +10,18 @@ from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
 
+# 캐릭터 생성용 prompt 접두 규칙. 사용자 appearancePrompt 앞에 붙는다.
+# (내장 ai의 _tags_to_prompt에 있던 로직을 backend로 옮김 — AI 서버에는 이 최종 prompt만 보낸다.)
+CHARACTER_PROMPT_PREFIX = "A single character, full body, standing, white background."
+
+
+def build_character_final_prompt(appearance_prompt: str) -> str:
+    """appearancePrompt를 외부 AI 서버에 보낼 최종 캐릭터 prompt로 조립한다.
+
+    description은 포함하지 않는다(저장/표시용 메타데이터). 배경의 assemble_final_prompt 와 대칭.
+    """
+    return f"{CHARACTER_PROMPT_PREFIX} {appearance_prompt.strip()}"
+
 
 class CharacterService:
     """캐릭터 라이브러리 + 씬-캐릭터 연결 비즈니스 로직.
