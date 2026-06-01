@@ -1,5 +1,12 @@
 import { getJob } from '@/api/jobs'
 
+// 폴링 중단(abort) 공통 에러. 호출부는 e.aborted로 식별해 조용히 무시한다.
+function abortedError() {
+  const error = new Error('Job polling aborted')
+  error.aborted = true
+  return error
+}
+
 // 비동기 Job(jobId)을 일정 주기로 폴링한다.
 // - completed: job(결과 포함)을 resolve
 // - failed: error.detail = job.error(백엔드 실제 실패 원인)를 담아 reject
@@ -14,13 +21,16 @@ export async function pollJob(
   { interval = 1500, maxAttempts = 240, onStatus, signal } = {},
 ) {
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    if (signal?.aborted) {
-      const error = new Error('Job polling aborted')
-      error.aborted = true
-      throw error
-    }
+    if (signal?.aborted) throw abortedError()
 
-    const job = await getJob(jobId)
+    let job
+    try {
+      job = await getJob(jobId, { signal })
+    } catch (e) {
+      // 진행 중 fetch가 abort되면 DOMException(name='AbortError') → 공통 aborted 규약으로 변환
+      if (e?.name === 'AbortError' || signal?.aborted) throw abortedError()
+      throw e
+    }
     if (onStatus) onStatus(job)
 
     if (job.status === 'completed') return job

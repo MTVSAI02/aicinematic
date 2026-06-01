@@ -94,6 +94,9 @@ class ComfyWorkflowRunner:
         )
         try:
             response = httpx.get(url, headers=_HEADERS, timeout=60)
+        except httpx.TimeoutException as exc:
+            # 공통 client(get_json/post_json)와 동일하게 timeout을 connection error와 분리한다.
+            raise ComfyUITimeoutError(f"이미지 다운로드 시간 초과: {filename}") from exc
         except httpx.RequestError as exc:
             raise ComfyUIConnectionError(f"이미지 다운로드 실패: {filename}") from exc
         if response.status_code != 200:
