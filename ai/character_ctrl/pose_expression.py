@@ -6,7 +6,7 @@
     - face_lock.py 결과 이미지를 입력으로 받아 변형
 
 의존:
-    - ai.comfy_client.run_workflow()  ← 박진희 담당, 아직 미구현
+    - ai.comfy_workflow_runner.run_workflow()  ← 워크플로 실행(생성). 결과 bytes 반환
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ from __future__ import annotations
 from enum import Enum
 from pathlib import Path
 
-# TODO: 박진희 comfy_client 완성 후 주석 해제
-# from ai.comfy_client import run_workflow
+# TODO: pose_expression 워크플로 연결 시 주석 해제 (run_workflow는 결과 bytes 반환, 저장은 backend)
+# from ai.comfy_workflow_runner import run_workflow
 
 WORKFLOW_NAME = "pose_expression"
 OUTPUT_DIR = Path("backend/app/storage/scenes")
@@ -102,8 +102,9 @@ def apply_pose(
     # 2. 표정 태그 → 추가 프롬프트
     expression_prompt = EXPRESSION_TAGS[expression]
 
-    # 3. 워크플로 실행
-    # TODO: comfy_client 완성 후 아래로 교체
+    # 3. 워크플로 실행 → image bytes → _save_image 저장
+    # pose_expression 워크플로(ControlNet)가 아직 ComfyUI에 연결되지 않았다.
+    # 연결되면 아래 주석을 풀어 사용한다 (저장 구조 그대로):
     # result = run_workflow(
     #     workflow_name=WORKFLOW_NAME,
     #     inputs={
@@ -115,14 +116,14 @@ def apply_pose(
     #     },
     # )
     # image_bytes = result["images"][0]
+    # suffix = f"{pose.value}_{expression.value}"
+    # return str(_save_image(scene_id, character_id, suffix, image_bytes))
 
-    image_bytes = None  # TODO: 제거
-
-    # 4. 저장
-    suffix = f"{pose.value}_{expression.value}"
-    output_path = _save_image(scene_id, character_id, suffix, image_bytes)
-
-    return str(output_path)
+    # ⚠️ 아직 미구현: 성공처럼 빈 파일 경로를 반환하지 않고 명시적으로 막는다(연결 전까지).
+    raise NotImplementedError(
+        "pose_expression 워크플로가 아직 ComfyUI에 연결되지 않았습니다. "
+        "run_workflow('pose_expression', inputs) 연결 후 _save_image 로 저장하세요."
+    )
 
 
 # ── 내부 헬퍼 ─────────────────────────────────────────────────────────────────

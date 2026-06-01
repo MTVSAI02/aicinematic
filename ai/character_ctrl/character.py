@@ -18,21 +18,20 @@
     ⚠️ Dev / Fast는 negative_prompt 불필요 (cfg=1.0 사용)
 
 의존:
-    - ai.comfy_client.run_workflow()   ← 박진희 담당, 아직 미구현
-    - ai.image.prompt_builder.build()  ← 박진희 담당, 아직 미구현
+    - ai.comfy_workflow_runner.run_workflow()  ← 워크플로 실행(생성). 결과 bytes 반환
+    - ai.image.prompt_builder.build()          ← TODO: prompt_builder 완성 후 해제
 """
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from enum import Enum
-from pathlib import Path
 
-from ai.comfy_client import run_workflow
+from ai.comfy_workflow_runner import run_workflow
 # from ai.image.prompt_builder import build as build_prompt  # TODO: prompt_builder 완성 후 해제
 
 WORKFLOW_NAME = "character_generate"
-OUTPUT_DIR = Path("backend/app/storage/characters")
 
 
 class HiDreamVariant(str, Enum):
@@ -58,26 +57,20 @@ def generate_character(
     name: str,
     appearance_prompt: str,
     variant: HiDreamVariant = HiDreamVariant.DEV,
-) -> str:
-    """HiDream-I1로 캐릭터 이미지를 생성한다.
+) -> bytes:
+    """HiDream-I1로 캐릭터 이미지를 생성하고 **이미지 bytes를 반환한다.**
+
+    저장 책임 경계(ai_code_review_prompt.md §0): AI는 생성 결과(bytes)만 반환한다.
+    파일 저장 / `/storage` URL 생성 / repository 저장은 backend가 담당한다.
 
     Args:
-        character_id:      캐릭터 고유 ID (백엔드에서 발급).
-        name:              캐릭터 이름 (로그·파일명 용도).
+        character_id:      캐릭터 고유 ID (백엔드에서 발급). seed 재현에 사용.
+        name:              캐릭터 이름 (로그 용도).
         appearance_prompt: 외형 설명 문자열 (백엔드 스키마 appearancePrompt).
-                           예) "금발 단발, 초록 외투를 입은 작은 소년"
         variant:           HiDream 변형. 기본값 DEV.
 
     Returns:
-        저장된 이미지의 파일 경로 문자열.
-
-    Example:
-        >>> path = generate_character(
-        ...     "abc-123", "어린왕자",
-        ...     "금발 단발, 초록 외투를 입은 작은 소년"
-        ... )
-        >>> print(path)
-        "backend/app/storage/characters/abc-123.png"
+        생성된 이미지의 raw bytes (PNG).
     """
     config = _VARIANT_CONFIG[variant]
 
@@ -99,13 +92,9 @@ def generate_character(
     if config["use_negative"]:
         inputs["negative_prompt"] = _NEGATIVE_PROMPT
 
-    # 3. 워크플로 실행
+    # 3. 워크플로 실행 → 이미지 bytes 반환 (저장은 backend)
     result = run_workflow(workflow_name=WORKFLOW_NAME, inputs=inputs)
-    image_bytes = result["images"][0]
-
-    # 4. 이미지 저장
-    output_path = _save_image(character_id, image_bytes)
-    return str(output_path)
+    return result["images"][0]
 
 
 # ── 내부 헬퍼 ─────────────────────────────────────────────────────────────────
@@ -120,20 +109,14 @@ def _tags_to_prompt(appearance_prompt: str) -> str:
 
 
 def _make_seed(character_id: str) -> int:
-    """character_id 기반으로 재현 가능한 시드 생성.
+    """character_id 기반으로 **재현 가능한** 시드 생성.
 
-    UUID 형식이면 UUID 기반 시드, 아니면 hash 기반 시드를 사용한다.
-    (mock ID 예: 'char_mock_001' 도 처리 가능)
+    UUID 형식이면 UUID 기반, 아니면 sha256 기반 시드를 사용한다.
+    ⚠️ Python 내장 hash()는 PYTHONHASHSEED로 프로세스마다 값이 달라져
+       'char_mock_001' 같은 ID의 시드가 재시작 후 바뀐다. 그래서 sha256으로 고정한다.
     """
     try:
         return int(uuid.UUID(character_id).int % (2**32))
     except ValueError:
-        return abs(hash(character_id)) % (2**32)
-
-
-def _save_image(character_id: str, image_bytes: bytes | None) -> Path:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = OUTPUT_DIR / f"{character_id}.png"
-    if image_bytes is not None:
-        output_path.write_bytes(image_bytes)
-    return output_path
+        digest = hashlib.sha256(character_id.encode("utf-8")).digest()
+        return int.from_bytes(digest[:4], "big")  # 0 ~ 2**32-1, 프로세스 무관 재현
