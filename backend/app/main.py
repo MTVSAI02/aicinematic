@@ -26,6 +26,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from .core.config import STORAGE_ROOT, STORAGE_URL_PREFIX
 from .core.exception_handlers import app_exception_handler
 from .core.exceptions import AppException
 from .routers import (
@@ -75,7 +76,7 @@ def root():
     return {"service": "Mongsil Bookstore", "status": "running", "docs": "/docs"}
 
 
-# 생성된 이미지 정적 서빙 — /storage/characters/{id}.png
-_STORAGE_DIR = Path(__file__).parent / "storage"
-_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/storage", StaticFiles(directory=str(_STORAGE_DIR)), name="storage")
+# 생성된 이미지/오디오 정적 서빙 — 경로는 core/config.py 에서 관리(절대경로)
+# 예: /storage/characters/{id}.png
+STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+app.mount(STORAGE_URL_PREFIX, StaticFiles(directory=str(STORAGE_ROOT)), name="storage")

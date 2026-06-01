@@ -22,13 +22,14 @@ router = APIRouter(prefix="/api/characters", tags=["characters"])
 )
 def generate_character(request: CharacterGenerateRequest):
     """
-    캐릭터 생성을 비동기 Job 구조로 요청합니다.
+    캐릭터 생성을 **비동기 Job**으로 요청합니다.
 
-    실제 ComfyUI 호출 없이 mock 캐릭터 결과를 만들어 저장하고,
-    jobId와 status를 반환합니다. (현재 mock 구현은 즉시 `completed`)
+    ComfyUI로 실제 이미지를 생성하며, **jobId와 `status="pending"`을 즉시 반환**합니다.
+    실제 생성은 백그라운드(InMemoryJobManager.run_async, ThreadPoolExecutor)에서 진행되고,
+    클라이언트는 `GET /api/jobs/{jobId}`로 pending→running→completed/failed를 폴링합니다.
 
-    생성 흐름은 InMemoryJobManager가 담당하며, 나중에 RabbitMQ/Celery
-    publish 로직으로 교체할 수 있습니다.
+    생성 실패 시 캐릭터 레코드는 저장되지 않습니다(orphan 방지: 성공 후 저장).
+    나중에 RabbitMQ/Celery publish 로직으로 교체할 수 있습니다.
     """
     return create_character_generation_job(request.model_dump())
 
