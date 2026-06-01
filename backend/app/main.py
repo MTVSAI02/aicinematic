@@ -1,5 +1,30 @@
+import os
+import sys
+from pathlib import Path
+
+# ── 프로젝트 루트를 sys.path에 추가 ─────────────────────────────────────────
+# backend/app/main.py → .parent × 3 = 프로젝트 루트
+# 이렇게 해야 'ai' 패키지를 백엔드에서 import 할 수 있다.
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+# ── .env 로드 (backend/.env 우선, 없으면 ai/.env) ───────────────────────────
+def _load_env(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
+_load_env(Path(__file__).parent.parent / ".env")        # backend/.env
+_load_env(_PROJECT_ROOT / "ai" / ".env")                # ai/.env (fallback)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .core.exception_handlers import app_exception_handler
 from .core.exceptions import AppException
@@ -48,3 +73,9 @@ app.include_router(voices.router)
 @app.get("/")
 def root():
     return {"service": "Mongsil Bookstore", "status": "running", "docs": "/docs"}
+
+
+# 생성된 이미지 정적 서빙 — /storage/characters/{id}.png
+_STORAGE_DIR = Path(__file__).parent / "storage"
+_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/storage", StaticFiles(directory=str(_STORAGE_DIR)), name="storage")

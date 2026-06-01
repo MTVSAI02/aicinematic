@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStories } from '@/api/stories'
 import { getBackgrounds, assignBackgroundToScene } from '@/api/backgrounds'
+import { getCharacters, assignCharacterToScene } from '@/api/characters'
 import { getApiErrorMessage } from '@/utils/apiError'
+import useCharacterStore from '@/store/useCharacterStore'
 import styles from './SceneEditorPage.module.css'
 
 // 씬 편집(skeleton). 현재는 "씬 ↔ 배경 연결"만 실제 동작한다.
@@ -17,21 +19,26 @@ function sceneText(scene) {
 export default function SceneEditorPage() {
   const navigate = useNavigate()
 
+  const { characters, setCharacters } = useCharacterStore()
+
   const [stories, setStories] = useState([])
   const [backgrounds, setBackgrounds] = useState([])
   const [storyId, setStoryId] = useState('')
   const [sceneId, setSceneId] = useState('')
   const [pickedBackgroundId, setPickedBackgroundId] = useState('')
+  const [pickedCharacterId, setPickedCharacterId] = useState('')
+  const [sceneAppearancePrompt, setSceneAppearancePrompt] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
-    Promise.all([getStories(), getBackgrounds()])
-      .then(([storyList, bgList]) => {
+    Promise.all([getStories(), getBackgrounds(), getCharacters()])
+      .then(([storyList, bgList, charList]) => {
         setStories(storyList)
         setBackgrounds(bgList)
+        setCharacters(charList)
         setLoadError('')
       })
       .catch((e) => {
@@ -61,6 +68,21 @@ export default function SceneEditorPage() {
       const list = await getStories()
       setStories(list)
       setMessage('배경이 씬에 연결되었습니다.')
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    }
+  }
+
+  async function handleCharacterConnect() {
+    if (!storyId || !sceneId || !pickedCharacterId) return
+    setMessage('')
+    setError('')
+    try {
+      await assignCharacterToScene(sceneId, { storyId, characterId: pickedCharacterId, sceneAppearancePrompt })
+      // 갱신: 스토리 다시 불러와 scene.characterId 반영
+      const list = await getStories()
+      setStories(list)
+      setMessage('캐릭터가 씬에 연결되었습니다.')
     } catch (e) {
       setError(getApiErrorMessage(e))
     }
@@ -98,12 +120,15 @@ export default function SceneEditorPage() {
                 <li
                   key={sc.sceneId}
                   className={`${styles.sceneItem} ${sc.sceneId === sceneId ? styles.sceneItemActive : ''}`}
-                  onClick={() => { setSceneId(sc.sceneId); setMessage(''); setError('') }}
+                  onClick={() => { setSceneId(sc.sceneId); setSceneAppearancePrompt(''); setMessage(''); setError('') }}
                 >
                   <span className={styles.sceneOrder}>씬 {sc.order}</span>
                   <p className={styles.sceneText}>{sceneText(sc)}</p>
                   {sc.backgroundId && (
                     <span className={styles.bgBadge}>배경: {sc.backgroundId}</span>
+                  )}
+                  {sc.characterId && (
+                    <span className={styles.bgBadge}>캐릭터: {sc.characterId}</span>
                   )}
                 </li>
               ))}
@@ -155,9 +180,45 @@ export default function SceneEditorPage() {
                   )}
                 </div>
 
-                <div className={styles.panelItem}>
+                <div className={styles.bgPanel}>
                   <span className={styles.panelLabel}>캐릭터</span>
-                  <button className={styles.panelBtn}>캐릭터 합성</button>
+                  <span className={styles.muted}>
+                    현재: {selectedScene.characterId ?? '연결 안 됨'}
+                  </span>
+                  {characters.length === 0 ? (
+                    <span className={styles.muted}>
+                      저장된 캐릭터가 없습니다.{' '}
+                      <button className={styles.link} onClick={() => navigate('/character')}>
+                        캐릭터 만들기
+                      </button>
+                    </span>
+                  ) : (
+                    <>
+                      <select
+                        className={styles.select}
+                        value={pickedCharacterId}
+                        onChange={(e) => setPickedCharacterId(e.target.value)}
+                      >
+                        <option value="">라이브러리에서 캐릭터 선택</option>
+                        {characters.map((c) => (
+                          <option key={c.characterId} value={c.characterId}>{c.name}</option>
+                        ))}
+                      </select>
+                      <textarea
+                        className={styles.textarea}
+                        value={sceneAppearancePrompt}
+                        onChange={(e) => setSceneAppearancePrompt(e.target.value)}
+                        placeholder="씬에서의 외형 설명 (선택). 예) 서있는 자세, 밝은 표정, 야외"
+                      />
+                      <button
+                        className={styles.panelBtn}
+                        onClick={handleCharacterConnect}
+                        disabled={!pickedCharacterId}
+                      >
+                        이 씬에 캐릭터 연결
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
               {message && <p className={styles.message}>{message}</p>}
