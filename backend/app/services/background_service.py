@@ -14,9 +14,7 @@ BACKGROUND_SUFFIX = (
     "storybook background, soft painterly style, clean composition, "
     "background only, no characters"
 )
-DEFAULT_NEGATIVE_PROMPT = (
-    "characters, people, animals, text, watermark, blurry, low quality"
-)
+# negativePrompt는 backend가 다루지 않는다. (AI FastAPI 서버/ComfyUI 워크플로 내부 고정값)
 DEFAULT_SUGGESTED_PROMPT = "따뜻하고 부드러운 동화풍 배경"
 
 # sourceText 키워드 → 배경 표현 매핑 (등장 순서대로 검사, 값은 중복 제거)
@@ -37,13 +35,6 @@ KEYWORD_MAP: list[tuple[tuple[str, ...], str]] = [
 def assemble_final_prompt(prompt: str) -> str:
     """사용자/추천 prompt에 background only 규칙 suffix를 붙여 finalPrompt를 만든다."""
     return f"{prompt.strip()}, {BACKGROUND_SUFFIX}"
-
-
-def resolve_negative_prompt(negative: str | None) -> str:
-    """negativePrompt가 비어 있으면 기본값을 사용한다."""
-    if negative and negative.strip():
-        return negative.strip()
-    return DEFAULT_NEGATIVE_PROMPT
 
 
 class BackgroundService:
@@ -68,7 +59,6 @@ class BackgroundService:
             "sourceText": source_text,
             "suggestedPrompt": suggested_prompt,
             "finalPrompt": assemble_final_prompt(suggested_prompt),
-            "negativePrompt": DEFAULT_NEGATIVE_PROMPT,
         }
 
     @staticmethod
@@ -101,7 +91,6 @@ class BackgroundService:
                 "name": name,
                 "prompt": candidate["prompt"],
                 "finalPrompt": candidate["finalPrompt"],
-                "negativePrompt": candidate["negativePrompt"],
                 "imageUrl": candidate["imageUrl"],
             }
         )

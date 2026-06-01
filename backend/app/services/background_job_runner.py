@@ -1,48 +1,48 @@
+from ..core.config import BACKGROUND_CANDIDATE_STORAGE_DIR, storage_url
 from ..core.exceptions import BackgroundGenerationFailedError
 from ..repositories.background_candidate_repository import background_candidate_repository
 from ..schemas.job import JobType
-from .background_service import assemble_final_prompt, resolve_negative_prompt
+from .ai_background_client import generate_background_images
+from .background_service import assemble_final_prompt
 from .job_manager import job_manager
-
-# mock 후보 개수. 실제로는 ComfyUI 워크플로가 몇 장 생성할지 결정한다.
-# 백엔드가 정하는 값이 아니라, 현재 mock 단계에서 "ComfyUI가 4장을 돌려준다"고 가정한 값일 뿐이다.
-MOCK_BACKGROUND_CANDIDATE_COUNT = 4
 
 
 def create_background_generation_job(request_data: dict) -> dict:
-    """배경 후보 생성 Job (비동기). 캐릭터와 동일하게 jobId를 즉시 반환하고
+    """배경 후보 생성 Job (비동기).
 
-    생성은 백그라운드에서 진행된다(실제 ComfyUI 연동 대비). 프론트는 GET /api/jobs/{jobId}로
-    폴링한다. 현재는 mock 후보(imageUrl=None)를 만든다."""
+    구조: Backend → 우리 AI FastAPI 서버(/generate) → 외부 ComfyUI.
+    Backend는 ComfyUI를 직접 호출하지 않고, finalPrompt를 만들어 AI 서버에 `{prompt}`로만 보낸다.
+    negativePrompt는 backend가 다루지 않는다(AI 서버/워크플로 내부 고정값).
+
+    AI 서버 1회 호출 → ComfyUI batch 결과(여러 장)를 받아 backend가 storage에 저장한다.
+    후보 개수는 백엔드가 정하지 않고 **AI/ComfyUI가 돌려준 만큼** 저장한다.
+    jobId 즉시 반환 → 프론트가 GET /api/jobs/{jobId} 폴링.
+    """
 
     def build_result() -> dict:
         prompt = request_data.get("prompt")
-        final_prompt = assemble_final_prompt(prompt)
-        negative_prompt = resolve_negative_prompt(request_data.get("negativePrompt"))
+        final_prompt = assemble_final_prompt(prompt)  # prompt + 배경 suffix (내부 개념)
 
-        # 후보 개수는 백엔드가 정하지 않는다(실제로는 ComfyUI가 생성한 만큼).
+        # 1. AI 서버 1회 호출 → 이미지 bytes 목록 (실패하면 예외 → Job failed, 부분 저장 없음)
+        images = generate_background_images(final_prompt)  # AI 서버에는 {"prompt": final_prompt}
+
+        # 2. 저장은 backend 담당: 받은 만큼 candidate별로 파일 저장 + imageUrl 생성
+        BACKGROUND_CANDIDATE_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
         candidates = []
-        for _ in range(MOCK_BACKGROUND_CANDIDATE_COUNT):
-            candidates.append(
-                background_candidate_repository.save(
-                    {
-                        "prompt": prompt,
-                        "finalPrompt": final_prompt,
-                        "negativePrompt": negative_prompt,
-                        "imageUrl": None,
-                    }
-                )
+        for image_bytes in images:
+            candidate_id = background_candidate_repository.reserve_id()
+            (BACKGROUND_CANDIDATE_STORAGE_DIR / f"{candidate_id}.png").write_bytes(image_bytes)
+            image_url = storage_url("backgrounds", "candidates", f"{candidate_id}.png")
+            background_candidate_repository.create(
+                candidate_id,
+                {"prompt": prompt, "finalPrompt": final_prompt, "imageUrl": image_url},
             )
+            candidates.append({"candidateId": candidate_id, "imageUrl": image_url})
 
-        # result.candidates 에는 candidateId/imageUrl 만 노출
         return {
             "prompt": prompt,
             "finalPrompt": final_prompt,
-            "negativePrompt": negative_prompt,
-            "candidates": [
-                {"candidateId": c["candidateId"], "imageUrl": c["imageUrl"]}
-                for c in candidates
-            ],
+            "candidates": candidates,
         }
 
     return job_manager.run_async(

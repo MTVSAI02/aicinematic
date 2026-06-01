@@ -28,7 +28,6 @@ const useBackgroundStore = create((set) => ({
   // 백엔드가 finalPrompt에 덧붙이는 고정 suffix(배경 규칙). 추천 응답에서 추출해 보관하고,
   // 미리보기는 항상 "현재 promptInput + suffix"로 실시간 계산한다(stale 방지).
   promptSuffix: '',
-  negativePrompt: '',
   sourceText: '',
 
   // 씬 추천/연결 공용 임시 입력 (나중에 Scene Editor 연결 시 외부에서 주입 가능)
@@ -46,7 +45,6 @@ const useBackgroundStore = create((set) => ({
   setCurrentJobId: (currentJobId) => set({ currentJobId }),
   setPromptInput: (promptInput) => set({ promptInput }),
   setPromptSuffix: (promptSuffix) => set({ promptSuffix }),
-  setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
   setSourceText: (sourceText) => set({ sourceText }),
   setStoryId: (storyId) => set({ storyId }),
   setSceneId: (sceneId) => set({ sceneId }),
@@ -83,7 +81,6 @@ const useBackgroundStore = create((set) => ({
       currentJobId: null,
       promptInput: '',
       promptSuffix: '',
-      negativePrompt: '',
       sourceText: '',
       storyId: '',
       sceneId: '',

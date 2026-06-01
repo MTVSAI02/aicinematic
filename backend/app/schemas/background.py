@@ -22,17 +22,15 @@ class BackgroundPromptSuggestionResponse(BaseModel):
     sourceText: str
     suggestedPrompt: str
     finalPrompt: str
-    negativePrompt: str
 
 
 # ── 후보 생성 Job ─────────────────────────────────────────────
 
 
 class BackgroundGenerateRequest(BaseModel):
-    # 후보 개수(count)는 요청으로 받지 않는다.
-    # 몇 장을 생성할지는 ComfyUI 워크플로(배치 크기)가 결정하며, 백엔드는 그 결과를 그대로 전달한다.
+    # 프론트는 사용자 prompt만 보낸다. negativePrompt는 받지 않는다(AI 서버/워크플로 내부 고정값).
+    # 후보 개수도 요청으로 받지 않는다(AI/ComfyUI batch 결과 개수만큼 저장).
     prompt: str = Field(min_length=1, examples=["별빛이 비치는 조용한 사막, 따뜻한 동화풍 배경"])
-    negativePrompt: str | None = None
 
     @field_validator("prompt")
     @classmethod
@@ -44,7 +42,6 @@ class BackgroundCandidate(BaseModel):
     candidateId: str
     prompt: str
     finalPrompt: str
-    negativePrompt: str
     imageUrl: str | None = None
 
 
@@ -66,7 +63,6 @@ class BackgroundResponse(BaseModel):
     name: str
     prompt: str
     finalPrompt: str
-    negativePrompt: str
     imageUrl: str | None = None
 
     model_config = ConfigDict(
@@ -76,7 +72,6 @@ class BackgroundResponse(BaseModel):
                 "name": "별빛 사막 배경",
                 "prompt": "별빛이 비치는 조용한 사막, 따뜻한 동화풍 배경",
                 "finalPrompt": "별빛이 비치는 조용한 사막, 따뜻한 동화풍 배경, storybook background, soft painterly style, clean composition, background only, no characters",
-                "negativePrompt": "characters, people, animals, text, watermark, blurry, low quality",
                 "imageUrl": None,
             }
         }
@@ -84,7 +79,7 @@ class BackgroundResponse(BaseModel):
 
 
 class BackgroundUpdateRequest(BaseModel):
-    # MVP에서는 name만 수정 가능. (prompt/finalPrompt/negativePrompt/imageUrl 은 생성 결과 추적용이라 수정 불가)
+    # MVP에서는 name만 수정 가능. (prompt/finalPrompt/imageUrl 은 생성 결과 추적용이라 수정 불가)
     name: str | None = Field(default=None, min_length=1)
 
     @field_validator("name")

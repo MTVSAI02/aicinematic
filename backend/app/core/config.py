@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 # 생성 결과(이미지/오디오/렌더) 저장 루트. backend/app/storage
@@ -8,8 +9,15 @@ STORAGE_ROOT = Path(__file__).resolve().parent.parent / "storage"
 
 CHARACTER_STORAGE_DIR = STORAGE_ROOT / "characters"
 BACKGROUND_STORAGE_DIR = STORAGE_ROOT / "backgrounds"
+BACKGROUND_CANDIDATE_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "candidates"
 AUDIO_STORAGE_DIR = STORAGE_ROOT / "audio"
 RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
+
+# 우리 AI FastAPI 서버 주소 (외부 ComfyUI는 이 AI 서버가 호출한다).
+# Backend는 ComfyUI를 직접 호출하지 않고 이 서버의 /generate 만 호출한다.
+# ⚠️ IP를 코드에 하드코딩하지 않는다. .env 의 AI_SERVER_URL 로 관리.
+#   예) AI_SERVER_URL=http://192.168.0.35:5000
+AI_SERVER_URL = os.getenv("AI_SERVER_URL", "")
 
 # 정적 서빙 URL prefix (main.py 의 app.mount 와 일치)
 STORAGE_URL_PREFIX = "/storage"

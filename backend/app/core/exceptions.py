@@ -97,3 +97,14 @@ class InvalidNarratorVoiceError(AppException):
 class InvalidCharacterVoiceError(AppException):
     status_code = 400
     detail = 'Character voice must have voiceType="character".'
+
+
+class AIServerError(AppException):
+    """우리 AI FastAPI 서버 호출 실패 (연결/설정/응답).
+
+    비동기 Job 안에서 발생하면 job_manager가 str(exc)=detail 을 job.error에 남긴다.
+    (mock fallback 없이 실패를 그대로 드러내 디버깅이 쉽도록 한다.)
+    """
+
+    status_code = 502
+    detail = "AI server request failed"

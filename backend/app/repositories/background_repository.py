@@ -17,7 +17,6 @@ class BackgroundRepository:
             "name": background_data.get("name"),
             "prompt": background_data.get("prompt"),
             "finalPrompt": background_data.get("finalPrompt"),
-            "negativePrompt": background_data.get("negativePrompt"),
             "imageUrl": background_data.get("imageUrl"),
         }
         self._backgrounds[background_id] = saved
