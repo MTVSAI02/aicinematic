@@ -317,22 +317,17 @@ scene.items 사용하기
 {
   characters: [
     {
-      characterId: 'char_001',
+      characterId: 'char_mock_001',
       name: '어린왕자',
-      imageUrl: '/static/characters/char_001.png',
-      referenceImageUrl: '/static/characters/char_001_ref.png',
-      appearancePrompt: '금발 단발, 초록 외투, 작은 소년',
-      seed: 1024,
-      voiceId: 'voice_001',
-      voiceProfile: {
-        voiceId: 'voice_001',
-        name: '어린왕자 목소리',
-        type: 'cloned',
-      },
+      appearancePrompt: '금발 단발, 초록 외투, 작은 소년', // ComfyUI 생성용
+      description: '호기심 많고 다정한 어린 왕자',          // 표시용 메타(선택)
+      imageUrl: '/storage/characters/char_mock_001.png',  // ComfyUI 생성 결과(미완료 시 null)
+      voiceId: 'voice_mock_001',                          // 연결된 보이스(없으면 null)
     },
   ],
   selectedCharacterId: null
 }
+// seed / referenceImageUrl / stylePreset / lockProfile / voiceProfile 은 백엔드가 받지 않는다(ComfyUI/AI 파트 관리).
 ```
 
 ### 8.4 Voice Store
@@ -921,7 +916,7 @@ export async function deleteCharacter(characterId) {
 }
 ```
 
-> 캐릭터 데이터: `{ characterId, name, appearancePrompt, imageUrl }` — `imageUrl`은 optional이며 mock 단계에서는 `null`. 스타일/seed/reference/lock, voice 관련 필드는 백엔드가 받지 않습니다(ComfyUI 파트 담당).
+> 캐릭터 데이터: `{ characterId, name, appearancePrompt, description, imageUrl, voiceId }` — `imageUrl`은 ComfyUI 비동기 생성 결과(완료 전 `null`), `voiceId`는 연결된 보이스(없으면 `null`). 스타일/seed/reference/lock 등은 백엔드가 받지 않습니다(ComfyUI 파트 담당).
 
 ### `src/api/voice.js` 역할
 
