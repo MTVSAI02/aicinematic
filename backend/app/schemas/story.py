@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from .character import SceneCharacterItem
+
 
 class StoryParseRequest(BaseModel):
     title: str = Field(examples=["어린 왕자"])
@@ -33,6 +35,10 @@ class SceneResponse(BaseModel):
     order: int = Field(description="1부터 순서대로 부여")
     backgroundId: str | None = Field(
         default=None, description="연결된 배경 ID. 없으면 null (PATCH /api/scenes/{sceneId}/background로 연결)"
+    )
+    characters: list[SceneCharacterItem] = Field(
+        default_factory=list,
+        description="연결된 캐릭터 목록(씬당 다중). PATCH /api/scenes/{sceneId}/character로 추가/수정, DELETE로 개별 제거. 각 항목에 sceneAppearancePrompt(표정/포즈) 포함",
     )
     items: list[StoryItemResponse]
 

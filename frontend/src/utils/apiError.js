@@ -22,6 +22,8 @@ export function getApiErrorMessage(error) {
     if (detail === 'Default voice cannot be deleted.') return '기본 보이스는 삭제할 수 없습니다.'
     if (detail === 'Only a narrator-type voice can be connected as narrator.')
       return '나레이션에는 나레이션용 보이스만 연결할 수 있습니다.'
+    if (detail === 'Character voice must have voiceType="character".')
+      return '캐릭터에는 캐릭터용 보이스만 연결할 수 있습니다.'
     return detail
   }
 
