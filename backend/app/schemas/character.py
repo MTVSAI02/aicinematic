@@ -57,6 +57,22 @@ class CharacterVoiceUpdateRequest(BaseModel):
     voiceId: str | None = None
 
 
+class SceneCharacterLayout(BaseModel):
+    """씬 합성 미리보기에서 캐릭터의 배치 정보.
+
+    좌표는 **정규화(0~1)** 로 저장한다(미리보기 크기 ≠ 최종 렌더 해상도여도 동일 위치로 매핑).
+    x/y는 캐릭터의 **중심** 위치, scale은 스테이지 너비 대비 캐릭터 너비 비율.
+    """
+
+    # 백엔드 계약은 백엔드가 지킨다(프론트 clamp는 방어용일 뿐). 범위 밖 값은 422.
+    x: float = Field(default=0.5, ge=0.0, le=1.0)  # 중심 x (정규화)
+    y: float = Field(default=0.55, ge=0.0, le=1.0)  # 중심 y (정규화)
+    scale: float = Field(default=0.28, gt=0.0, le=5.0)  # 너비 비율(양수, 과도값 방지)
+    rotation: float = Field(default=0.0, ge=-360.0, le=360.0)  # 각도(도). 해상도 무관
+    zIndex: int = Field(default=1, ge=0, le=9999)
+    flipX: bool = False
+
+
 class SceneCharacterItem(BaseModel):
     """씬에 연결된 캐릭터 1개. (씬당 여러 명 가능)"""
 
@@ -64,6 +80,8 @@ class SceneCharacterItem(BaseModel):
     # 씬별 캐릭터 연출(표정/포즈 등). 지금은 저장만 하고,
     # 추후 face_lock / pose_expression / scene character generation 에서 사용한다.
     sceneAppearancePrompt: str | None = None
+    # 합성 미리보기 배치(위치/크기/순서/반전). 없으면 프론트/서비스 기본값 사용.
+    layout: SceneCharacterLayout | None = None
 
 
 class SceneCharacterUpdateRequest(BaseModel):
@@ -76,6 +94,8 @@ class SceneCharacterUpdateRequest(BaseModel):
     storyId: str
     characterId: str
     sceneAppearancePrompt: str | None = None
+    # 위치/크기 조정 저장용. 전달되면 그 캐릭터의 layout만 갱신한다.
+    layout: SceneCharacterLayout | None = None
 
 
 class SceneCharactersResponse(BaseModel):

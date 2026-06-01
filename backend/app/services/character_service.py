@@ -23,6 +23,17 @@ def build_character_final_prompt(appearance_prompt: str) -> str:
     return f"{CHARACTER_PROMPT_PREFIX} {appearance_prompt.strip()}"
 
 
+# 씬에 새 캐릭터 추가 시 기본 x(중심, 정규화) — 겹치지 않게 분산. index는 추가 전 캐릭터 수.
+_DEFAULT_LAYOUT_X = [0.5, 0.3, 0.7, 0.2, 0.5, 0.8]
+
+
+def _default_character_layout(index: int) -> dict:
+    """씬 합성 미리보기용 기본 배치. 1명=중앙 하단, 추가될수록 좌우로 분산."""
+    x = _DEFAULT_LAYOUT_X[index] if index < len(_DEFAULT_LAYOUT_X) else 0.5
+    # 프레임 안에 들어오도록 보수적 기본값(키 큰 캐릭터도 안 넘치게). 사용자가 드래그/리사이즈로 조정.
+    return {"x": x, "y": 0.55, "scale": 0.28, "rotation": 0.0, "zIndex": index + 1, "flipX": False}
+
+
 class CharacterService:
     """캐릭터 라이브러리 + 씬-캐릭터 연결 비즈니스 로직.
 
@@ -89,12 +100,14 @@ class CharacterService:
         scene_id: str,
         character_id: str,
         scene_appearance_prompt: str | None = None,
+        layout: dict | None = None,
     ) -> dict:
         """씬에 캐릭터를 추가/수정한다. (씬당 여러 명 가능)
 
         story 없음 → 404, scene 없음 → 404, 캐릭터 없음 → 404.
-        같은 characterId가 이미 있으면 sceneAppearancePrompt만 갱신한다.
-        sceneAppearancePrompt는 지금은 저장만 한다(추후 face_lock/pose에서 사용).
+        같은 characterId가 이미 있으면 전달된 값만 부분 갱신한다
+        (sceneAppearancePrompt / layout 각각 None이 아니면 갱신 → 드래그 저장 시 prompt 안 지워짐).
+        새로 추가될 때 layout이 없으면 기본 배치(겹치지 않게 분산)를 넣는다.
         반환: 그 씬의 전체 캐릭터 목록.
         """
         scene = self._find_scene(story_id, scene_id)
@@ -106,12 +119,18 @@ class CharacterService:
             (c for c in characters if c.get("characterId") == character_id), None
         )
         if existing is not None:
-            existing["sceneAppearancePrompt"] = scene_appearance_prompt
+            if scene_appearance_prompt is not None:
+                existing["sceneAppearancePrompt"] = scene_appearance_prompt
+            if layout is not None:
+                existing["layout"] = layout
         else:
             characters.append(
                 {
                     "characterId": character_id,
                     "sceneAppearancePrompt": scene_appearance_prompt,
+                    "layout": layout
+                    if layout is not None
+                    else _default_character_layout(len(characters)),
                 }
             )
         return {"storyId": story_id, "sceneId": scene_id, "characters": characters}
