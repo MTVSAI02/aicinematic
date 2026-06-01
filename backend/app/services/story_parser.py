@@ -67,7 +67,8 @@ def parse_script_to_scenes(script: str) -> list[dict]:
         if items:
             scenes.append({
                 "sceneId": f"scene_{order:03d}",
-                "order": order,
+                "order": order,  # 스토리 원본 순서. 이후 변경하지 않는다.
+                "duration": 3.0,  # 타임라인 재생 길이(초). 기본 3.0, 1.0~30.0 범위로 조절.
                 "backgroundId": None,
                 "items": items,
             })

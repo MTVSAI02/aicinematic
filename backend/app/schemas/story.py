@@ -33,6 +33,7 @@ class StoryItemResponse(BaseModel):
 class SceneResponse(BaseModel):
     sceneId: str = Field(description="scene_001, scene_002 형식으로 자동 생성")
     order: int = Field(description="1부터 순서대로 부여")
+    duration: float = Field(default=3.0, description="타임라인 재생 길이(초). 기본 3.0, 1.0~30.0")
     backgroundId: str | None = Field(
         default=None, description="연결된 배경 ID. 없으면 null (PATCH /api/scenes/{sceneId}/background로 연결)"
     )
