@@ -328,6 +328,7 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
   - AI 서버는 **1회 호출로 ComfyUI batch 결과(여러 장)** 를 `{ "images": ["<base64 png>", ...] }`로 반환. **후보 개수는 AI/ComfyUI가 결정**(백엔드는 받은 만큼 저장).
   - Backend가 각 base64를 디코드해 `storage/backgrounds/candidates/{candidateId}.png`로 저장, `imageUrl` 생성.
   - AI 서버 주소는 `AI_SERVER_URL`(env). 연결/응답 실패 시 **mock fallback 없이 Job `failed`**(원인을 `error`에 보존).
+- **라이브러리 저장(후보→저장)**: 후보 1장 선택 저장 시 candidate 이미지를 `storage/backgrounds/library/{backgroundId}.png`로 **복사**하고 imageUrl을 library 경로로 둔다. 저장 성공 후에만 선택된 candidate 파일·record를 삭제한다(순서: library 복사 → record 저장 → candidate 파일 삭제 → candidate record 삭제). 저장본이 후보 파일에 의존하지 않는다.
 - **Job**: `JobType.background_generate`로 `InMemoryJobManager.run_async`(비동기). `pending` 반환 후 폴링(캐릭터와 동일). 저장 책임은 backend(이미지 저장/imageUrl/repository).
 - scene 응답에 `backgroundId`(optional, 기본 null) 포함.
 
@@ -437,6 +438,10 @@ ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 
 - 생성 결과는 DB 없이 **로컬 파일**로 저장하고 `/storage`로 정적 서빙한다.
 - 경로는 [`core/config.py`](app/core/config.py)에서 **절대경로**로 관리(`STORAGE_ROOT` + characters/backgrounds/audio/renders). 상대경로 하드코딩 금지(실행 cwd 의존 버그 방지).
 - imageUrl 예: `/storage/characters/{characterId}.png` (`storage_url()` 헬퍼).
+- **배경은 2단계 폴더**:
+  - 후보: `storage/backgrounds/candidates/{candidateId}.png` (생성 결과, 임시)
+  - 저장본: `storage/backgrounds/library/{backgroundId}.png` (선택 저장 시 후보에서 **복사**, 영구 자산)
+  - 저장된 배경의 imageUrl은 **library 경로**이므로 후보 삭제와 무관하게 유지된다.
 
 **저장 책임 경계 (AI ↔ Backend)**
 
