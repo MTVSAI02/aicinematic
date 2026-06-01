@@ -17,6 +17,7 @@ export default function CharacterCreateForm() {
   const setCharacters = useCharacterStore((s) => s.setCharacters)
 
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [appearancePrompt, setAppearancePrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [jobStatus, setJobStatus] = useState(null)
@@ -32,7 +33,7 @@ export default function CharacterCreateForm() {
     : !trimmedName
       ? '캐릭터 이름을 입력해주세요.'
       : !trimmedPrompt
-        ? '캐릭터 외형 설명을 입력해주세요.'
+        ? '외형 프롬프트를 입력해주세요.'
         : ''
 
   async function handleCreate() {
@@ -44,6 +45,7 @@ export default function CharacterCreateForm() {
       // 1. 생성 Job 요청 → jobId 수신
       const job = await characterApi.generateCharacter({
         name: trimmedName,
+        description: description.trim(),
         appearancePrompt: trimmedPrompt,
       })
 
@@ -56,6 +58,7 @@ export default function CharacterCreateForm() {
         const list = await characterApi.getCharacters()
         setCharacters(list)
         setName('')
+        setDescription('')
         setAppearancePrompt('')
       } else if (jobDetail.status === 'failed') {
         setError(getApiErrorMessage({ detail: jobDetail.error }))
@@ -82,7 +85,16 @@ export default function CharacterCreateForm() {
         외형 설명
         <input
           className={styles.input}
-          placeholder="금발 단발, 초록 외투를 입은 작은 소년"
+          placeholder="예: 금발 단발의 작은 소년, 초록 외투"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </label>
+      <label className={styles.label}>
+        외형 프롬프트
+        <textarea
+          className={styles.textarea}
+          placeholder={"blonde short hair, small boy, green coat, full body, white background\n자세할수록 더 정확하게 생성됩니다."}
           value={appearancePrompt}
           onChange={(e) => setAppearancePrompt(e.target.value)}
         />
