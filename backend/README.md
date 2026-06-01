@@ -55,7 +55,8 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 | 변수 | 용도 |
 |---|---|
 | `APP_NAME` / `APP_ENV` / `FRONTEND_URL` / `STORAGE_DIR` | 앱 기본 설정 |
-| `COMFYUI_DEFAULT_URL` | ComfyUIClient 기본 URL |
+| `AI_SERVER_URL` | **우리 AI FastAPI 서버** 주소 (배경 생성 `/generate` 호출용). 예: `http://192.168.0.35:5000` |
+| `COMFYUI_DEFAULT_URL` | ComfyUIClient 기본 URL (캐릭터 in-process 생성용) |
 | `COMFYUI_CHARACTER_URL` | 캐릭터 생성용 ComfyUI |
 | `COMFYUI_TIMEOUT_SECONDS` | 요청 timeout(초) |
 
@@ -139,7 +140,7 @@ backend/
 | PATCH | `/api/characters/{character_id}` | 캐릭터 부분 수정 (name/appearancePrompt/imageUrl) |
 | DELETE | `/api/characters/{character_id}` | 캐릭터 삭제 |
 | POST | `/api/backgrounds/prompt-suggestions` | 씬 기반 배경 프롬프트 추천 (이미지 생성 X) |
-| POST | `/api/backgrounds/generate` | 배경 후보 생성 Job (**비동기** → `pending` 반환, 폴링; 후보는 현재 mock) |
+| POST | `/api/backgrounds/generate` | 배경 후보 생성 Job (**비동기** → `pending` 반환, 폴링; body `{prompt}`만). Backend→AI 서버(/generate)→ComfyUI |
 | POST | `/api/backgrounds` | 후보 1장 → 배경 라이브러리 저장 |
 | GET | `/api/backgrounds` | 저장된 배경 목록 조회 |
 | GET | `/api/backgrounds/{background_id}` | 저장된 배경 단건 조회 |
@@ -314,12 +315,17 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 
 - **2단계 저장소**: 후보(`bg_candidate_*`, 임시) → 선택 저장(`bg_mock_*`, 라이브러리)
 - 배경은 특정 씬 소유물이 아니라 **여러 스토리/씬에서 재사용**하는 자산. 씬은 `backgroundId`만 참조한다(candidateId 직접 연결 금지).
-- **프롬프트 규칙(LLM 전, 규칙 기반)**: `finalPrompt = {prompt}, storybook background, soft painterly style, clean composition, background only, no characters`. 기본 negativePrompt = `characters, people, animals, text, watermark, blurry, low quality`. → 배경엔 사람/동물 금지(캐릭터는 별도 라이브러리).
+- **프롬프트 규칙(LLM 전, 규칙 기반)**: `finalPrompt = {prompt}, storybook background, soft painterly style, clean composition, background only, no characters`. → 배경엔 사람/동물 금지(캐릭터는 별도 라이브러리). **negativePrompt는 backend가 다루지 않는다**(AI 서버/ComfyUI 워크플로 내부 고정값).
 - **⚠️ generate `prompt` 계약**: `POST /api/backgrounds/generate`의 `prompt`는 **맨 프롬프트**(suggestedPrompt 또는 사용자가 수정한 원본)여야 한다. suffix가 붙은 `finalPrompt`를 보내면 중복된다. **finalPrompt 조립은 백엔드 책임**. → 프론트는 `promptInput`(전송용)과 `finalPromptPreview`(표시용) 상태를 분리하고, `generateBackground({ prompt })`에 finalPrompt를 넣지 않는다. (가드는 두지 않고 계약으로 관리. 실수가 반복되면 "prompt에 backend suffix 포함 시 422"로 막는 방향 검토)
 - **suggestedPrompt**: scene.items의 narration(없으면 dialogue) → sourceText → 키워드 사전(사막/별빛/숲/바다…) 매칭, 없으면 기본값. **정답이 아니라 초안**이며 사용자가 수정.
 - **수정**: MVP는 `name`만. **삭제**: 참조하던 모든 scene의 backgroundId를 null로 정리.
-- **Job**: `JobType.background_generate`로 `InMemoryJobManager.run_async`(비동기) + Job API 재사용. `pending` 반환 후 폴링(캐릭터와 동일 패턴). 후보는 현재 mock.
-- 실제 ComfyUI 호출/이미지 생성 없음(`imageUrl=null`). scene 응답에 `backgroundId`(optional, 기본 null) 추가됨.
+- **생성 구조 (AI FastAPI 서버 경유)**: `Backend → 우리 AI 서버(/generate) → 외부 ComfyUI`. **Backend는 ComfyUI를 직접 호출하지 않는다.**
+  - Backend는 finalPrompt를 만들어 AI 서버에 **`{ "prompt": finalPrompt }`만** 보낸다(필드명 항상 `prompt`).
+  - AI 서버는 **1회 호출로 ComfyUI batch 결과(여러 장)** 를 `{ "images": ["<base64 png>", ...] }`로 반환. **후보 개수는 AI/ComfyUI가 결정**(백엔드는 받은 만큼 저장).
+  - Backend가 각 base64를 디코드해 `storage/backgrounds/candidates/{candidateId}.png`로 저장, `imageUrl` 생성.
+  - AI 서버 주소는 `AI_SERVER_URL`(env). 연결/응답 실패 시 **mock fallback 없이 Job `failed`**(원인을 `error`에 보존).
+- **Job**: `JobType.background_generate`로 `InMemoryJobManager.run_async`(비동기). `pending` 반환 후 폴링(캐릭터와 동일). 저장 책임은 backend(이미지 저장/imageUrl/repository).
+- scene 응답에 `backgroundId`(optional, 기본 null) 포함.
 
 ### 캐릭터 / Job API
 
@@ -394,6 +400,7 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
   - 배경/씬: `BackgroundCandidateNotFoundError` (404), `BackgroundNotFoundError` (404), `BackgroundGenerationFailedError` (500), `StoryNotFoundError` (404), `SceneNotFoundError` (404)
   - TTS: `TTSAudioNotFoundError` (404), `TTSGenerationFailedError` (500), `EmptySceneItemsError` (400)
   - 보이스: `VoiceNotFoundError` (404), `DefaultVoiceCannotBeModifiedError` (400), `DefaultVoiceCannotBeDeletedError` (400), `InvalidNarratorVoiceError` (400), `InvalidCharacterVoiceError` (400)
+  - AI 서버: `AIServerError` (502) — 우리 AI FastAPI 서버 호출 실패(설정/연결/응답). 비동기 Job 안에서 발생하면 `job.error`에 원인이 남는다.
 - `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
