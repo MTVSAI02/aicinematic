@@ -20,10 +20,7 @@ export function generateBackground({ prompt, negativePrompt }) {
   })
 }
 
-// GET /api/jobs/{jobId} — Job 상태 조회
-export function getJob(jobId) {
-  return request(`/api/jobs/${jobId}`)
-}
+// (Job 조회는 api/jobs.js 의 getJob 사용 — 캐릭터/배경 공통)
 
 // POST /api/backgrounds — 후보 1장을 배경 라이브러리에 저장
 export function saveBackground({ candidateId, name }) {

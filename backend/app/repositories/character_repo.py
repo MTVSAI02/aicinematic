@@ -1,25 +1,44 @@
+import threading
+
+
 class CharacterRepository:
     """DB 대신 메모리 dict에 캐릭터를 저장하는 Mock Repository.
 
     서버 재시작 시 데이터는 초기화된다.
+    비동기 Job(워커 스레드)에서 ID 발급/저장이 일어날 수 있어 counter는 lock으로 보호한다.
     """
 
     def __init__(self):
         self._characters: dict = {}
         self._counter: int = 0
+        self._lock = threading.Lock()
 
-    def save(self, character_data: dict) -> dict:
-        self._counter += 1
-        character_id = f"char_mock_{self._counter:03d}"
+    def reserve_id(self) -> str:
+        """characterId만 발급한다(저장하지 않음).
+
+        생성(예: ComfyUI 이미지)을 먼저 시도하고 성공한 뒤 create()로 저장하기 위함.
+        → 생성 실패 시 imageUrl=None인 빈 캐릭터(orphan)가 남지 않는다.
+        """
+        with self._lock:
+            self._counter += 1
+            return f"char_mock_{self._counter:03d}"
+
+    def create(self, character_id: str, character_data: dict) -> dict:
+        """예약된 characterId로 캐릭터 레코드를 저장한다."""
         saved = {
             "characterId": character_id,
             "name": character_data.get("name"),
             "appearancePrompt": character_data.get("appearancePrompt"),
+            "description": character_data.get("description"),  # 저장/표시용 메타(ComfyUI prompt 미사용)
             "imageUrl": character_data.get("imageUrl"),
             "voiceId": character_data.get("voiceId"),  # 보이스 라이브러리 참조 (없으면 None)
         }
         self._characters[character_id] = saved
         return saved
+
+    def save(self, character_data: dict) -> dict:
+        """ID 발급 + 즉시 저장 (이미 만들어진 결과를 바로 저장하는 경로)."""
+        return self.create(self.reserve_id(), character_data)
 
     def list(self) -> list[dict]:
         return list(self._characters.values())

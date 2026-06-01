@@ -92,3 +92,8 @@ class DefaultVoiceCannotBeDeletedError(AppException):
 class InvalidNarratorVoiceError(AppException):
     status_code = 400
     detail = "Only a narrator-type voice can be connected as narrator."
+
+
+class InvalidCharacterVoiceError(AppException):
+    status_code = 400
+    detail = 'Character voice must have voiceType="character".'

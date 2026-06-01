@@ -54,4 +54,4 @@ ComfyUI의 **읽기전용** API(`/system_stats`, `/object_info`)만 호출하는
 아래는 정식 AI 모듈이므로 이 정리와 무관하게 유지한다.
 
 - `ai/comfy_client.py`, `ai/core/exceptions.py` — ComfyUI 공통 클라이언트/예외 (정식)
-- `ai/test_comfy_connection.py`, `ai/.env.example` — AI 파트 자체 연결 테스트 도구
+- `ai/test_comfy_connection.py` — AI 파트 자체 연결 테스트 도구 (`ai/.env`는 직접 생성, gitignore)

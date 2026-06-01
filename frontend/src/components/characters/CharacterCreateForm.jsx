@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
+import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
 // 캐릭터 페이지 공용 스타일 모듈 공유 (기존 디자인 톤 유지)
 import styles from '@/pages/character/CharacterPage.module.css'
 
-// Job 상태별 안내 문구. (현재 백엔드는 mock 이라 보통 바로 completed)
+// Job 상태별 안내 문구. (비동기 Job: pending→running→completed/failed)
 const JOB_STATUS_TEXT = {
   pending: '생성 대기 중입니다.',
   running: '캐릭터를 생성 중입니다.',
@@ -42,28 +43,26 @@ export default function CharacterCreateForm() {
     setError('')
     setJobStatus(null)
     try {
-      // 1. 생성 Job 요청 → jobId 수신
+      // 1. 생성 Job 요청 → jobId 수신 (비동기: 즉시 pending 반환)
       const job = await characterApi.generateCharacter({
         name: trimmedName,
         description: description.trim(),
         appearancePrompt: trimmedPrompt,
       })
+      setJobStatus(job.status)
 
-      // 2. Job 상태 조회 (현재는 1회. pending/running polling 은 추후 도입)
-      const jobDetail = await characterApi.getJob(job.jobId)
-      setJobStatus(jobDetail.status)
+      // 2. completed/failed 까지 폴링 (pending/running 동안 상태 갱신)
+      await pollJob(job.jobId, { onStatus: (j) => setJobStatus(j.status) })
 
-      // 3. 완료되면 캐릭터 목록 다시 동기화
-      if (jobDetail.status === 'completed') {
-        const list = await characterApi.getCharacters()
-        setCharacters(list)
-        setName('')
-        setDescription('')
-        setAppearancePrompt('')
-      } else if (jobDetail.status === 'failed') {
-        setError(getApiErrorMessage({ detail: jobDetail.error }))
-      }
+      // 3. 완료 → 캐릭터 목록 다시 동기화 + 폼 초기화
+      const list = await characterApi.getCharacters()
+      setCharacters(list)
+      setName('')
+      setDescription('')
+      setAppearancePrompt('')
     } catch (e) {
+      // pollJob 실패 시 e.detail = job.error (예: "Character generation failed")
+      setJobStatus('failed')
       setError(getApiErrorMessage(e))
     } finally {
       setLoading(false)

@@ -74,7 +74,7 @@ cd frontend
 nvm install      # .nvmrc 보고 Node 24 설치 (최초 1회)
 nvm use          # Node 24 로 전환 (터미널 새로 열 때마다)
 npm install      # package-lock.json 기준으로 동일 버전 설치
-cp .env.example .env   # 환경변수 파일 생성 (필요시 값 수정)
+# frontend/.env 를 만들고 VITE_API_BASE_URL(백엔드 주소)을 설정 (값은 팀 공유)
 ```
 
 **Windows (PowerShell)**
@@ -83,7 +83,7 @@ cd frontend
 nvm install 24         # Node 24 설치 (최초 1회) — nvm-windows 는 버전 직접 지정
 nvm use 24             # Node 24 로 전환
 npm install            # package-lock.json 기준으로 동일 버전 설치
-Copy-Item .env.example .env   # 환경변수 파일 생성 (필요시 값 수정)
+# frontend/.env 를 만들고 VITE_API_BASE_URL(백엔드 주소)을 설정 (값은 팀 공유)
 ```
 
 **Windows (cmd)**
@@ -92,7 +92,7 @@ cd frontend
 nvm install 24
 nvm use 24
 npm install
-copy .env.example .env
+REM frontend/.env 를 만들고 VITE_API_BASE_URL(백엔드 주소)을 설정 (값은 팀 공유)
 ```
 
 ---
@@ -133,8 +133,8 @@ curl http://localhost:8000/api/health
 | 원인 | 해결 |
 |---|---|
 | 백엔드 서버가 안 켜짐 | `uv run uvicorn backend.app.main:app --reload` 실행했는지 확인 |
-| 주소가 다름 | `frontend/.env` 의 `VITE_API_BASE_URL` 이 백엔드 주소(`http://localhost:8000`)와 같은지 확인 |
-| `.env` 가 없음 | `cp .env.example .env` (Windows: `copy` / `Copy-Item`) 했는지 확인 |
+| 주소가 다름 | `frontend/.env` 의 `VITE_API_BASE_URL` 이 실제 백엔드 주소와 같은지 확인 |
+| `.env` 가 없음 | `frontend/.env` 를 만들고 `VITE_API_BASE_URL` 을 설정했는지 확인 |
 | `.env` 수정 후 반영 안 됨 | `.env` 는 **서버 재시작해야** 적용됨 → 프론트 `npm run dev` 끄고 다시 실행 |
 | CORS 에러 (콘솔 빨간 메시지) | 백엔드 `main.py` 의 `allow_origins` 에 프론트 주소가 있는지 확인 |
 
@@ -179,12 +179,15 @@ npm install <패키지명>       # 예: npm install zustand
 ## 환경변수
 
 - `frontend/.env` 는 **git 에 올라가지 않습니다**(`.gitignore` 처리).
-- 새로 받은 사람은 [`frontend/.env.example`](frontend/.env.example) 을 복사해서 `.env` 를 만드세요.
-- 새 환경변수가 생기면 `.env.example` 에도 추가해서 팀에 공유하세요.
+- 새로 받은 사람은 `frontend/.env` 를 만들고 아래 “환경변수” 표의 값을 넣으세요.
+- 새 환경변수가 생기면 이 README 의 환경변수 표에도 추가해서 팀에 공유하세요.
 
-| 변수 | 설명 | 예시 |
-|---|---|---|
-| `VITE_API_BASE_URL` | 백엔드 주소 | `http://localhost:8000` |
+> **`.env.example` 정리 기준 (의도된 결정)**
+> `backend/.env.example`, `frontend/.env.example`, `ai/.env.example` **세 개 모두 삭제**했습니다. 환경변수 안내를 각 README의 직접 `.env` 생성 방식으로 통합했기 때문이며, 버그가 아니라 문서 기준 정리입니다. (`.env` 자체는 모두 gitignore — 각자 로컬에서 생성)
+
+| 변수 | 설명 |
+|---|---|
+| `VITE_API_BASE_URL` | 백엔드 서버 주소 (값은 팀에서 공유, 코드/문서엔 하드코딩 금지) |
 
 ---
 

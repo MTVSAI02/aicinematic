@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStories } from '@/api/stories'
 import { getBackgrounds, assignBackgroundToScene } from '@/api/backgrounds'
-import { getCharacters, assignCharacterToScene } from '@/api/characters'
+import {
+  getCharacters,
+  assignCharacterToScene,
+  removeCharacterFromScene,
+} from '@/api/characters'
 import { getApiErrorMessage } from '@/utils/apiError'
 import useCharacterStore from '@/store/useCharacterStore'
 import styles from './SceneEditorPage.module.css'
@@ -54,6 +58,20 @@ export default function SceneEditorPage() {
   function handleStoryChange(value) {
     setStoryId(value)
     setSceneId('')
+    // 스토리가 바뀌면 이전 씬에서 고른 선택값을 비운다(다른 씬에 잘못 연결 방지)
+    setPickedBackgroundId('')
+    setPickedCharacterId('')
+    setSceneAppearancePrompt('')
+    setMessage('')
+    setError('')
+  }
+
+  // 씬을 선택하면 배경은 현재 연결값으로 prefill, 캐릭터 추가폼은 비운다(다중이라 목록은 따로 표시).
+  function handleSceneSelect(sc) {
+    setSceneId(sc.sceneId)
+    setPickedBackgroundId(sc.backgroundId ?? '')
+    setPickedCharacterId('')
+    setSceneAppearancePrompt('')
     setMessage('')
     setError('')
   }
@@ -79,10 +97,24 @@ export default function SceneEditorPage() {
     setError('')
     try {
       await assignCharacterToScene(sceneId, { storyId, characterId: pickedCharacterId, sceneAppearancePrompt })
-      // 갱신: 스토리 다시 불러와 scene.characterId 반영
+      const list = await getStories() // scene.characters 목록 갱신
+      setStories(list)
+      setPickedCharacterId('') // 추가 폼 초기화 (연달아 다른 캐릭터 추가 가능)
+      setSceneAppearancePrompt('')
+      setMessage('캐릭터가 씬에 추가되었습니다.')
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    }
+  }
+
+  async function handleCharacterRemove(characterId) {
+    setMessage('')
+    setError('')
+    try {
+      await removeCharacterFromScene(sceneId, characterId, storyId)
       const list = await getStories()
       setStories(list)
-      setMessage('캐릭터가 씬에 연결되었습니다.')
+      setMessage('캐릭터를 씬에서 제거했습니다.')
     } catch (e) {
       setError(getApiErrorMessage(e))
     }
@@ -120,15 +152,15 @@ export default function SceneEditorPage() {
                 <li
                   key={sc.sceneId}
                   className={`${styles.sceneItem} ${sc.sceneId === sceneId ? styles.sceneItemActive : ''}`}
-                  onClick={() => { setSceneId(sc.sceneId); setSceneAppearancePrompt(''); setMessage(''); setError('') }}
+                  onClick={() => handleSceneSelect(sc)}
                 >
                   <span className={styles.sceneOrder}>씬 {sc.order}</span>
                   <p className={styles.sceneText}>{sceneText(sc)}</p>
                   {sc.backgroundId && (
                     <span className={styles.bgBadge}>배경: {sc.backgroundId}</span>
                   )}
-                  {sc.characterId && (
-                    <span className={styles.bgBadge}>캐릭터: {sc.characterId}</span>
+                  {sc.characters?.length > 0 && (
+                    <span className={styles.bgBadge}>캐릭터 {sc.characters.length}명</span>
                   )}
                 </li>
               ))}
@@ -181,10 +213,32 @@ export default function SceneEditorPage() {
                 </div>
 
                 <div className={styles.bgPanel}>
-                  <span className={styles.panelLabel}>캐릭터</span>
-                  <span className={styles.muted}>
-                    현재: {selectedScene.characterId ?? '연결 안 됨'}
-                  </span>
+                  <span className={styles.panelLabel}>캐릭터 (씬당 여러 명)</span>
+
+                  {/* 현재 연결된 캐릭터 목록 + 개별 제거 */}
+                  {selectedScene.characters?.length > 0 ? (
+                    selectedScene.characters.map((sc) => {
+                      const name =
+                        characters.find((c) => c.characterId === sc.characterId)?.name ??
+                        sc.characterId
+                      return (
+                        <span key={sc.characterId} className={styles.muted}>
+                          • {name}
+                          {sc.sceneAppearancePrompt ? ` · ${sc.sceneAppearancePrompt}` : ''}{' '}
+                          <button
+                            className={styles.link}
+                            onClick={() => handleCharacterRemove(sc.characterId)}
+                          >
+                            제거
+                          </button>
+                        </span>
+                      )
+                    })
+                  ) : (
+                    <span className={styles.muted}>연결된 캐릭터 없음</span>
+                  )}
+
+                  {/* 캐릭터 추가 */}
                   {characters.length === 0 ? (
                     <span className={styles.muted}>
                       저장된 캐릭터가 없습니다.{' '}
@@ -199,7 +253,7 @@ export default function SceneEditorPage() {
                         value={pickedCharacterId}
                         onChange={(e) => setPickedCharacterId(e.target.value)}
                       >
-                        <option value="">라이브러리에서 캐릭터 선택</option>
+                        <option value="">추가할 캐릭터 선택</option>
                         {characters.map((c) => (
                           <option key={c.characterId} value={c.characterId}>{c.name}</option>
                         ))}
@@ -208,14 +262,14 @@ export default function SceneEditorPage() {
                         className={styles.textarea}
                         value={sceneAppearancePrompt}
                         onChange={(e) => setSceneAppearancePrompt(e.target.value)}
-                        placeholder="씬에서의 외형 설명 (선택). 예) 서있는 자세, 밝은 표정, 야외"
+                        placeholder="이 씬에서의 연출 (선택). 예) 웃는 표정, 오른쪽을 바라봄"
                       />
                       <button
                         className={styles.panelBtn}
                         onClick={handleCharacterConnect}
                         disabled={!pickedCharacterId}
                       >
-                        이 씬에 캐릭터 연결
+                        이 씬에 캐릭터 추가
                       </button>
                     </>
                   )}

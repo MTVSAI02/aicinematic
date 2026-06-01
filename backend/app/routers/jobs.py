@@ -16,6 +16,8 @@ def get_job(job_id: str):
     - status: `pending`, `running`, `completed`, `failed`
     - 존재하지 않는 jobId 요청 시 404(`Job not found`)를 반환합니다.
 
-    현재 단계는 mock 구현이라 생성 직후 바로 `completed` 상태가 됩니다.
+    캐릭터/배경 생성은 **비동기**라 `pending`→`running`→`completed/failed`로 진행됩니다.
+    클라이언트는 이 엔드포인트를 폴링해 `completed`면 `result`, `failed`면 `error`를 확인합니다.
+    (씬 TTS는 동기 Job이라 즉시 `completed`)
     """
     return job_service.get_job(job_id)

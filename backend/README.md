@@ -47,11 +47,19 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 ## 환경변수
 
-`.env.example`을 복사해 `.env`를 만들고 필요한 값을 수정합니다.
+`backend/.env`(gitignore)에 앱/ComfyUI 설정을 둔다. **`backend/.env`는 선택사항** — 없으면
+`main.py`가 자동으로 `ai/.env`로 fallback하므로, ComfyUI 값만 `ai/.env`에 있으면 그대로 동작한다.
 
-```bash
-cp .env.example .env
-```
+`backend/.env`를 따로 쓰려면 아래 변수를 채운다. (값은 코드/문서에 하드코딩하지 않고 `.env`에만 둔다. ComfyUI 서버 주소는 팀에서 공유)
+
+| 변수 | 용도 |
+|---|---|
+| `APP_NAME` / `APP_ENV` / `FRONTEND_URL` / `STORAGE_DIR` | 앱 기본 설정 |
+| `COMFYUI_DEFAULT_URL` | ComfyUIClient 기본 URL |
+| `COMFYUI_CHARACTER_URL` | 캐릭터 생성용 ComfyUI |
+| `COMFYUI_TIMEOUT_SECONDS` | 요청 timeout(초) |
+
+> 로드 우선순위: `backend/.env` → 없으면 `ai/.env`. (`main.py`의 `_load_env`)
 
 ## 폴더 구조
 
@@ -65,14 +73,14 @@ backend/
 │   │   ├── characters.py      # POST /api/characters/generate, 캐릭터 CRUD
 │   │   ├── jobs.py            # GET /api/jobs/{job_id}
 │   │   ├── backgrounds.py     # 배경 프롬프트 추천/생성 Job/라이브러리 CRUD
-│   │   ├── scenes.py          # PATCH /api/scenes/{scene_id}/background (씬-배경 연결)
+│   │   ├── scenes.py          # 씬-배경 연결(PATCH .../background) + 씬-캐릭터(PATCH 추가/수정, DELETE 제거; 다중)
 │   │   ├── tts.py             # POST /api/tts/scene, GET /api/tts, DELETE /api/tts/{audio_id}
 │   │   └── voices.py          # 보이스 라이브러리 CRUD + PATCH /api/characters/{id}/voice는 characters.py
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── story_parser.py    # 빈 줄 기준 씬 분해, narration/dialogue 분리 + 감정 태그/키워드
 │   │   ├── story_service.py   # 스토리 파싱/저장/조회 (StoryNotFoundError)
-│   │   ├── job_manager.py     # InMemoryJobManager (캐릭터/배경/TTS Job, 나중에 RabbitMQ/Celery로 교체)
+│   │   ├── job_manager.py     # InMemoryJobManager: run_async(비동기,ThreadPool)/run(동기). 나중에 RabbitMQ/Celery로 교체
 │   │   ├── character_service.py  # 캐릭터 CRUD 비즈니스 로직 (커스텀 예외 발생)
 │   │   ├── job_service.py     # Job 조회 비즈니스 로직 (JobNotFoundError)
 │   │   ├── background_service.py  # 배경 추천/라이브러리 CRUD/씬 연결 + 프롬프트 규칙
@@ -108,7 +116,7 @@ backend/
 │   ├── backend_health_api_setup_prompt.md
 │   ├── backend_code_review_prompt.md
 │   └── stories_parse_api_with_mock_prompt.md
-├── .env.example
+├── .env                  # 로컬 환경변수(gitignore). 없으면 ai/.env 로 fallback
 ├── requirements.txt
 └── README.md
 ```
@@ -123,7 +131,7 @@ backend/
 | GET | `/api/stories` | 저장된 스토리 목록 조회 |
 | GET | `/api/stories/{story_id}` | 저장된 스토리 단건 조회 |
 | PATCH | `/api/stories/{story_id}/narrator-voice` | 나레이션 보이스 연결/해제 (body: voiceId, null이면 해제) |
-| POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (mock, 즉시 completed) |
+| POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (**비동기** → `pending` 반환, 폴링) |
 | GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / background_generate / tts_generate) |
 | GET | `/api/characters` | 캐릭터 목록 조회 |
 | POST | `/api/characters` | 캐릭터 결과 직접 저장 |
@@ -131,14 +139,18 @@ backend/
 | PATCH | `/api/characters/{character_id}` | 캐릭터 부분 수정 (name/appearancePrompt/imageUrl) |
 | DELETE | `/api/characters/{character_id}` | 캐릭터 삭제 |
 | POST | `/api/backgrounds/prompt-suggestions` | 씬 기반 배경 프롬프트 추천 (이미지 생성 X) |
-| POST | `/api/backgrounds/generate` | 배경 후보 4장 생성 Job (mock, 즉시 completed) |
+| POST | `/api/backgrounds/generate` | 배경 후보 생성 Job (**비동기** → `pending` 반환, 폴링; 후보는 현재 mock) |
 | POST | `/api/backgrounds` | 후보 1장 → 배경 라이브러리 저장 |
 | GET | `/api/backgrounds` | 저장된 배경 목록 조회 |
 | GET | `/api/backgrounds/{background_id}` | 저장된 배경 단건 조회 |
 | PATCH | `/api/backgrounds/{background_id}` | 배경 수정 (name만) |
 | DELETE | `/api/backgrounds/{background_id}` | 배경 삭제 (+참조 씬 backgroundId null) |
 | PATCH | `/api/scenes/{scene_id}/background` | 씬에 배경 연결 (body: storyId, backgroundId) |
+
 | POST | `/api/tts/scene` | 씬 TTS 생성 Job (`AI_TTS_URL`/`QWEN_TTS_ENABLED` 설정 시 실제 합성, 미설정 시 audioUrl=null) |
+| PATCH | `/api/scenes/{scene_id}/character` | 씬에 캐릭터 추가/수정 (**씬당 다중**; body: storyId, characterId, sceneAppearancePrompt?) |
+| DELETE | `/api/scenes/{scene_id}/character/{character_id}` | 씬에서 캐릭터 1명 제거 (query: storyId) |
+
 | GET | `/api/tts?storyId=&sceneId=` | 씬별 TTS 결과 목록 조회 |
 | DELETE | `/api/tts/{audio_id}` | TTS 결과 삭제 |
 | POST | `/api/voices` | 보이스 자산 생성 (mock) |
@@ -213,7 +225,7 @@ Voice 라이브러리 → voiceId 발급
   - 생성 직후 `status="pending"`(AI 클로닝 대기). 실제 클로닝 결과(provider/model/sampleAudioUrl/status)는 **AI 통합 단계에서 AI 파트가 채운다** — 현재 백엔드엔 그 통로가 없다(TTS `audioUrl`을 백엔드가 채우지 않는 것과 동일).
   - **수정(`PATCH /api/voices/{id}`)은 사용자 메타(`name`/`description`/`voicePrompt`)만** 바꾼다.
   - **삭제(`DELETE /api/voices/{id}`)**: 보이스 제거 + 참조 캐릭터 `voiceId`·스토리 `narratorVoiceId` null 캐스케이드(AI 무관).
-- **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404).
+- **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404) + **`voiceType="character"` 검증**(아니면 400, narrator preset을 캐릭터에 못 붙임).
 - **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_preset_narrator_calm_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404. **`voiceType="narrator"`인 보이스만 연결 가능**(character 타입이면 400 Invalid narrator voice) — 즉 현재는 preset 4개만 narrator로 붙는다. (narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠)
 - **삭제 캐스케이드**: 보이스 삭제 시 그 `voiceId`를 참조하던 **모든 캐릭터의 `voiceId`**와 **스토리의 `narratorVoiceId`**를 null로 만든다(배경 삭제와 동일 정책).
 - **TTS 반영(dialogue)**: dialogue의 `speaker`로 저장된 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사. 매칭 캐릭터가 없으면 null. (목소리=character.voiceId 고정, 감정=item.emotion 문장별)
@@ -272,7 +284,9 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 >
 > **백엔드 ↔ AI/TTS 요청·응답 JSON 계약**(팀원 전달용): 루트 [`TTS_AI_CONTRACT.md`](../TTS_AI_CONTRACT.md)
 
+
 - **AI/TTS 호출 방식**: `AI_TTS_URL` 우선, 없으면 `QWEN_TTS_ENABLED=1`일 때 로컬 Qwen3-TTS, 둘 다 없으면 `audioUrl=null`. `tts_generate` Job은 현재 즉시 `completed`이며 결과에 `audios` 배열을 담는다.
+
 - **감정은 그대로 통과**: TTS가 감정을 새로 판단하지 않고 `item.emotion`/`emotionLabel`을 복사한다. (감정 결정은 Story Parse 책임)
 - **voiceType / voiceId**: narration→`narrator`, dialogue→`character`.
   - **dialogue**: `speaker`로 저장 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 복사. 매칭 캐릭터 없거나 보이스 미연결이면 null.
@@ -308,7 +322,7 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 - **⚠️ generate `prompt` 계약**: `POST /api/backgrounds/generate`의 `prompt`는 **맨 프롬프트**(suggestedPrompt 또는 사용자가 수정한 원본)여야 한다. suffix가 붙은 `finalPrompt`를 보내면 중복된다. **finalPrompt 조립은 백엔드 책임**. → 프론트는 `promptInput`(전송용)과 `finalPromptPreview`(표시용) 상태를 분리하고, `generateBackground({ prompt })`에 finalPrompt를 넣지 않는다. (가드는 두지 않고 계약으로 관리. 실수가 반복되면 "prompt에 backend suffix 포함 시 422"로 막는 방향 검토)
 - **suggestedPrompt**: scene.items의 narration(없으면 dialogue) → sourceText → 키워드 사전(사막/별빛/숲/바다…) 매칭, 없으면 기본값. **정답이 아니라 초안**이며 사용자가 수정.
 - **수정**: MVP는 `name`만. **삭제**: 참조하던 모든 scene의 backgroundId를 null로 정리.
-- **Job**: `JobType.background_generate`로 기존 `InMemoryJobManager` + Job API 재사용. 현재 mock이라 즉시 `completed`.
+- **Job**: `JobType.background_generate`로 `InMemoryJobManager.run_async`(비동기) + Job API 재사용. `pending` 반환 후 폴링(캐릭터와 동일 패턴). 후보는 현재 mock.
 - 실제 ComfyUI 호출/이미지 생성 없음(`imageUrl=null`). scene 응답에 `backgroundId`(optional, 기본 null) 추가됨.
 
 ### 캐릭터 / Job API
@@ -350,10 +364,11 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 
 **현재 구현 범위 / 가정**
 
-- 실제 ComfyUI 연동은 아직 구현하지 않음. `InMemoryJobManager`가 mock 캐릭터 결과를 만들어 **즉시 `completed`** 처리한다.
-- RabbitMQ/Celery는 아직 구현하지 않음. 나중에 `InMemoryJobManager`만 교체하면 되도록 분리되어 있다.
-  - 현재: `FastAPI → InMemoryJobManager → Mock Character Result`
+- **ComfyUI 실제 생성으로 전환됨.** 캐릭터 생성은 `InMemoryJobManager.run_async`로 **비동기** 처리한다 — `pending`을 즉시 반환하고 백그라운드(ThreadPoolExecutor)에서 ComfyUI를 호출한다. (생성 실패 시 캐릭터 레코드 미저장 = orphan 방지)
+- RabbitMQ/Celery는 아직 아님. **MVP는 in-memory ThreadPoolExecutor** — 서버 재시작 시 pending/running Job은 유실된다. 배포 단계에서 Redis Queue/Celery/RQ로 교체(이 클래스만 publish 버전으로).
+  - 현재: `FastAPI → InMemoryJobManager.run_async(ThreadPool) → ComfyUI → Character Result`
   - 나중: `FastAPI → RabbitMQ/Celery → Worker → ComfyUI → Character Result`
+- async/sync 정책은 아래 "비동기 Job / 저장 구조" 섹션 참고.
 - 스타일(`stylePreset`) / `seed` / `referenceImageUrl` / `lockProfile`은 백엔드가 받지 않는다. 스타일·seed·캐릭터 고정은 ComfyUI 파트에서 관리한다고 가정한다.
 - 캐릭터는 `voiceId`(연결된 보이스 자산, 기본 null)를 가진다. 연결은 `PATCH /api/characters/{id}/voice`로 하며, 실제 목소리 클로닝/합성은 AI/TTS 파트가 담당한다. (보이스 라이브러리는 "Voice(보이스) API" 참고)
 
@@ -382,10 +397,46 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
   - 캐릭터/Job: `CharacterNotFoundError` (404), `JobNotFoundError` (404), `NoFieldsToUpdateError` (400), `CharacterGenerationFailedError` (500)
   - 배경/씬: `BackgroundCandidateNotFoundError` (404), `BackgroundNotFoundError` (404), `BackgroundGenerationFailedError` (500), `StoryNotFoundError` (404), `SceneNotFoundError` (404)
   - TTS: `TTSAudioNotFoundError` (404), `TTSGenerationFailedError` (500), `EmptySceneItemsError` (400)
-  - 보이스: `VoiceNotFoundError` (404), `DefaultVoiceCannotBeModifiedError` (400), `DefaultVoiceCannotBeDeletedError` (400), `InvalidNarratorVoiceError` (400)
+  - 보이스: `VoiceNotFoundError` (404), `DefaultVoiceCannotBeModifiedError` (400), `DefaultVoiceCannotBeDeletedError` (400), `InvalidNarratorVoiceError` (400), `InvalidCharacterVoiceError` (400)
 - `app.add_exception_handler(AppException, app_exception_handler)`로 한 곳에서 변환하므로 응답 형태가 일관된다.
 - `name`, `appearancePrompt` 필수 + `min_length=1` + 공백만 문자열 금지(`field_validator`)는 Pydantic 단계에서 `422`로 처리된다(FastAPI 기본). PATCH에서도 전달되면 동일 규칙 적용.
 - 예상하지 못한 서버 오류는 500으로 처리되며, 별도 전역 핸들러를 추가로 만들지 않는다(FastAPI 기본).
+
+## 비동기 Job / 저장 구조
+
+ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 **비동기 Job**으로 처리한다.
+
+**처리 방식 정책**
+
+| 작업 | 방식 | 비고 |
+|---|---|---|
+| 캐릭터 이미지 생성 | **비동기** (`run_async`) | ComfyUI 호출. `pending` 즉시 반환 → 폴링 |
+| 배경 이미지 생성 | **비동기** (`run_async`) | 후보는 현재 mock, 흐름은 캐릭터와 동일 |
+| 보이스 클로닝 | **비동기** (예정) | 무거운 1회성 작업 |
+| 최종 영상 렌더링 | **비동기** (예정) | ffmpeg/concat/싱크 |
+| 씬 단위 TTS 합성 | **동기** (`run`) | 짧은 합성. 현재 mock은 즉시 `completed`. 길어지면 `run_async`로 전환 가능 |
+
+- **JobManager 2-경로**: `run_async()`(백그라운드, ThreadPoolExecutor) / `run()`(동기, TTS·짧은 작업). [`services/job_manager.py`](app/services/job_manager.py)
+- **⚠️ MVP 한계**: in-memory ThreadPoolExecutor라 **서버 재시작 시 pending/running Job 유실**. 단일 프로세스 기준. 배포 시 Redis Queue/Celery/RQ로 교체(이 클래스만 publish 버전으로).
+- **프론트 폴링**: `GET /api/jobs/{jobId}`를 `pending/running` 동안 반복 조회(프론트 `utils/pollJob.js` 공통). 캐릭터/배경/클로닝/렌더 공용.
+- **orphan 방지**: 캐릭터는 **생성 성공 후 저장**(`reserve_id → generate → create`). 실패 시 레코드 미저장.
+
+**저장(storage) 구조**
+
+- 생성 결과는 DB 없이 **로컬 파일**로 저장하고 `/storage`로 정적 서빙한다.
+- 경로는 [`core/config.py`](app/core/config.py)에서 **절대경로**로 관리(`STORAGE_ROOT` + characters/backgrounds/audio/renders). 상대경로 하드코딩 금지(실행 cwd 의존 버그 방지).
+- imageUrl 예: `/storage/characters/{characterId}.png` (`storage_url()` 헬퍼).
+
+**저장 책임 경계 (AI ↔ Backend) — 2차 정석 계약(예정)**
+
+현재는 임시로 AI 모듈(`ai/character_ctrl/character.py`)이 storage에 직접 저장한다. 배경/보이스/렌더가 붙기 전에 아래 계약으로 전환한다.
+
+```text
+AI 모듈   → ComfyUI 호출 → 이미지 bytes / metadata 반환 (저장 위치는 모름)
+Backend  → core/config 경로로 파일 저장 → /storage URL 생성 → repository 저장
+```
+
+→ "AI는 생성, Backend는 저장/URL/repository". 이 계약 확정 후 AI의 직접 저장·상대경로를 제거한다. (혜원 협의)
 
 ## 구조 리뷰 / 기술부채 기록
 

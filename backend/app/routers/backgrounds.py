@@ -40,11 +40,12 @@ def suggest_background_prompt(request: BackgroundPromptSuggestionRequest):
 )
 def generate_backgrounds(request: BackgroundGenerateRequest):
     """
-    배경 후보를 생성하는 Job을 만든다. (현재 mock, 즉시 completed)
+    배경 후보를 생성하는 **비동기 Job**을 만든다. (캐릭터 생성과 동일 패턴)
 
-    실제 ComfyUI 호출 없이 mock candidate를 만들어 임시 저장하고,
-    jobId/status를 반환한다. 후보는 GET /api/jobs/{jobId}에서 확인한다.
-    (후보 개수는 ComfyUI 워크플로가 결정하며 mock은 4장을 가정한다.)
+    jobId와 `status="pending"`을 즉시 반환하고, 생성은 백그라운드에서 진행된다.
+    클라이언트는 `GET /api/jobs/{jobId}`를 폴링해 `completed`면 `result.candidates`를 확인한다.
+    MVP/환경에 따라 mock 또는 ComfyUI workflow runner가 후보를 생성한다(현재는 mock 4장 가정).
+    (후보 개수는 ComfyUI 워크플로가 결정한다.)
 
     ⚠️ prompt 계약: 여기 넣는 `prompt`는 **맨 프롬프트**(suggestedPrompt 또는 사용자가
     수정한 원본 prompt)여야 한다. background only/no characters 등 suffix가 붙은

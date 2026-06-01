@@ -10,7 +10,10 @@ MOCK_BACKGROUND_CANDIDATE_COUNT = 4
 
 
 def create_background_generation_job(request_data: dict) -> dict:
-    """배경 후보 생성 Job (mock, 즉시 completed). imageUrl=None."""
+    """배경 후보 생성 Job (비동기). 캐릭터와 동일하게 jobId를 즉시 반환하고
+
+    생성은 백그라운드에서 진행된다(실제 ComfyUI 연동 대비). 프론트는 GET /api/jobs/{jobId}로
+    폴링한다. 현재는 mock 후보(imageUrl=None)를 만든다."""
 
     def build_result() -> dict:
         prompt = request_data.get("prompt")
@@ -42,9 +45,9 @@ def create_background_generation_job(request_data: dict) -> dict:
             ],
         }
 
-    return job_manager.run(
+    return job_manager.run_async(
         JobType.background_generate.value,
         build_result,
         BackgroundGenerationFailedError.detail,
-        "Background generation job completed with mock candidates.",
+        "Background generation job accepted.",
     )

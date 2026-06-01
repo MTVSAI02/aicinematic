@@ -1,15 +1,9 @@
 import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
+import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
 import StorySceneSelect from './StorySceneSelect'
 import styles from '@/pages/background/BackgroundPage.module.css'
-
-const JOB_STATUS_TEXT = {
-  pending: '생성 대기 중입니다.',
-  running: '배경을 생성 중입니다.',
-  completed: '배경 후보 생성이 완료되었습니다.',
-  failed: '배경 생성에 실패했습니다.',
-}
 
 // finalPrompt = "{suggestedPrompt}, {suffix}" 이므로, 둘을 비교해 suffix(배경 규칙)만 추출한다.
 // 백엔드 suffix 문자열을 프론트에 하드코딩하지 않기 위함.
@@ -60,22 +54,16 @@ export default function BackgroundPromptPanel() {
     resetCandidates()
     try {
       // 주의: finalPrompt 가 아니라 promptInput 만 보낸다. count 도 보내지 않는다.
+      // 비동기: 즉시 jobId 반환 → completed/failed 까지 폴링
       const job = await backgroundApi.generateBackground({
         prompt: promptInput.trim(),
         negativePrompt: negativePrompt || undefined,
       })
       setCurrentJobId(job.jobId)
 
-      const jobDetail = await backgroundApi.getJob(job.jobId)
-      if (jobDetail.status === 'completed') {
-        setCandidates(jobDetail.result?.candidates ?? [])
-        setSelectedCandidateId(null)
-      } else if (jobDetail.status === 'failed') {
-        setError(getApiErrorMessage({ detail: jobDetail.error }))
-      } else {
-        // pending/running — 현재 mock 에선 거의 없음. polling 은 추후.
-        setError(`상태: ${JOB_STATUS_TEXT[jobDetail.status] ?? jobDetail.status}`)
-      }
+      const finished = await pollJob(job.jobId)
+      setCandidates(finished.result?.candidates ?? [])
+      setSelectedCandidateId(null)
     } catch (e) {
       setError(getApiErrorMessage(e))
     } finally {
