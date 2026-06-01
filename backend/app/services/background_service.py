@@ -1,3 +1,10 @@
+import shutil
+
+from ..core.config import (
+    BACKGROUND_CANDIDATE_STORAGE_DIR,
+    BACKGROUND_LIBRARY_STORAGE_DIR,
+    storage_url,
+)
 from ..core.exceptions import (
     BackgroundCandidateNotFoundError,
     BackgroundNotFoundError,
@@ -82,18 +89,45 @@ class BackgroundService:
     # ── 라이브러리 저장/조회/수정/삭제 ───────────────────────
 
     def save_background(self, candidate_id: str, name: str) -> dict:
+        """후보 1장을 라이브러리에 저장한다.
+
+        저장본을 후보 파일에서 **독립**시킨다: 후보 이미지를 library 경로로 복사하고,
+        복사·record 저장이 성공한 뒤에만 선택된 후보(파일+record)를 삭제한다.
+        순서를 지켜 중간 실패 시에도 이미지가 사라지지 않게 한다
+        (library 복사 성공 → record 저장 성공 → 후보 파일 삭제 → 후보 record 삭제).
+        """
         candidate = self._candidate_repo.get(candidate_id)
         if candidate is None:
             raise BackgroundCandidateNotFoundError()
 
-        return self._background_repo.save(
+        # 후보 이미지 파일 확인 (record는 있는데 파일이 없으면 사용 불가)
+        candidate_path = BACKGROUND_CANDIDATE_STORAGE_DIR / f"{candidate_id}.png"
+        if not candidate_path.is_file():
+            raise BackgroundCandidateNotFoundError()
+
+        # 1) backgroundId 발급 → 후보 이미지를 library 경로로 복사
+        background_id = self._background_repo.reserve_id()
+        BACKGROUND_LIBRARY_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        library_path = BACKGROUND_LIBRARY_STORAGE_DIR / f"{background_id}.png"
+        shutil.copyfile(candidate_path, library_path)
+        image_url = storage_url("backgrounds", "library", f"{background_id}.png")
+
+        # 2) 복사 성공 후에만 record 저장 (imageUrl은 library 경로 — 후보에 의존하지 않음)
+        saved = self._background_repo.create(
+            background_id,
             {
                 "name": name,
                 "prompt": candidate["prompt"],
                 "finalPrompt": candidate["finalPrompt"],
-                "imageUrl": candidate["imageUrl"],
-            }
+                "imageUrl": image_url,
+            },
         )
+
+        # 3) 저장이 모두 성공한 뒤에만 선택된 후보 정리 (파일 → record 순)
+        candidate_path.unlink(missing_ok=True)
+        self._candidate_repo.delete(candidate_id)
+
+        return saved
 
     def list_backgrounds(self) -> list[dict]:
         return self._background_repo.list()

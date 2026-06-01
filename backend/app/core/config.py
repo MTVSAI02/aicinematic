@@ -10,6 +10,8 @@ STORAGE_ROOT = Path(__file__).resolve().parent.parent / "storage"
 CHARACTER_STORAGE_DIR = STORAGE_ROOT / "characters"
 BACKGROUND_STORAGE_DIR = STORAGE_ROOT / "backgrounds"
 BACKGROUND_CANDIDATE_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "candidates"
+# 라이브러리에 저장된(선택된) 배경 이미지. 후보 파일에 의존하지 않도록 여기로 복사한다.
+BACKGROUND_LIBRARY_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "library"
 AUDIO_STORAGE_DIR = STORAGE_ROOT / "audio"
 RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
 

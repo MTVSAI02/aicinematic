@@ -14,19 +14,28 @@ class BackgroundRepository:
         self._counter: int = 0
         self._lock = threading.Lock()
 
-    def save(self, background_data: dict) -> dict:
+    def reserve_id(self) -> str:
+        """backgroundId만 발급한다(저장 X). 이미지 파일명을 먼저 정해 복사하기 위함."""
         with self._lock:
             self._counter += 1
-            background_id = f"bg_mock_{self._counter:03d}"
-            saved = {
-                "backgroundId": background_id,
-                "name": background_data.get("name"),
-                "prompt": background_data.get("prompt"),
-                "finalPrompt": background_data.get("finalPrompt"),
-                "imageUrl": background_data.get("imageUrl"),
-            }
+            return f"bg_mock_{self._counter:03d}"
+
+    def create(self, background_id: str, background_data: dict) -> dict:
+        """예약된 backgroundId로 배경 레코드를 저장한다."""
+        saved = {
+            "backgroundId": background_id,
+            "name": background_data.get("name"),
+            "prompt": background_data.get("prompt"),
+            "finalPrompt": background_data.get("finalPrompt"),
+            "imageUrl": background_data.get("imageUrl"),
+        }
+        with self._lock:
             self._backgrounds[background_id] = saved
-            return saved
+        return saved
+
+    def save(self, background_data: dict) -> dict:
+        """ID 발급 + 즉시 저장."""
+        return self.create(self.reserve_id(), background_data)
 
     def list(self) -> list[dict]:
         with self._lock:
