@@ -342,11 +342,15 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
   "characterId": "char_mock_001",
   "name": "어린왕자",
   "appearancePrompt": "금발 단발, 초록 외투를 입은 작은 소년",
-  "imageUrl": null
+  "description": "호기심 많고 다정한 어린 왕자",
+  "imageUrl": "/storage/characters/char_mock_001.png",
+  "voiceId": null
 }
 ```
 
-- `imageUrl`은 optional(nullable). mock 단계에서는 `null`이며, 나중에 ComfyUI 결과 연결 후 이미지 경로가 채워진다.
+- `description`은 optional(nullable). 저장/표시용 메타데이터로, 생성 prompt에는 `appearancePrompt`만 쓰인다.
+- `imageUrl`은 optional(nullable). 생성 성공 시 backend가 bytes를 `storage/characters/{characterId}.png`로 저장하고 경로를 채운다(생성 전/실패 시 `null`).
+- `voiceId`는 연결된 보이스 자산(기본 `null`). `PATCH /api/characters/{id}/voice`로 연결/해제한다.
 - PATCH 동작 기준 (나중에 DB 컬럼 nullability와 1:1 매핑):
   - `imageUrl`: nullable → `PATCH {"imageUrl": null}`을 보내면 **실제로 `null`로 초기화**된다(이미지 연결 해제).
   - `name` / `appearancePrompt`: NOT NULL 성격 → 명시적 `null`을 보내면 무시되고 기존 값이 유지된다(공백 문자열은 `422`).
@@ -418,7 +422,7 @@ ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 
 | 작업 | 방식 | 비고 |
 |---|---|---|
 | 캐릭터 이미지 생성 | **비동기** (`run_async`) | ComfyUI 호출. `pending` 즉시 반환 → 폴링 |
-| 배경 이미지 생성 | **비동기** (`run_async`) | 후보는 현재 mock, 흐름은 캐릭터와 동일 |
+| 배경 이미지 생성 | **비동기** (`run_async`) | 우리 AI FastAPI 서버(`AI_SERVER_URL`/generate) 호출 → base64 후보 저장 |
 | 보이스 클로닝 | **비동기** (예정) | 무거운 1회성 작업 |
 | 최종 영상 렌더링 | **비동기** (예정) | ffmpeg/concat/싱크 |
 | 씬 단위 TTS 합성 | **동기** (`run`) | 짧은 합성. 현재 mock은 즉시 `completed`. 길어지면 `run_async`로 전환 가능 |
@@ -434,16 +438,19 @@ ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 
 - 경로는 [`core/config.py`](app/core/config.py)에서 **절대경로**로 관리(`STORAGE_ROOT` + characters/backgrounds/audio/renders). 상대경로 하드코딩 금지(실행 cwd 의존 버그 방지).
 - imageUrl 예: `/storage/characters/{characterId}.png` (`storage_url()` 헬퍼).
 
-**저장 책임 경계 (AI ↔ Backend) — 2차 정석 계약(예정)**
+**저장 책임 경계 (AI ↔ Backend)**
 
-현재는 임시로 AI 모듈(`ai/character_ctrl/character.py`)이 storage에 직접 저장한다. 배경/보이스/렌더가 붙기 전에 아래 계약으로 전환한다.
+캐릭터·배경 모두 아래 계약으로 동작한다 — **AI는 생성 결과(bytes)만 반환, 저장은 Backend**.
 
 ```text
-AI 모듈   → ComfyUI 호출 → 이미지 bytes / metadata 반환 (저장 위치는 모름)
+AI(생성)  → 이미지 bytes 반환 (저장 위치는 모름)
+            - 캐릭터: in-process ai 모듈(generate_character)이 bytes 반환
+            - 배경:   우리 AI FastAPI 서버(/generate)가 base64 반환 → backend가 디코드
 Backend  → core/config 경로로 파일 저장 → /storage URL 생성 → repository 저장
 ```
 
-→ "AI는 생성, Backend는 저장/URL/repository". 이 계약 확정 후 AI의 직접 저장·상대경로를 제거한다. (혜원 협의)
+- 캐릭터: `ai/character_ctrl/character.py`가 storage 직접 저장을 멈추고 bytes를 반환하도록 전환됨(저장은 `character_job_runner`).
+- 미구현 씬 이미지 모듈(`face_lock.py`/`pose_expression.py`)도 구현 시 같은 계약을 따른다(직접 저장 금지).
 
 ## 구조 리뷰 / 기술부채 기록
 

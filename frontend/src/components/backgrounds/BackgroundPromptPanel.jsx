@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
 import { pollJob } from '@/utils/pollJob'
@@ -20,6 +21,10 @@ export default function BackgroundPromptPanel() {
     setSourceText, setCandidates, setCurrentJobId, setSelectedCandidateId,
     setLoading, setError, resetCandidates,
   } = useBackgroundStore()
+
+  // 언마운트 시 진행 중 폴링 취소 (페이지 이동 후 늦게 끝난 Job이 store를 갱신하는 것 방지)
+  const abortRef = useRef(null)
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   // finalPrompt 미리보기는 항상 현재 promptInput 기준으로 실시간 계산한다 (stale 방지).
   // suffix(배경 규칙)는 추천 응답에서 추출해 보관한 값. 추천을 안 받았으면 미리보기는 표시하지 않는다.
@@ -59,10 +64,12 @@ export default function BackgroundPromptPanel() {
       })
       setCurrentJobId(job.jobId)
 
-      const finished = await pollJob(job.jobId)
+      abortRef.current = new AbortController()
+      const finished = await pollJob(job.jobId, { signal: abortRef.current.signal })
       setCandidates(finished.result?.candidates ?? [])
       setSelectedCandidateId(null)
     } catch (e) {
+      if (e.aborted) return // 언마운트 취소 → 무시
       if (e.timedOut) {
         setError('배경 생성이 오래 걸리고 있어요. 잠시 후 다시 시도해주세요.')
       } else {

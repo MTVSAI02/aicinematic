@@ -80,6 +80,10 @@ def generate_character(
     prompt = _tags_to_prompt(appearance_prompt)
 
     # 2. 워크플로 inputs 구성
+    # ⚠️ 현재 run_workflow(character_generate)는 positive_prompt / seed 만 워크플로에 주입한다.
+    #    아래 steps/cfg/model/width/height/negative_prompt 는 아직 워크플로에 반영되지 않는다
+    #    (Full/Dev/Fast variant 설정은 동작하지 않음 — 워크플로 JSON의 고정값이 쓰인다).
+    #    캐릭터를 AI FastAPI 서버 호출 방식으로 이관할 때 이 파라미터 전달을 함께 재설계한다.
     inputs = {
         "positive_prompt": prompt,
         "seed": _make_seed(character_id),

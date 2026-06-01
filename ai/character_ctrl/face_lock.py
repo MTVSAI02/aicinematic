@@ -30,7 +30,6 @@ from .character import HiDreamVariant, _VARIANT_CONFIG
 # from ai.image.prompt_builder import build as build_prompt
 
 WORKFLOW_NAME = "face_lock"
-OUTPUT_DIR = Path("backend/app/storage/scenes")
 
 # IP-Adapter 적용 강도 (0.0 ~ 1.0)
 # 높을수록 레퍼런스 얼굴과 닮음↑, 낮을수록 씬 프롬프트 자유도↑
@@ -44,28 +43,22 @@ def lock_face(
     scene_appearance_prompt: str,
     variant: HiDreamVariant = HiDreamVariant.DEV,
     ip_strength: float = DEFAULT_IP_STRENGTH,
-) -> str:
+) -> bytes:
     """IP-Adapter for Flux로 얼굴을 고정한 씬 이미지를 생성한다.
+
+    저장 책임 경계: AI는 생성 결과(bytes)만 반환한다. 파일 저장 / `/storage` URL /
+    repository 저장은 backend가 담당한다(캐릭터/배경과 동일 계약).
 
     Args:
         character_id:          캐릭터 ID.
-        scene_id:              씬 ID (저장 경로용).
+        scene_id:              씬 ID (backend 저장 시 파일명용으로 전달).
         reference_image_path:  character.py가 생성한 원본 캐릭터 이미지 경로.
         scene_appearance_prompt: 씬에서의 캐릭터 외형 설명. 예) "서있는 자세, 밝은 표정, 야외"
         variant:               HiDream 변형. 기본값 DEV.
         ip_strength:           IP-Adapter 강도. 기본값 0.80.
 
     Returns:
-        저장된 이미지의 파일 경로 문자열.
-
-    Example:
-        >>> path = lock_face(
-        ...     "abc-123", "scene-001",
-        ...     "backend/app/storage/characters/abc-123.png",
-        ...     "standing, waving hand, outdoor",
-        ... )
-        >>> print(path)
-        "backend/app/storage/scenes/scene-001_abc-123.png"
+        생성된 이미지의 raw bytes (PNG).
     """
     ref_path = Path(reference_image_path)
     if not ref_path.exists():
@@ -92,17 +85,16 @@ def lock_face(
     if config["use_negative"]:
         inputs["negative_prompt"] = _NEGATIVE_PROMPT
 
-    # 3. 워크플로 실행 → image bytes → _save_image 저장
+    # 3. 워크플로 실행 → image bytes 반환 (저장은 backend)
     # face_lock 워크플로(IP-Adapter for Flux)가 아직 ComfyUI에 연결되지 않았다.
-    # 연결되면 아래 주석을 풀어 사용한다 (저장 구조 그대로):
+    # 연결되면 아래 주석을 풀어 사용한다 (AI는 bytes만 반환, 저장은 backend):
     # result = run_workflow(workflow_name=WORKFLOW_NAME, inputs=inputs)
-    # image_bytes = result["images"][0]
-    # return str(_save_image(scene_id, character_id, image_bytes))
+    # return result["images"][0]
 
-    # ⚠️ 아직 미구현: 성공처럼 빈 파일 경로를 반환하지 않고 명시적으로 막는다(연결 전까지).
+    # ⚠️ 아직 미구현: 빈 결과를 성공처럼 반환하지 않고 명시적으로 막는다(연결 전까지).
     raise NotImplementedError(
         "face_lock 워크플로가 아직 ComfyUI에 연결되지 않았습니다. "
-        "run_workflow('face_lock', inputs) 연결 후 _save_image 로 저장하세요."
+        "run_workflow('face_lock', inputs) 연결 후 result['images'][0](bytes)를 반환하세요."
     )
 
 
@@ -120,11 +112,3 @@ def _tags_to_prompt(appearance_prompt: str) -> str:
     TODO: prompt_builder.py 완성 후 제거.
     """
     return f"A single character. {appearance_prompt.strip()}"
-
-
-def _save_image(scene_id: str, character_id: str, image_bytes: bytes | None) -> Path:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = OUTPUT_DIR / f"{scene_id}_{character_id}.png"
-    if image_bytes is not None:
-        output_path.write_bytes(image_bytes)
-    return output_path

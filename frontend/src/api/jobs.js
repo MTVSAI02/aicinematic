@@ -2,6 +2,7 @@
 import { request } from '@/utils/request'
 
 // GET /api/jobs/{jobId} — Job 상태/결과 조회
-export function getJob(jobId) {
-  return request(`/api/jobs/${jobId}`)
+// signal(AbortSignal): 폴링 중단 시 진행 중인 fetch도 즉시 취소하기 위해 전달한다.
+export function getJob(jobId, { signal } = {}) {
+  return request(`/api/jobs/${jobId}`, { signal })
 }
