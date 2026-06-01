@@ -8,7 +8,7 @@ export default function HomePage() {
     <div className={styles.page}>
       <h1>AI Cinematic</h1>
       <p className={styles.sub}>스토리를 입력하면 동화 영상이 완성돼요.</p>
-      <button className={styles.cta} onClick={() => navigate('/story-input')}>
+      <button className={styles.cta} onClick={() => navigate('/voice-input')}>
         새 프로젝트 시작
       </button>
 
