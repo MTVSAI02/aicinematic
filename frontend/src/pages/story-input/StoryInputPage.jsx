@@ -29,7 +29,8 @@ export default function StoryInputPage() {
       setStoryId(result.storyId)
       setStoryTitle(result.title)
       setScenes(result.scenes)
-      navigate('/scene-check')
+      // storyId를 URL에 실어 보낸다 → scene-check 새로고침 시에도 백엔드에서 씬을 다시 불러올 수 있다.
+      navigate(`/scene-check?storyId=${encodeURIComponent(result.storyId)}`)
     } catch {
       setError('스토리 분석에 실패했습니다. 백엔드 서버가 실행 중인지 확인해 주세요.')
     } finally {

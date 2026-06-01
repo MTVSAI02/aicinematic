@@ -15,6 +15,11 @@ export function getStories() {
   return request('/api/stories')
 }
 
+// GET /api/stories/{storyId} — 저장된 스토리 단건(씬 포함). 새로고침 후 scene-check 재수화용.
+export function getStory(storyId) {
+  return request(`/api/stories/${storyId}`)
+}
+
 // PATCH /api/stories/{storyId}/narrator-voice — 나레이션 보이스 연결/해제
 // payload: { voiceId: "voice_preset_narrator_calm_001" } 또는 { voiceId: null }(해제)
 export function assignNarratorVoiceToStory(storyId, payload) {
