@@ -1,20 +1,34 @@
+import threading
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 
 from ..repositories.job_repo import job_repository
 from ..schemas.job import JobStatus
 
 
 class InMemoryJobManager:
-    """Job 발급/상태 관리만 담당한다.
+    """Job 발급/상태 관리를 담당한다.
 
     도메인별 생성 로직(캐릭터/배경/TTS …)은 각 *_job_runner가 갖고,
     여기서는 "Job 생성 → running → 결과 콜백 실행 → completed/failed"만 처리한다.
 
-    나중에 RabbitMQ/Celery로 교체할 때도 이 클래스만 publish 버전으로 바꾸면 된다.
+    두 가지 실행 방식을 제공한다.
+    - run()       : 동기. build_result()를 요청 안에서 즉시 실행해 completed/failed로 반환.
+                    짧은 작업(예: 현재 TTS mock = 즉시 completed)에 사용한다.
+    - run_async() : 비동기. jobId를 즉시 반환하고 build_result()는 백그라운드 스레드에서 실행.
+                    오래 걸리는 작업(ComfyUI 이미지 생성, 보이스 클로닝, 렌더링)에 사용한다.
+
+    ⚠️ MVP 한계: 비동기는 in-memory ThreadPoolExecutor로 처리한다.
+       - 서버 재시작 시 pending/running Job은 유실된다(메모리 저장).
+       - 단일 프로세스 기준이며, 배포 단계에서는 Redis Queue / Celery / RQ 등으로 교체한다.
+       (이 클래스만 publish 버전으로 바꾸면 호출부는 그대로 둘 수 있다.)
     """
 
-    def __init__(self, job_repo):
+    def __init__(self, job_repo, max_workers: int = 4):
         self._job_repo = job_repo
+        self._executor = ThreadPoolExecutor(max_workers=max_workers)
+        # in-memory job_repo를 워커 스레드가 갱신하므로 상태 갱신을 직렬화한다.
+        self._lock = threading.Lock()
 
     def run(
         self,
@@ -23,10 +37,9 @@ class InMemoryJobManager:
         failed_detail: str,
         success_message: str,
     ) -> dict:
-        """Job을 만들고 build_result()를 실행해 completed/failed 처리한다.
+        """동기 실행. build_result()를 즉시 돌려 completed/failed로 반환한다.
 
-        build_result: Job 결과(dict)를 만드는 도메인 콜백. 예외가 나면 Job은 failed.
-        반환: {jobId, status, message} (JobCreatedResponse 형태)
+        반환: {jobId, status(completed|failed), message} (JobCreatedResponse 형태)
         """
         job = self._job_repo.create(job_type)
         job_id = job["jobId"]
@@ -48,6 +61,44 @@ class InMemoryJobManager:
             "status": JobStatus.completed.value,
             "message": success_message,
         }
+
+    def run_async(
+        self,
+        job_type: str,
+        build_result: Callable[[], dict],
+        failed_detail: str,
+        accepted_message: str,
+    ) -> dict:
+        """비동기 실행. Job(pending)을 만들고 jobId를 즉시 반환한다.
+
+        build_result()는 백그라운드 스레드에서 실행되며,
+        프론트는 GET /api/jobs/{jobId} 로 pending→running→completed/failed 를 폴링한다.
+
+        반환: {jobId, status="pending", message} (JobCreatedResponse 형태)
+        """
+        job = self._job_repo.create(job_type)  # status=pending
+        job_id = job["jobId"]
+        self._executor.submit(self._run_job, job_id, build_result, failed_detail)
+        return {
+            "jobId": job_id,
+            "status": JobStatus.pending.value,
+            "message": accepted_message,
+        }
+
+    def _run_job(
+        self, job_id: str, build_result: Callable[[], dict], failed_detail: str
+    ) -> None:
+        """워커 스레드 본체: running 표시 → build_result 실행 → completed/failed."""
+        with self._lock:
+            self._job_repo.update_status(job_id, JobStatus.running.value, progress=10)
+        try:
+            result = build_result()
+        except Exception:  # noqa: BLE001
+            with self._lock:
+                self._job_repo.fail(job_id, failed_detail)
+            return
+        with self._lock:
+            self._job_repo.complete(job_id, result=result)
 
 
 job_manager = InMemoryJobManager(job_repository)
