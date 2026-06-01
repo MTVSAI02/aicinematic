@@ -4,10 +4,10 @@ import useStoryStore from '@/store/useStoryStore'
 import { parseStory } from '@/api/stories'
 import styles from './StoryInputPage.module.css'
 
-const PLACEHOLDER = `[잔잔함] 어린 왕자는 작은 별에 혼자 살았어요.
-[신남] 어린왕자: "오늘은 어디로 여행을 떠나볼까?"`
+const PLACEHOLDER = `[나레이션] 어린 왕자는 작은 별에 혼자 살았어요.
+[놀람] 어린왕자: "오늘은 어디로 여행을 떠나볼까?"`
 
-const EMOTION_LABELS = '기본 · 잔잔함 · 기쁨 · 슬픔 · 화남 · 무서움 · 신남 · 다정함 · 진지함'
+const EMOTION_LABELS = '기본 · 차분함 · 기쁨 · 슬픔 · 화남 · 무서움 · 놀람 · 다정함 · 진지함'
 
 export default function StoryInputPage() {
   const navigate = useNavigate()
@@ -31,7 +31,7 @@ export default function StoryInputPage() {
       setScenes(result.scenes)
       navigate('/scene-check')
     } catch {
-      setError('스토리 분석에 실패했습니다. 백엔드 서버가 실행 중인지 확인해주세요.')
+      setError('스토리 분석에 실패했습니다. 백엔드 서버가 실행 중인지 확인해 주세요.')
     } finally {
       setLoading(false)
     }
@@ -47,10 +47,13 @@ export default function StoryInputPage() {
       <div className={styles.help}>
         <strong>감정 태그 (선택)</strong>
         <ul className={styles.helpList}>
-          <li>줄 맨 앞에 <code>[감정]</code>을 붙이면 그 감정으로 지정돼요. 예: <code>[화남] 어린왕자: "싫어"</code></li>
-          <li>태그가 없으면 문장 속 표현으로 감정을 <strong>자동 추정</strong>해요. (예: "안녕" → 다정함)</li>
+          <li>
+            줄 맨 앞에 <code>[감정]</code>을 붙이면 해당 감정으로 지정됩니다.
+          </li>
+          <li>
+            태그가 없으면 문장 표현으로 감정을 자동 추정합니다.
+          </li>
           <li>지원 감정: {EMOTION_LABELS}</li>
-          <li>지원하지 않는 감정이나 태그가 없으면 기본값(내레이션=잔잔함, 대사=기본)으로 처리돼요.</li>
         </ul>
       </div>
 
@@ -60,7 +63,7 @@ export default function StoryInputPage() {
           className={styles.titleInput}
           placeholder="예: 어린 왕자"
           value={storyTitle}
-          onChange={(e) => setStoryTitle(e.target.value)}
+          onChange={(event) => setStoryTitle(event.target.value)}
           maxLength={60}
         />
       </label>
@@ -69,18 +72,21 @@ export default function StoryInputPage() {
         className={styles.textarea}
         placeholder={PLACEHOLDER}
         value={storyText}
-        onChange={(e) => setStoryText(e.target.value)}
+        onChange={(event) => setStoryText(event.target.value)}
         rows={16}
       />
+
       {error && <p className={styles.error}>{error}</p>}
+
       <div className={styles.actions}>
         <span className={styles.count}>{storyText.length}자</span>
         <button className={styles.btn} onClick={handleParse} disabled={!canParse}>
-          {loading ? '분석 중...' : '씬 분해하기 →'}
+          {loading ? '분석 중...' : '씬 분해하기'}
         </button>
       </div>
+
       {!loading && !trimmedTitle && (
-        <p className={styles.guide}>제목을 입력하면 “씬 분해하기”가 활성화됩니다.</p>
+        <p className={styles.guide}>제목을 입력하면 씬 분해하기가 활성화됩니다.</p>
       )}
     </div>
   )

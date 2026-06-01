@@ -40,8 +40,8 @@ export default function SceneEditorPage() {
   useEffect(() => {
     Promise.all([getStories(), getBackgrounds(), getCharacters()])
       .then(([storyList, bgList, charList]) => {
-        setStories(storyList)
-        setBackgrounds(bgList)
+        setStories(Array.isArray(storyList) ? storyList : [])
+        setBackgrounds(Array.isArray(bgList) ? bgList : [])
         setCharacters(charList)
         setLoadError('')
       })
@@ -49,7 +49,7 @@ export default function SceneEditorPage() {
         // 실패를 "스토리/배경 없음"으로 숨기지 않고 에러로 표시한다.
         setLoadError(`데이터를 불러오지 못했습니다. ${getApiErrorMessage(e)}`)
       })
-  }, [])
+  }, [setCharacters])
 
   const selectedStory = stories.find((s) => s.storyId === storyId)
   const scenes = selectedStory?.scenes ?? []

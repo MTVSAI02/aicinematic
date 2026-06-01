@@ -13,7 +13,6 @@ export default function CharacterPage() {
   const setCharacters = useCharacterStore((s) => s.setCharacters)
   const [loadError, setLoadError] = useState('')
 
-  // 페이지 진입 시 백엔드 캐릭터 목록으로 store 동기화 (최종 저장소는 백엔드)
   useEffect(() => {
     characterApi
       .getCharacters()
@@ -21,9 +20,8 @@ export default function CharacterPage() {
         setCharacters(list)
         setLoadError('')
       })
-      .catch((e) => {
-        // 실패를 "빈 목록"으로 숨기지 않고 에러로 표시 (데이터 없음 vs 서버 오류 구분)
-        setLoadError(`캐릭터 목록을 불러오지 못했습니다. ${getApiErrorMessage(e)}`)
+      .catch((error) => {
+        setLoadError(`캐릭터 목록을 불러오지 못했습니다. ${getApiErrorMessage(error)}`)
       })
   }, [setCharacters])
 
@@ -31,7 +29,6 @@ export default function CharacterPage() {
     <div className={styles.page}>
       <h1>캐릭터</h1>
 
-      {/* 임시: AI(ComfyUI) 연결 확인 — 실제 연동 시 삭제 (TEMP_AI_CONNECTION_TEST.md) */}
       <AiConnectionCheck />
 
       <section className={styles.section}>
@@ -47,10 +44,10 @@ export default function CharacterPage() {
 
       <div className={styles.actions}>
         <button className={styles.btnSecondary} onClick={() => navigate('/scene-check')}>
-          ← 씬 확인
+          씬 확인
         </button>
         <button className={styles.btn} onClick={() => navigate('/voice')}>
-          보이스 →
+          보이스 설정
         </button>
       </div>
     </div>

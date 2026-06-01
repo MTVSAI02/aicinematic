@@ -1,0 +1,410 @@
+/* 음성 입력(보이스 클로닝) 페이지.
+   CSS 변수만 사용, 하드코딩 색 금지 (--danger 계열 예외). */
+
+.page {
+  padding: 40px 24px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.help {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 32px;
+}
+
+/* ── 섹션 ──────────────────────────────────── */
+.section {
+  margin-bottom: 36px;
+}
+
+.stepTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  color: var(--text-h);
+  margin: 0 0 16px;
+}
+
+.stepBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ── 역할 선택 카드 ────────────────────────── */
+.roleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 440px;
+}
+
+.roleCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.roleCard:hover {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow);
+}
+
+.roleCardSelected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  box-shadow: var(--shadow);
+}
+
+.roleEmoji {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.roleLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.roleDesc {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* ── 샘플 문장 박스 ────────────────────────── */
+.sampleBox {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--code-bg);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.sampleText {
+  font-size: 17px;
+  color: var(--text-h);
+  line-height: 1.75;
+  flex: 1;
+  margin: 0;
+}
+
+.refreshBtn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.refreshBtn:hover {
+  background: var(--bg);
+}
+
+/* ── 녹음 영역 ─────────────────────────────── */
+.minLabel {
+  font-size: 12px;
+  font-weight: 400;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+.recordArea {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.recordControls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recordBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 2px solid var(--accent-border);
+  border-radius: 10px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.recordBtn:hover {
+  opacity: 0.85;
+}
+
+.recordBtnActive {
+  border-color: var(--danger);
+  background: rgba(192, 57, 43, 0.08);
+  color: var(--danger);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+.recordDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.15; }
+}
+
+.orDivider {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.uploadLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.uploadLabel:hover {
+  background: var(--code-bg);
+}
+
+.fileInput {
+  display: none;
+}
+
+/* ── 진행 바 ─────────────────────────────────── */
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progressTrack {
+  width: 200px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--danger);
+  transition: width 0.4s ease, background 0.3s;
+}
+
+.progressBarOk {
+  background: #22c55e;
+}
+
+.progressLabel {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.progressLabelOk {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+/* ── 미리보기 ────────────────────────────────── */
+.previewArea {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.previewTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.durationOk {
+  font-size: 13px;
+  color: #22c55e;
+  margin: 0;
+  font-weight: 500;
+}
+
+.durationWarn {
+  font-size: 13px;
+  color: var(--danger);
+  margin: 0;
+}
+
+.audio {
+  height: 36px;
+}
+
+.resetBtn {
+  padding: 7px 16px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.resetBtn:hover {
+  background: var(--code-bg);
+}
+
+/* ── 동의 문구 / 상태 ──────────────────────── */
+.consent {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.75;
+  margin: 10px 0 0;
+}
+
+.message {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--danger);
+  margin: 0 0 8px;
+}
+
+/* ── 하단 네비게이션 ────────────────────────── */
+.pageNav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.navRight {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+.btnSecondary {
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnSecondary:hover {
+  background: var(--code-bg);
+}
+
+/* ── 반응형 ─────────────────────────────────── */
+@media (max-width: 600px) {
+  .roleGrid {
+    max-width: 100%;
+  }
+
+  .sampleBox {
+    flex-direction: column;
+  }
+
+  .recordArea {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pageNav {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .navRight {
+    flex-direction: column;
+  }
+}

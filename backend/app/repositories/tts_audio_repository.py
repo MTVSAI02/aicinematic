@@ -1,7 +1,8 @@
 class InMemoryTTSAudioRepository:
-    """TTS mock audio 결과를 저장하는 메모리 Mock Repository.
+    """TTS audio 결과를 저장하는 메모리 Repository.
 
-    실제 음성 파일은 없고(audioUrl=None), 메타데이터만 보관한다.
+    mock 단계에서는 audioUrl=None 메타데이터만 보관하고,
+    AI/TTS 연동 시 audioId 기준으로 audioUrl/durationSec/error를 갱신한다.
     서버 재시작 시 데이터는 초기화된다.
     """
 
@@ -29,6 +30,21 @@ class InMemoryTTSAudioRepository:
 
     def get(self, audio_id: str) -> dict | None:
         return self._audios.get(audio_id)
+
+    def apply_ai_result(self, audios: list[dict]) -> list[dict]:
+        """AI/TTS 응답을 audioId 기준으로 저장 레코드에 반영한다."""
+        updated = []
+        for audio in audios:
+            audio_id = audio.get("audioId")
+            if not audio_id or audio_id not in self._audios:
+                continue
+
+            record = self._audios[audio_id]
+            record["audioUrl"] = audio.get("audioUrl")
+            record["durationSec"] = audio.get("durationSec")
+            record["error"] = audio.get("error")
+            updated.append(record)
+        return updated
 
     def delete(self, audio_id: str) -> bool:
         if audio_id in self._audios:

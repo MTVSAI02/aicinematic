@@ -6,6 +6,7 @@ import SceneCheckPage from '@/pages/scene-check/SceneCheckPage'
 import CharacterPage from '@/pages/character/CharacterPage'
 import BackgroundPage from '@/pages/background/BackgroundPage'
 import SceneEditorPage from '@/pages/scene-editor/SceneEditorPage'
+import VoiceInputPage from '@/pages/voice-input/VoiceInputPage'
 import VoicePage from '@/pages/voice/VoicePage'
 import TimelinePage from '@/pages/timeline/TimelinePage'
 import ExportPage from '@/pages/export/ExportPage'
@@ -16,6 +17,7 @@ export default function App() {
       <NavBar />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/voice-input" element={<VoiceInputPage />} />
         <Route path="/story-input" element={<StoryInputPage />} />
         <Route path="/scene-check" element={<SceneCheckPage />} />
         <Route path="/character" element={<CharacterPage />} />

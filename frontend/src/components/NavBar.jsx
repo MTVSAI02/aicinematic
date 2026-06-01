@@ -3,6 +3,7 @@ import styles from './NavBar.module.css'
 
 const NAV_ITEMS = [
   { to: '/', label: '홈' },
+  { to: '/voice-input', label: '음성 입력' },
   { to: '/story-input', label: '스토리 입력' },
   { to: '/scene-check', label: '씬 확인' },
   { to: '/character', label: '캐릭터' },
