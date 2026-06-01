@@ -11,10 +11,7 @@ export function generateCharacter(payload) {
   })
 }
 
-// GET /api/jobs/{jobId} — Job 상태 조회
-export function getJob(jobId) {
-  return request(`/api/jobs/${jobId}`)
-}
+// (Job 조회는 api/jobs.js 의 getJob 사용 — 캐릭터/배경/보이스 공통)
 
 // GET /api/characters — 캐릭터 목록 조회
 export function getCharacters() {
@@ -66,4 +63,12 @@ export function assignCharacterToScene(sceneId, { storyId, characterId, sceneApp
     ...jsonBody({ storyId, characterId, sceneAppearancePrompt }),
     method: 'PATCH',
   })
+}
+
+// DELETE /api/scenes/{sceneId}/character/{characterId} — 씬에서 캐릭터 1명 제거 (storyId는 쿼리)
+export function removeCharacterFromScene(sceneId, characterId, storyId) {
+  return request(
+    `/api/scenes/${sceneId}/character/${characterId}?storyId=${encodeURIComponent(storyId)}`,
+    { method: 'DELETE' },
+  )
 }
