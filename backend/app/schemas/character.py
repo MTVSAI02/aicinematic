@@ -40,6 +40,7 @@ class CharacterUpdateRequest(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, examples=["작은 왕자"])
     appearancePrompt: str | None = Field(default=None, min_length=1)
+    description: str | None = Field(default=None, examples=["호기심 많고 다정한 어린 왕자"])
     imageUrl: str | None = Field(default=None, examples=["/static/characters/prince.png"])
 
     @field_validator("name", "appearancePrompt")

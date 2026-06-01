@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
 import { pollJob } from '@/utils/pollJob'
@@ -23,6 +23,10 @@ export default function CharacterCreateForm() {
   const [loading, setLoading] = useState(false)
   const [jobStatus, setJobStatus] = useState(null)
   const [error, setError] = useState('')
+
+  // 언마운트 시 진행 중 폴링 취소 (setState-on-unmounted 방지)
+  const abortRef = useRef(null)
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const trimmedName = name.trim()
   const trimmedPrompt = appearancePrompt.trim()
@@ -52,7 +56,11 @@ export default function CharacterCreateForm() {
       setJobStatus(job.status)
 
       // 2. completed/failed 까지 폴링 (pending/running 동안 상태 갱신)
-      await pollJob(job.jobId, { onStatus: (j) => setJobStatus(j.status) })
+      abortRef.current = new AbortController()
+      await pollJob(job.jobId, {
+        onStatus: (j) => setJobStatus(j.status),
+        signal: abortRef.current.signal,
+      })
 
       // 3. 완료 → 캐릭터 목록 다시 동기화 + 폼 초기화
       const list = await characterApi.getCharacters()
@@ -61,7 +69,13 @@ export default function CharacterCreateForm() {
       setDescription('')
       setAppearancePrompt('')
     } catch (e) {
-      // pollJob 실패 시 e.detail = job.error (예: "Character generation failed")
+      if (e.aborted) return // 언마운트 취소 → 무시
+      if (e.timedOut) {
+        // 실패가 아니라 "아직 생성 중" — 백엔드 Job은 계속 진행 중일 수 있음
+        setError('생성이 오래 걸리고 있어요. 잠시 후 캐릭터 라이브러리를 새로고침해 확인하세요.')
+        return
+      }
+      // pollJob 실패 시 e.detail = 백엔드 실제 실패 원인(job.error)
       setJobStatus('failed')
       setError(getApiErrorMessage(e))
     } finally {
