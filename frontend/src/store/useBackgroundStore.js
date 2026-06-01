@@ -69,6 +69,14 @@ const useBackgroundStore = create((set) => ({
         state.selectedBackgroundId === backgroundId ? null : state.selectedBackgroundId,
     })),
 
+  // 저장 성공한 후보를 그리드에서 제거 (백엔드에서 이미 삭제됨 → 재저장 시 404 방지).
+  removeCandidate: (candidateId) =>
+    set((state) => ({
+      candidates: state.candidates.filter((c) => c.candidateId !== candidateId),
+      selectedCandidateId:
+        state.selectedCandidateId === candidateId ? null : state.selectedCandidateId,
+    })),
+
   // ── resets ───────────────────────────────────
   resetCandidates: () => set({ candidates: [], selectedCandidateId: null }),
 

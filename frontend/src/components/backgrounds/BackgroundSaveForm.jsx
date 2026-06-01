@@ -8,7 +8,7 @@ import styles from '@/pages/background/BackgroundPage.module.css'
 export default function BackgroundSaveForm() {
   const {
     selectedCandidateId, loading,
-    setBackgrounds, setSelectedCandidateId, setLoading, setError,
+    setBackgrounds, removeCandidate, setLoading, setError,
   } = useBackgroundStore()
 
   const [name, setName] = useState('')
@@ -23,15 +23,17 @@ export default function BackgroundSaveForm() {
     setSavedMessage('')
     setError(null)
     setLoading(true)
+    const savedCandidateId = selectedCandidateId
     try {
       await backgroundApi.saveBackground({
-        candidateId: selectedCandidateId,
+        candidateId: savedCandidateId,
         name: name.trim(),
       })
       // 저장 후 라이브러리 갱신
       const list = await backgroundApi.getBackgrounds()
       setBackgrounds(list)
-      setSelectedCandidateId(null)
+      // 저장된 후보는 백엔드에서 삭제됨 → 그리드에서도 제거(+ 선택 해제 → 재저장 버튼 비활성)
+      removeCandidate(savedCandidateId)
       setName('')
       setSavedMessage('배경이 라이브러리에 저장되었습니다.')
     } catch (e) {

@@ -40,6 +40,11 @@ class BackgroundCandidateRepository:
     def get(self, candidate_id: str) -> dict | None:
         return self._candidates.get(candidate_id)
 
+    def delete(self, candidate_id: str) -> bool:
+        """후보 레코드를 삭제한다. (라이브러리 저장 성공 후 선택된 후보 정리용)"""
+        with self._lock:
+            return self._candidates.pop(candidate_id, None) is not None
+
     def list(self) -> list[dict]:
         with self._lock:
             return list(self._candidates.values())
