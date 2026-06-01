@@ -1,6 +1,6 @@
 """우리 AI FastAPI 서버 호출 클라이언트 (배경 생성).
 
-구조: Frontend → Backend → **AI FastAPI 서버(/generate)** → 외부 ComfyUI
+구조: Frontend → Backend → **AI FastAPI 서버(/generate-background)** → 외부 ComfyUI
 - Backend는 외부 ComfyUI(/prompt·/history·/view)를 직접 호출하지 않는다.
 - Backend는 AI 서버에 항상 `{ "prompt": finalPrompt }` 만 보낸다(negativePrompt 안 보냄).
 - AI 서버는 **1회 호출로 ComfyUI batch 결과(여러 장)** 를 base64 배열로 반환한다:
@@ -21,7 +21,7 @@ _GENERATE_TIMEOUT_SECONDS = 180
 
 
 def generate_background_images(prompt: str) -> list[bytes]:
-    """AI FastAPI 서버 `/generate` 를 1회 호출해 배경 이미지 여러 장을 받는다.
+    """AI FastAPI 서버 `/generate-background` 를 1회 호출해 배경 이미지 여러 장을 받는다.
 
     Args:
         prompt: 최종 프롬프트(finalPrompt). AI 서버에는 항상 'prompt' 필드명으로만 보낸다.
@@ -37,7 +37,7 @@ def generate_background_images(prompt: str) -> list[bytes]:
     if not AI_SERVER_URL or not AI_SERVER_URL.strip():
         raise AIServerError("AI_SERVER_URL is not configured")
 
-    url = f"{AI_SERVER_URL.rstrip('/')}/generate"
+    url = f"{AI_SERVER_URL.rstrip('/')}/generate-background"
     try:
         response = httpx.post(
             url, json={"prompt": prompt}, timeout=_GENERATE_TIMEOUT_SECONDS
