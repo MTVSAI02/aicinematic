@@ -14,9 +14,12 @@ router = APIRouter(prefix="/api/tts", tags=["tts"])
 @router.post("/scene", response_model=JobCreatedResponse, summary="씬 TTS 생성 Job")
 def generate_scene_tts(request: TTSSceneGenerateRequest):
     """
-    storyId/sceneId의 scene.items를 기반으로 TTS 생성 Job을 만든다. (현재 mock, 즉시 completed)
+    storyId/sceneId의 scene.items를 기반으로 TTS 생성 Job을 만든다.
 
-    - 실제 TTS 모델 호출 없이 mock audio(audioUrl=null)를 만들어 저장한다.
+    - 백엔드가 scene.items를 TTS_AI_CONTRACT.md의 items 형태로 구성한다.
+    - AI_TTS_URL이 설정되어 있으면 POST {AI_TTS_URL}/tts로 전달한다.
+    - QWEN_TTS_ENABLED=1이면 로컬 Qwen3-TTS 어댑터를 사용한다.
+    - 둘 다 없으면 audioUrl=null 메타만 저장한다.
     - 감정은 item.emotion/emotionLabel을 그대로 사용한다(TTS가 새로 판단하지 않음).
     - narration→voiceType=narrator, dialogue→voiceType=character.
       dialogue는 speaker로 저장 캐릭터(name 매칭)를 찾아 characterId/voiceId를 채운다(미매칭이면 null).

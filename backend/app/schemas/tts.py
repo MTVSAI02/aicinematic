@@ -19,7 +19,11 @@ class TTSAudioResponse(BaseModel):
     voiceType: str  # narrator / character
     characterId: str | None = None  # dialogue speaker→캐릭터(name 매칭) ID, 미매칭/narration이면 null
     voiceId: str | None = None  # dialogue=캐릭터 voiceId / narration=story.narratorVoiceId, 없으면 null
-    audioUrl: str | None = None  # 현재 null (실제 합성은 AI 단계)
+    voiceName: str | None = None
+    voicePrompt: str | None = None
+    audioUrl: str | None = None
+    durationSec: float | None = None
+    error: str | None = None
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -36,7 +40,11 @@ class TTSAudioResponse(BaseModel):
                 "voiceType": "narrator",
                 "characterId": None,
                 "voiceId": None,
+                "voiceName": None,
+                "voicePrompt": None,
                 "audioUrl": None,
+                "durationSec": None,
+                "error": None,
             }
         }
     )

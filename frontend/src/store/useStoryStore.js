@@ -29,7 +29,7 @@ const useStoryStore = create((set) => ({
       ),
     })),
 
-  setSceneAudioMeta: (sceneId, audioUrl, audioDurationSec) =>
+  setSceneAudioMeta: (sceneId, audioUrl, audioDurationSec, audioItems = []) =>
     set((state) => ({
       scenes: state.scenes.map((scene) =>
         matchesScene(scene, sceneId)
@@ -39,6 +39,7 @@ const useStoryStore = create((set) => ({
               audio_url: audioUrl,
               audioDurationSec,
               audio_duration_sec: audioDurationSec,
+              audioItems,
               duration: Math.max(
                 getDuration(scene),
                 audioDurationSec ? audioDurationSec + 0.5 : 1,

@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { generateSceneVoice } from '../../api/voiceApi'
+import { generateSceneVoice } from '@/api/voiceApi'
 
-function getSpeakerLabel(scene, characterNameById) {
-  if (scene.type === 'narration') return '내레이터'
-  return characterNameById[scene.speaker] ?? scene.speaker ?? '알 수 없음'
+function getSpeakerLabel(item, characterNameById) {
+  if (item.type === 'narration') return '나레이터'
+  return characterNameById[item.speaker] ?? item.speaker ?? '화자 없음'
 }
 
-function getVoiceLabel(scene, characterNameById) {
-  if (scene.type === 'narration') return '내레이터 목소리'
-  return `${getSpeakerLabel(scene, characterNameById)} 캐릭터 목소리`
+function getVoiceLabel(item, characterNameById) {
+  if (item.type === 'narration') return '나레이터 목소리'
+  return `${getSpeakerLabel(item, characterNameById)} 캐릭터 목소리`
+}
+
+function getAudioForItem(item, audioItems) {
+  return audioItems.find((audio) => audio.itemIndex === item.itemIndex)
 }
 
 export function AudioPanel({
@@ -22,7 +26,11 @@ export function AudioPanel({
   async function handleGenerateVoice(scene) {
     setSceneStatuses((current) => ({
       ...current,
-      [scene.id]: { state: 'loading', message: '음성을 생성하는 중입니다.' },
+      [scene.id]: {
+        state: 'loading',
+        message: '씬 안의 나레이션과 대사를 생성하는 중입니다.',
+        audioItems: current[scene.id]?.audioItems ?? scene.audioItems ?? [],
+      },
     }))
 
     try {
@@ -30,7 +38,11 @@ export function AudioPanel({
       onSceneAudioGenerated(scene.id, audio)
       setSceneStatuses((current) => ({
         ...current,
-        [scene.id]: { state: 'done', message: '음성 생성 완료' },
+        [scene.id]: {
+          state: 'done',
+          message: '음성 생성 완료',
+          audioItems: audio.audioItems,
+        },
       }))
     } catch (error) {
       setSceneStatuses((current) => ({
@@ -38,6 +50,7 @@ export function AudioPanel({
         [scene.id]: {
           state: 'error',
           message: error instanceof Error ? error.message : '음성 생성 실패',
+          audioItems: current[scene.id]?.audioItems ?? scene.audioItems ?? [],
         },
       }))
     }
@@ -51,66 +64,98 @@ export function AudioPanel({
           <h2>TTS 음성 생성</h2>
         </div>
         <p className="panel-description">
-          내레이션은 내레이터 목소리, 대사는 캐릭터 목소리로 구분합니다.
+          한 씬 안의 나레이션과 캐릭터 대사를 각각 분리해서 생성하고
+          미리듣기합니다.
         </p>
       </div>
 
-      <div className="scene-list">
-        {scenes.map((scene) => {
-          const status = sceneStatuses[scene.id] ?? {
-            state: 'idle',
-            message: '음성 생성 전',
-          }
-          const isLoading = status.state === 'loading'
-          const speakerLabel = getSpeakerLabel(scene, characterNameById)
+      {scenes.length === 0 ? (
+        <p className="empty-message">선택한 스토리에 생성할 씬이 없습니다.</p>
+      ) : (
+        <div className="scene-list">
+          {scenes.map((scene) => {
+            const status = sceneStatuses[scene.id] ?? {
+              state: 'idle',
+              message: '음성 생성 전',
+              audioItems: scene.audioItems ?? [],
+            }
+            const isLoading = status.state === 'loading'
+            const audioItems = status.audioItems ?? scene.audioItems ?? []
 
-          return (
-            <article className="scene-card" key={scene.id}>
-              <div className="scene-card-top">
-                <span className="scene-order">Scene {scene.order}</span>
-                <span className={`status-badge status-${status.state}`}>
-                  {status.message}
-                </span>
-              </div>
+            return (
+              <article className="scene-card" key={scene.id}>
+                <div className="scene-card-top">
+                  <span className="scene-order">Scene {scene.order}</span>
+                  <span className={`status-badge status-${status.state}`}>
+                    {status.message}
+                  </span>
+                </div>
 
-              <div className="scene-meta">
-                <span>{scene.type === 'narration' ? '내레이션' : '대사'}</span>
-                <span>{speakerLabel}</span>
-                <span>{getVoiceLabel(scene, characterNameById)}</span>
-              </div>
+                <div className="tts-item-list">
+                  {scene.items.map((item) => {
+                    const itemAudio = getAudioForItem(item, audioItems)
 
-              <p className="scene-line">{scene.line}</p>
+                    return (
+                      <div className="tts-item" key={item.itemIndex}>
+                        <div className="scene-meta">
+                          <span>
+                            {item.type === 'narration' ? '나레이션' : '대사'}
+                          </span>
+                          <span>{getSpeakerLabel(item, characterNameById)}</span>
+                          <span>{getVoiceLabel(item, characterNameById)}</span>
+                          {item.emotionLabel && <span>{item.emotionLabel}</span>}
+                        </div>
 
-              <div className="scene-timing">
-                <span>장면 길이 {scene.durationSec.toFixed(1)}초</span>
-                <span>
-                  음성 길이{' '}
-                  {scene.audioDurationSec
-                    ? `${scene.audioDurationSec.toFixed(1)}초`
-                    : '-'}
-                </span>
-              </div>
+                        <p className="scene-line">{item.text}</p>
 
-              <div className="scene-actions">
-                <button
-                  className="primary-button"
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => handleGenerateVoice(scene)}
-                >
-                  {scene.audioPath ? '음성 다시 생성' : '음성 생성'}
-                </button>
+                        {itemAudio?.error && (
+                          <p className="tts-item-error">{itemAudio.error}</p>
+                        )}
 
-                {scene.audioPath && (
-                  <audio className="audio-player" controls src={scene.audioPath}>
-                    이 브라우저는 오디오 재생을 지원하지 않습니다.
-                  </audio>
-                )}
-              </div>
-            </article>
-          )
-        })}
-      </div>
+                        {itemAudio?.audioUrl && (
+                          <div className="tts-item-audio">
+                            <span>
+                              음성 길이{' '}
+                              {itemAudio.durationSec
+                                ? `${itemAudio.durationSec.toFixed(1)}초`
+                                : '-'}
+                            </span>
+                            <audio
+                              className="audio-player"
+                              controls
+                              src={itemAudio.audioUrl}
+                            >
+                              브라우저가 오디오 재생을 지원하지 않습니다.
+                            </audio>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="scene-timing">
+                  <span>씬 길이 {scene.durationSec.toFixed(1)}초</span>
+                  <span>대사 항목 {scene.items.length}개</span>
+                </div>
+
+                <div className="scene-actions">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleGenerateVoice(scene)}
+                  >
+                    {audioItems.some((audio) => audio.audioUrl)
+                      ? '씬 음성 다시 생성'
+                      : '씬 음성 생성'}
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

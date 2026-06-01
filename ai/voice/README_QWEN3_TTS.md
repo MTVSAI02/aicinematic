@@ -49,18 +49,24 @@ backend/app/storage/voice/qwen3_tts_voice_clone.wav
 
 ## 백엔드 연동용 함수
 
-FastAPI 라우터에서는 아래 함수만 감싸서 호출하면 된다.
+FastAPI 라우터는 `TTS_AI_CONTRACT.md` 기준으로 `audioId`가 포함된 payload를 만든다.
+로컬 Qwen 연동은 `ai.voice.tts_contract.synthesize_scene_tts`가 담당한다.
 
 ```python
-from ai.voice.tts import generate_tts
-from ai.voice.clone import generate_voice_clone
+from ai.voice.tts_contract import synthesize_scene_tts
 
-tts_result = generate_tts("안녕하세요.", speaker="Sohee")
-clone_result = generate_voice_clone(
-    "새로 합성할 문장입니다.",
-    ref_audio="backend/app/storage/voice/sample.wav",
-    ref_text="샘플에서 실제로 말한 문장입니다.",
-)
+result = synthesize_scene_tts({
+    "storyId": "story_mock_001",
+    "sceneId": "scene_001",
+    "items": [{"audioId": "audio_mock_001", "text": "안녕하세요.", "emotion": "calm"}],
+})
+```
+
+백엔드에서 실제 Qwen 합성을 켜려면:
+
+```powershell
+$env:QWEN_TTS_ENABLED="1"
+.\.venv-qwen3-tts\Scripts\python.exe -m uvicorn backend.app.main:app --reload
 ```
 
 ## 운영 메모
@@ -69,3 +75,15 @@ clone_result = generate_voice_clone(
 - 이 노트북은 VRAM 8GB라 0.6B 모델을 기본값으로 둔다. 발표용 품질을 더 올릴 때는 4090 머신이나 클라우드 GPU에서 1.7B 모델로 교체한다.
 - `flash-attn is not installed` 경고는 Windows 로컬 테스트에서는 무시해도 된다. 속도 최적화용이며 필수 설치 항목은 아니다.
 - `SoX could not be found` 경고가 보일 수 있다. 기본 CustomVoice 테스트는 우선 진행하고, 보이스 클로닝에서 오디오 로딩 문제가 생기면 Windows용 SoX 설치를 별도로 진행한다.
+
+## Runtime notes
+
+- `ai/voice/qwen3_runtime.py` sets `NUMBA_CACHE_DIR` to `.cache/qwen3_tts/numba` before importing `qwen_tts`. This avoids long Windows temp/cache stalls during `librosa`/`numba` import.
+- `load_qwen3_model()` resolves the Hugging Face cached snapshot first and passes the local snapshot path to `from_pretrained()`. This prevents `AutoProcessor` from making an extra Hugging Face API request during local/offline runs.
+- Local FastAPI integration test:
+
+```powershell
+$env:QWEN_TTS_ENABLED="1"
+$env:HF_HUB_OFFLINE="1"
+.\.venv-qwen3-tts\Scripts\python.exe -m uvicorn backend.app.main:app --reload
+```

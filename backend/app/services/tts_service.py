@@ -7,6 +7,8 @@ from ..core.exceptions import (
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.tts_audio_repository import tts_audio_repository
+from ..repositories.voice_repository import voice_repository
+from .tts_ai_client import tts_ai_client
 from .tts_job_runner import create_tts_generation_job
 
 # voiceType 매핑: narration → narrator, dialogue → character
@@ -21,18 +23,18 @@ DEFAULT_EMOTION = {
     "dialogue": ("neutral", "기본"),
 }
 
-
 class TTSService:
     """scene.items 기반 TTS 생성/조회/삭제 비즈니스 로직.
 
     감정은 새로 판단하지 않고 item.emotion/emotionLabel을 그대로 사용한다.
-    실제 TTS 모델 호출 없이 mock audio(audioUrl=None)를 만든다.
+    백엔드가 audioId를 발급하고, AI/TTS는 audioId -> audioUrl만 채운다.
     """
 
-    def __init__(self, story_repo, tts_audio_repo, character_repo):
+    def __init__(self, story_repo, tts_audio_repo, character_repo, voice_repo):
         self._story_repo = story_repo
         self._tts_audio_repo = tts_audio_repo
         self._character_repo = character_repo
+        self._voice_repo = voice_repo
 
     def generate_scene_tts(self, story_id: str, scene_id: str) -> dict:
         scene = self._find_scene(story_id, scene_id)
@@ -63,6 +65,7 @@ class TTSService:
             # narration: characterId는 없고, voiceId는 story.narratorVoiceId 사용 (없으면 None).
             character_id = None
             voice_id = None
+            voice = None
             if item_type == "dialogue":
                 matched = chars_by_name.get(item.get("speaker"))
                 if matched:
@@ -70,6 +73,8 @@ class TTSService:
                     voice_id = matched.get("voiceId")  # 캐릭터에 연결된 보이스 (없으면 None)
             elif item_type == "narration":
                 voice_id = narrator_voice_id  # 나레이터 보이스 (없으면 None)
+            if voice_id:
+                voice = self._voice_repo.get(voice_id)
 
             audio_targets.append(
                 {
@@ -84,7 +89,11 @@ class TTSService:
                     "voiceType": VOICE_TYPE.get(item_type, "narrator"),
                     "characterId": character_id,
                     "voiceId": voice_id,  # 실제 합성/클로닝은 AI 파트, 여기선 참조만
-                    "audioUrl": None,     # 실제 음성 파일 없음
+                    "voiceName": voice.get("name") if voice else None,
+                    "voicePrompt": voice.get("voicePrompt") if voice else None,
+                    "audioUrl": None,
+                    "durationSec": None,
+                    "error": None,
                 }
             )
 
@@ -94,6 +103,15 @@ class TTSService:
         # 재생성 정책: 같은 story+scene 기존 audio 삭제 후 새로 저장 (누적 방지)
         self._tts_audio_repo.delete_by_scene(story_id, scene_id)
         saved_audios = self._tts_audio_repo.create_many(audio_targets)
+        ai_payload = {
+            "storyId": story_id,
+            "sceneId": scene_id,
+            "items": saved_audios,
+        }
+        ai_result = tts_ai_client.synthesize_scene(ai_payload)
+        if ai_result and isinstance(ai_result.get("audios"), list):
+            self._tts_audio_repo.apply_ai_result(ai_result["audios"])
+            saved_audios = self._tts_audio_repo.list_by_scene(story_id, scene_id)
 
         # tts_generate Job 생성 (즉시 completed)
         return create_tts_generation_job(story_id, scene_id, saved_audios)
@@ -118,4 +136,9 @@ class TTSService:
         raise SceneNotFoundError()
 
 
-tts_service = TTSService(story_repository, tts_audio_repository, character_repository)
+tts_service = TTSService(
+    story_repository,
+    tts_audio_repository,
+    character_repository,
+    voice_repository,
+)

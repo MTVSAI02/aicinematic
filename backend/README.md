@@ -76,7 +76,7 @@ backend/
 │   │   ├── character_service.py  # 캐릭터 CRUD 비즈니스 로직 (커스텀 예외 발생)
 │   │   ├── job_service.py     # Job 조회 비즈니스 로직 (JobNotFoundError)
 │   │   ├── background_service.py  # 배경 추천/라이브러리 CRUD/씬 연결 + 프롬프트 규칙
-│   │   ├── tts_service.py     # scene.items → mock audio 생성/조회/삭제 (speaker→voiceId 반영)
+│   │   ├── tts_service.py     # scene.items → TTS audio target 생성/조회/삭제 (speaker→voiceId 반영)
 │   │   └── voice_service.py   # 보이스 라이브러리 CRUD (삭제 시 캐릭터 voiceId 캐스케이드)
 │   ├── repositories/
 │   │   ├── __init__.py
@@ -85,7 +85,7 @@ backend/
 │   │   ├── job_repo.py        # Job 상태 메모리 Mock Repository
 │   │   ├── background_candidate_repository.py  # 배경 후보(임시) 메모리 저장
 │   │   ├── background_repository.py            # 배경 라이브러리 메모리 저장
-│   │   ├── tts_audio_repository.py             # TTS mock audio 메모리 저장
+│   │   ├── tts_audio_repository.py             # TTS audio 메타 메모리 저장
 │   │   └── voice_repository.py                 # 보이스 라이브러리 메모리 저장
 │   ├── schemas/
 │   │   ├── __init__.py
@@ -138,7 +138,7 @@ backend/
 | PATCH | `/api/backgrounds/{background_id}` | 배경 수정 (name만) |
 | DELETE | `/api/backgrounds/{background_id}` | 배경 삭제 (+참조 씬 backgroundId null) |
 | PATCH | `/api/scenes/{scene_id}/background` | 씬에 배경 연결 (body: storyId, backgroundId) |
-| POST | `/api/tts/scene` | 씬 TTS 생성 Job (mock, 즉시 completed) |
+| POST | `/api/tts/scene` | 씬 TTS 생성 Job (`AI_TTS_URL`/`QWEN_TTS_ENABLED` 설정 시 실제 합성, 미설정 시 audioUrl=null) |
 | GET | `/api/tts?storyId=&sceneId=` | 씬별 TTS 결과 목록 조회 |
 | DELETE | `/api/tts/{audio_id}` | TTS 결과 삭제 |
 | POST | `/api/voices` | 보이스 자산 생성 (mock) |
@@ -254,17 +254,17 @@ narration은 화자가 없어 캐릭터로 목소리를 못 붙이므로, 사용
 
 ### TTS(음성 생성) API
 
-TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emotion/speaker)를 그대로 사용하고, **실제 음성 생성 없이 mock audio**를 만든다.
+TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emotion/speaker)를 그대로 사용하고, 백엔드가 `audioId`를 먼저 발급한 뒤 `TTS_AI_CONTRACT.md` 형태로 AI/TTS에 전달한다. `AI_TTS_URL`이 있으면 원격 AI/TTS 서버를 호출하고, `QWEN_TTS_ENABLED=1`이면 로컬 Qwen3-TTS 어댑터를 사용한다. 둘 다 없으면 기존처럼 `audioUrl=null` 메타만 만든다.
 
 > #### 📍 현재 단계 (중요): "백엔드 mock 구조"까지만
 >
 > ```text
-> [프론트] ──✖ 아직 호출 안 함 ──▶ [백엔드 TTS API] ──✖ AI 호출 안 함(mock) ──▶ [AI/TTS]
+> [프론트] ──▶ [백엔드 TTS API] ──▶ [`AI_TTS_URL` 원격 TTS 또는 로컬 Qwen3-TTS] ──▶ [audioId별 audioUrl/durationSec/error]
 > ```
 >
-> - ✅ **됨**: 백엔드 mock API (scene.items → mock audio 생성/저장/조회/삭제, `tts_generate` Job). 데이터를 반환할 준비 완료.
-> - ❌ **안 됨 (AI 요청)**: 실제 TTS 모델/AI 서버 호출 없음. `audioUrl=null`인 가짜 결과만 만든다. → 실제 연동 시 `tts_service`/`job_manager`의 mock 부분을 실제 TTS 호출로 교체하고 `audioUrl`을 채운다.
-> - ❌ **안 됨 (프론트 연동)**: 프론트에 TTS를 호출하는 코드가 아직 없다. → 추후 `frontend/src/api/tts.js` + 음성 생성 버튼/재생 UI 추가 필요.
+> - ✅ **됨**: 백엔드 TTS API (scene.items → audio target 생성/저장/조회/삭제, `tts_generate` Job). AI/TTS 설정이 없으면 `audioUrl=null` 메타를 반환한다.
+> - ✅ **됨 (AI 요청)**: `AI_TTS_URL` 설정 시 `POST {AI_TTS_URL}/tts`, `QWEN_TTS_ENABLED=1` 설정 시 로컬 Qwen3-TTS로 실제 wav 생성. 미설정이면 `audioUrl=null`로 계약 메타만 저장한다.
+> - ✅ **됨 (프론트 연동)**: `frontend/src/api/voiceApi.js`가 `/api/tts/scene` Job을 만들고 `/api/jobs/{jobId}`를 polling한 뒤 `audioUrl`을 재생한다.
 > - ✅ **됨**: character voice 매핑(dialogue `speaker` → 저장 캐릭터(name 매칭) → `characterId`/`voiceId`를 audio에 복사). 보이스 라이브러리(`/api/voices`) + 캐릭터 연결(`PATCH /api/characters/{id}/voice`)도 구현됨.
 > - ❌ **안 됨**: 보이스 클로닝(voiceId에 실제 목소리 매핑 = provider/model/sampleAudioUrl/status 채우기)은 AI/TTS 파트 영역.
 >
@@ -272,7 +272,7 @@ TTS는 **scene 단위**로 생성한다. 이미 파싱된 `scene.items`(text/emo
 >
 > **백엔드 ↔ AI/TTS 요청·응답 JSON 계약**(팀원 전달용): 루트 [`TTS_AI_CONTRACT.md`](../TTS_AI_CONTRACT.md)
 
-- **실제 TTS 모델/AI 서버 호출 없음.** `audioUrl`은 항상 `null`(실제 음성 파일 없음). `tts_generate` Job은 mock이라 즉시 `completed`.
+- **AI/TTS 호출 방식**: `AI_TTS_URL` 우선, 없으면 `QWEN_TTS_ENABLED=1`일 때 로컬 Qwen3-TTS, 둘 다 없으면 `audioUrl=null`. `tts_generate` Job은 현재 즉시 `completed`이며 결과에 `audios` 배열을 담는다.
 - **감정은 그대로 통과**: TTS가 감정을 새로 판단하지 않고 `item.emotion`/`emotionLabel`을 복사한다. (감정 결정은 Story Parse 책임)
 - **voiceType / voiceId**: narration→`narrator`, dialogue→`character`.
   - **dialogue**: `speaker`로 저장 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 복사. 매칭 캐릭터 없거나 보이스 미연결이면 null.

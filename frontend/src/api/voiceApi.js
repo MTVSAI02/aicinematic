@@ -1,64 +1,82 @@
-const MOCK_AUDIO_DURATION_SEC = 4.3
-const SAMPLE_RATE = 8000
+import { jsonBody, request } from '@/utils/request'
 
-function writeAscii(view, offset, text) {
-  for (let i = 0; i < text.length; i += 1) {
-    view.setUint8(offset + i, text.charCodeAt(i))
-  }
+const JOB_POLL_INTERVAL_MS = 500
+const JOB_POLL_LIMIT = 20
+
+function getSceneId(scene) {
+  return scene.sceneId ?? scene.id
 }
 
-function createMockWavDataUrl(durationSec = MOCK_AUDIO_DURATION_SEC) {
-  const sampleCount = Math.floor(SAMPLE_RATE * durationSec)
-  const dataSize = sampleCount * 2
-  const buffer = new ArrayBuffer(44 + dataSize)
-  const view = new DataView(buffer)
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
-  writeAscii(view, 0, 'RIFF')
-  view.setUint32(4, 36 + dataSize, true)
-  writeAscii(view, 8, 'WAVE')
-  writeAscii(view, 12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, 1, true)
-  view.setUint32(24, SAMPLE_RATE, true)
-  view.setUint32(28, SAMPLE_RATE * 2, true)
-  view.setUint16(32, 2, true)
-  view.setUint16(34, 16, true)
-  writeAscii(view, 36, 'data')
-  view.setUint32(40, dataSize, true)
-
-  for (let i = 0; i < sampleCount; i += 1) {
-    const fadeIn = Math.min(i / (SAMPLE_RATE * 0.05), 1)
-    const fadeOut = Math.min((sampleCount - i) / (SAMPLE_RATE * 0.08), 1)
-    const envelope = Math.min(fadeIn, fadeOut)
-    const tone = Math.sin((2 * Math.PI * 440 * i) / SAMPLE_RATE)
-    const sample = Math.round(tone * envelope * 0.18 * 32767)
-    view.setInt16(44 + i * 2, sample, true)
+async function waitForJob(jobId) {
+  for (let count = 0; count < JOB_POLL_LIMIT; count += 1) {
+    const job = await request(`/api/jobs/${jobId}`)
+    if (job.status === 'completed') return job
+    if (job.status === 'failed') {
+      throw new Error(job.error ?? 'TTS 생성 작업이 실패했습니다.')
+    }
+    await sleep(JOB_POLL_INTERVAL_MS)
   }
 
-  let binary = ''
-  const bytes = new Uint8Array(buffer)
-  for (let i = 0; i < bytes.length; i += 1) {
-    binary += String.fromCharCode(bytes[i])
-  }
-
-  return `data:audio/wav;base64,${btoa(binary)}`
+  throw new Error('TTS 생성 작업 시간이 초과되었습니다.')
 }
 
 export async function generateSceneVoice({ storyId, scene }) {
-  if (!storyId || !scene?.id) {
+  const sceneId = getSceneId(scene)
+  if (!storyId || !sceneId) {
     throw new Error('storyId와 scene 정보가 필요합니다.')
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 800))
+  if (!storyId.startsWith('story_mock_')) {
+    throw new Error(
+      '실제 TTS는 백엔드에 저장된 스토리에서만 생성할 수 있습니다. 스토리 입력에서 씬 분해를 먼저 진행해 주세요.',
+    )
+  }
 
-  const sceneType = scene.type ?? scene.segments?.[0]?.type ?? 'narration'
+  const createdJob = await request('/api/tts/scene', {
+    ...jsonBody({ storyId, sceneId }),
+    method: 'POST',
+  })
+  const job = await waitForJob(createdJob.jobId)
+  const audios = job.result?.audios ?? []
+  const playableAudios = audios.filter((audio) => audio.audioUrl)
+  const firstPlayableAudio = playableAudios[0]
+
+  if (playableAudios.length === 0) {
+    const backendErrors = audios
+      .map((audio) => audio.error)
+      .filter(Boolean)
+      .join('\n')
+
+    if (backendErrors) {
+      throw new Error(`TTS 음성 파일 생성 실패:\n${backendErrors}`)
+    }
+
+    throw new Error(
+      '백엔드가 TTS 메타만 생성했고 음성 파일 URL은 비어 있습니다. 백엔드를 QWEN_TTS_ENABLED=1로 실행했는지 확인해 주세요.',
+    )
+  }
+
+  const totalAudioDurationSec = playableAudios.reduce(
+    (total, audio) => total + (audio.durationSec ?? 0),
+    0,
+  )
 
   return {
-    sceneId: scene.id,
-    voiceType: sceneType === 'narration' ? 'narrator' : 'character',
-    audioPath: createMockWavDataUrl(),
-    audioDurationSec: MOCK_AUDIO_DURATION_SEC,
+    sceneId,
+    voiceType: firstPlayableAudio.voiceType,
+    audioPath: firstPlayableAudio.audioUrl,
+    audioDurationSec:
+      totalAudioDurationSec ||
+      firstPlayableAudio.durationSec ||
+      firstPlayableAudio.audioDurationSec ||
+      scene.durationSec ||
+      scene.duration ||
+      3,
+    audioItems: audios,
   }
 }
 
@@ -102,9 +120,5 @@ export async function generateClonedVoice({ characterId, text }) {
 
   await new Promise((resolve) => setTimeout(resolve, 900))
 
-  return {
-    characterId,
-    audioPath: createMockWavDataUrl(),
-    audioDurationSec: MOCK_AUDIO_DURATION_SEC,
-  }
+  throw new Error('보이스 클로닝 실제 합성 API는 아직 백엔드에 연결되지 않았습니다.')
 }
