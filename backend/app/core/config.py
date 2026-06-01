@@ -14,9 +14,9 @@ AUDIO_STORAGE_DIR = STORAGE_ROOT / "audio"
 RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
 
 # 우리 AI FastAPI 서버 주소 (외부 ComfyUI는 이 AI 서버가 호출한다).
-# Backend는 ComfyUI를 직접 호출하지 않고 이 서버의 /generate 만 호출한다.
-# ⚠️ IP를 코드에 하드코딩하지 않는다. .env 의 AI_SERVER_URL 로 관리.
-#   예) AI_SERVER_URL=http://192.168.0.35:5000
+# Backend는 ComfyUI를 직접 호출하지 않고 이 서버의 /generate-character·/generate-background 만 호출한다.
+# ⚠️ 실제 주소(IP)는 코드에 하드코딩하지 않고 .env 의 AI_SERVER_URL 로 관리한다.
+#   (예시 값은 backend/.env.example 참고)
 AI_SERVER_URL = os.getenv("AI_SERVER_URL", "")
 
 # 정적 서빙 URL prefix (main.py 의 app.mount 와 일치)

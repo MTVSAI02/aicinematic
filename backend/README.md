@@ -55,7 +55,7 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 | 변수 | 용도 |
 |---|---|
 | `APP_NAME` / `APP_ENV` / `FRONTEND_URL` / `STORAGE_DIR` | 앱 기본 설정 |
-| `AI_SERVER_URL` | **우리 AI FastAPI 서버** 주소 (배경 생성 `/generate` 호출용). 예: `http://192.168.0.35:5000` |
+| `AI_SERVER_URL` | **우리 AI FastAPI 서버** 주소 (캐릭터/배경 생성 호출용: `/generate-character`·`/generate-background`). 형식: `http://<host>:<port>` (실제 주소는 팀 공유, 로컬 `.env`에만 기입) |
 | `COMFYUI_DEFAULT_URL` | ComfyUIClient 기본 URL (캐릭터 in-process 생성용) |
 | `COMFYUI_CHARACTER_URL` | 캐릭터 생성용 ComfyUI |
 | `COMFYUI_TIMEOUT_SECONDS` | 요청 timeout(초) |
@@ -422,7 +422,7 @@ ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 
 | 작업 | 방식 | 비고 |
 |---|---|---|
 | 캐릭터 이미지 생성 | **비동기** (`run_async`) | 우리 AI FastAPI 서버(`AI_SERVER_URL`/generate-character) 호출 → base64 1장 저장 |
-| 배경 이미지 생성 | **비동기** (`run_async`) | 우리 AI FastAPI 서버(`AI_SERVER_URL`/generate) 호출 → base64 후보 저장 |
+| 배경 이미지 생성 | **비동기** (`run_async`) | 우리 AI FastAPI 서버(`AI_SERVER_URL`/generate-background) 호출 → base64 후보 저장 |
 | 보이스 클로닝 | **비동기** (예정) | 무거운 1회성 작업 |
 | 최종 영상 렌더링 | **비동기** (예정) | ffmpeg/concat/싱크 |
 | 씬 단위 TTS 합성 | **동기** (`run`) | 짧은 합성. 현재 mock은 즉시 `completed`. 길어지면 `run_async`로 전환 가능 |
@@ -446,7 +446,7 @@ ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 
 ```text
 AI 서버   → 이미지 base64 반환 (저장 위치는 모름)
             - 캐릭터: {AI_SERVER_URL}/generate-character → { "images": ["<base64>"] }  (1장, images[0])
-            - 배경:   {AI_SERVER_URL}/generate           → { "images": ["<base64>", ...] }  (batch)
+            - 배경:   {AI_SERVER_URL}/generate-background → { "images": ["<base64>", ...] }  (batch)
 Backend  → base64 decode → core/config 경로로 파일 저장 → /storage URL 생성 → repository 저장
 ```
 
@@ -459,10 +459,11 @@ Backend  → base64 decode → core/config 경로로 파일 저장 → /storage 
 
 보류한 리팩터(분리 트리거 포함)와 팀 결정은 루트 [`BACKEND_TECH_DEBT.md`](../BACKEND_TECH_DEBT.md)에 정리되어 있다.
 
-## ⚠️ 임시 코드 (실제 ComfyUI 연동 시 삭제)
+## ⚠️ 임시 코드 (실제 연동 시 삭제)
 
-- `GET /api/ai/comfy-health` (`app/routers/ai_health.py`) — 프론트→백엔드→AI→ComfyUI(읽기전용) 연결 확인용 임시 엔드포인트.
-- 동작하려면 백엔드에 `COMFYUI_DEFAULT_URL`이 필요해 현재는 `uv run --env-file ai/.env uvicorn ...`로 실행한다.
+- 캐릭터/배경이 외부 AI FastAPI 서버 방식으로 전환되어, ComfyUI 직접 연결 확인 엔드포인트
+  (`/api/ai/comfy-health`, `/api/ai/background-comfy-health`)는 **제거했다.**
+- `GET /api/ai/voice-comfy-health` (`app/routers/ai_health.py`) — **보이스(TTS) 전용**으로만 남겨둔 임시 연결 확인 엔드포인트. TTS 실제 연동 테스트가 끝나면 제거한다.
 - 제거 체크리스트: 루트 [`TEMP_AI_CONNECTION_TEST.md`](../TEMP_AI_CONNECTION_TEST.md)
 
 ## 추후 구현 예정

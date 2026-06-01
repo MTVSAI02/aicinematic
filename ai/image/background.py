@@ -3,7 +3,6 @@
 이번 단계 범위 (중요):
 - 배경용 workflow JSON / mapping JSON 로드
 - finalPrompt / negativePrompt 를 workflow 에 주입할 payload 구성
-- 배경 ComfyUI 연결 확인 (읽기전용)
 
 절대 하지 않는 것:
 - 실제 이미지 생성 (POST /prompt 실행 / workflow 실행)
@@ -16,14 +15,10 @@
 - 배경은 background only / no characters / no people / no animals.
 """
 
-import os
 from pathlib import Path
 
 from ..comfy_client import ComfyUIClient
-from ..core.exceptions import BackgroundWorkflowPrepareError, ComfyUIConfigError
-
-# 배경 생성은 GPU1(comfy1) 서버를 사용한다. (전용 환경변수)
-BACKGROUND_COMFY_URL_ENV = "COMFYUI_GPU1_URL"
+from ..core.exceptions import BackgroundWorkflowPrepareError
 
 WORKFLOWS_DIR = Path(__file__).resolve().parent.parent / "workflows"
 BACKGROUND_WORKFLOW_PATH = WORKFLOWS_DIR / "background_generate.json"
@@ -82,21 +77,3 @@ def build_background_workflow_payload(finalPrompt: str, negativePrompt: str) -> 
 def prepare_background_generation(finalPrompt: str, negativePrompt: str) -> dict:
     """배경 생성을 위한 준비(payload 구성)까지만 수행한다. 실제 생성은 하지 않는다."""
     return build_background_workflow_payload(finalPrompt, negativePrompt)
-
-
-def check_background_comfy_connection() -> dict:
-    """배경 ComfyUI(GPU1) 서버 연결을 확인한다. (읽기전용, POST /prompt 호출 없음)
-
-    성공: {"ok": True, "baseUrl": ..., ...}
-    실패/미설정: {"ok": False, "baseUrl"?, "error": ...}
-    """
-    base_url = os.getenv(BACKGROUND_COMFY_URL_ENV)
-    if not base_url or not base_url.strip():
-        return {"ok": False, "error": f"{BACKGROUND_COMFY_URL_ENV} is not configured"}
-
-    try:
-        client = ComfyUIClient(base_url=base_url)
-    except ComfyUIConfigError as exc:
-        return {"ok": False, "error": exc.message}
-
-    return client.health_check()

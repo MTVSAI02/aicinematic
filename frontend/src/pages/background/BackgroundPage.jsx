@@ -7,8 +7,6 @@ import BackgroundPromptPanel from '@/components/backgrounds/BackgroundPromptPane
 import BackgroundCandidateGrid from '@/components/backgrounds/BackgroundCandidateGrid'
 import BackgroundSaveForm from '@/components/backgrounds/BackgroundSaveForm'
 import BackgroundLibrary from '@/components/backgrounds/BackgroundLibrary'
-import AiConnectionCheck from '@/components/AiConnectionCheck'
-import { getBackgroundComfyHealth } from '@/api/ai'
 import styles from './BackgroundPage.module.css'
 
 export default function BackgroundPage() {
@@ -36,14 +34,6 @@ export default function BackgroundPage() {
       <p className={styles.cardMeta}>
         배경은 후보를 생성한 뒤 1장을 골라 라이브러리에 저장합니다. 저장한 배경을 특정 씬에 연결하는 것은 “씬 편집”에서 합니다.
       </p>
-
-      {/* 임시: 배경 전용 경로(프론트→백→AI 배경 모듈→ComfyUI 읽기전용) 연결 확인.
-          실제 연동 시 삭제 — TEMP_AI_CONNECTION_TEST.md */}
-      <AiConnectionCheck
-        check={getBackgroundComfyHealth}
-        label="배경 AI 서버 연결 확인"
-        okText="배경 AI 서버 연결됨 ✅"
-      />
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>1. 프롬프트 & 후보 생성</h2>

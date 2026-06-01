@@ -1,57 +1,32 @@
-# ⚠️ 임시 코드: AI(ComfyUI) 연결 테스트용 — 실제 연동 시 삭제/교체
+# ⚠️ 임시 코드: AI 연결 테스트용 — 실제 연동 시 삭제/교체
 
 이 문서는 **임시로 추가한 "연결 확인용 코드"** 목록과 제거 기준을 적어둔다.
 
-## 왜 임시인가
+## 현재 상태 (2026-06 기준)
 
-현재는 백엔드 `JobManager`가 ComfyUI를 실제로 호출하지 않는다(mock 캐릭터 생성).
-그래서 "프론트 → 백엔드 → AI → ComfyUI → 백엔드 → 프론트" 전체 경로가 **한 번에 도는지 확인**하기 위해,
-ComfyUI의 **읽기전용** API(`/system_stats`, `/object_info`)만 호출하는 연결 확인 통로를 임시로 만들었다.
+캐릭터·배경은 **외부 AI FastAPI 서버 방식**(`Backend → AI 서버(/generate-character·/generate-background) → ComfyUI`)으로
+전환·검증되었다. 그래서 ComfyUI를 **직접** 찔러보던 캐릭터/배경 연결 확인 임시 코드는 **제거 완료**다.
 
-- ComfyUI **이미지 생성(`POST /prompt`)은 호출하지 않는다.** (읽기전용 health check 뿐)
+- ✅ 백엔드 `GET /api/ai/comfy-health`, `GET /api/ai/background-comfy-health` 제거
+- ✅ `ai/image/background.py` 의 `check_background_comfy_connection()` 제거
+- ✅ ai 연결 테스트 스크립트 제거 (`ai/character_ctrl/test_comfy_check.py`, `ai/test_comfy_connection.py`, `ai/test_background_connection.py`)
+- ✅ 프론트 `getComfyHealth`/`getBackgroundComfyHealth` 및 캐릭터/배경 페이지의 `<AiConnectionCheck />` 제거
+- 유지: 일반 서버 상태 확인 `/api/health` (ComfyUI 연결 확인 아님 — 영구 유지)
 
-## 🗑️ 제거 기준 (언제 지우나)
+## 🗑️ 아직 남은 정리 대상 (TTS/Voice)
 
-**실제 ComfyUI 연동이 구현되면 삭제하거나 정식 구조로 교체한다.**
-
-구체적으로 아래가 충족되는 시점:
-
-- 백엔드 `InMemoryJobManager`(또는 RabbitMQ/Celery worker)가 실제로 `ai` 모듈을 통해
-  ComfyUI workflow를 실행해 캐릭터 이미지를 생성하도록 연결될 때.
-- 즉 `프론트 → 백엔드 → AI → ComfyUI` 가 mock이 아니라 실제 생성 흐름으로 동작할 때.
-
-> 그 단계에서 `/api/ai/comfy-health`는 (1) 완전히 삭제하거나,
-> (2) 정식 헬스체크/모니터링 엔드포인트로 승격할지 팀에서 결정한다.
-
-## 삭제 대상 체크리스트
+TTS/Voice는 **아직 실제 AI 서버 연동 테스트 전**이라, 보이스 연결 확인 임시 코드는 **그대로 둔다.**
+TTS 실연동 테스트가 끝나면 아래를 제거한다.
 
 ### 백엔드
-- [ ] `backend/app/routers/ai_health.py` — 파일 전체 (`GET /api/ai/comfy-health`, `GET /api/ai/background-comfy-health`, `GET /api/ai/voice-comfy-health`)
-- [ ] `ai/voice/voice.py` 의 `check_voice_comfy_connection()` — 연결 확인 전용 함수 (실제 음성 연동 함수가 생기면 정리)
-- [ ] `backend/app/main.py`
-  - [ ] `from .routers import ai_health, ...` 에서 `ai_health` 제거
-  - [ ] `app.include_router(ai_health.router)` 줄 제거
-- [ ] 백엔드 실행 시 주입한 `COMFYUI_DEFAULT_URL` 처리
-  - 현재는 이 엔드포인트 때문에 백엔드를 `uv run --env-file ai/.env uvicorn ...` 로 띄워야 동작한다.
-  - 실제 연동 단계에서 AI 설정(env)을 backend config로 정식 편입할지 함께 정리한다.
+- [ ] `backend/app/routers/ai_health.py` — `GET /api/ai/voice-comfy-health` (현재 이 파일에 이 엔드포인트만 남음 → 제거 시 파일째 삭제 + `main.py`의 import/`include_router` 제거)
+- [ ] `ai/voice/voice.py` 의 `check_voice_comfy_connection()`
 
 ### 프론트엔드
-- [ ] `frontend/src/api/ai.js` — 파일 전체 (`getComfyHealth`, `getBackgroundComfyHealth`, `getVoiceComfyHealth`)
-- [ ] `frontend/src/components/AiConnectionCheck.jsx` — 파일 전체 (연결 확인 버튼 컴포넌트, check/label/okText props)
-- [ ] `frontend/src/pages/character/CharacterPage.jsx`
-  - [ ] `import AiConnectionCheck from '@/components/AiConnectionCheck'`
-  - [ ] `<AiConnectionCheck />` 렌더링 (`{/* 임시: AI(ComfyUI) 연결 확인 ... */}`)
-- [ ] `frontend/src/pages/background/BackgroundPage.jsx`
-  - [ ] `import AiConnectionCheck` / `import { getBackgroundComfyHealth }`
-  - [ ] `<AiConnectionCheck check={getBackgroundComfyHealth} ... />` 렌더링 (`{/* 임시: 배경 전용 경로 연결 확인 ... */}`)
-- [ ] `frontend/src/pages/voice/VoicePage.jsx`
-  - [ ] `import AiConnectionCheck` / `import { getVoiceComfyHealth }`
-  - [ ] `<AiConnectionCheck check={getVoiceComfyHealth} ... />` 렌더링 (`{/* 임시: 보이스 전용 경로 연결 확인 ... */}`)
-- [ ] `frontend/src/pages/character/CharacterPage.module.css` — `.aiCheck` 클래스
+- [ ] `frontend/src/api/ai.js` — `getVoiceComfyHealth` (현재 이 함수만 남음 → 제거 시 파일째 삭제)
+- [ ] `frontend/src/components/AiConnectionCheck.jsx` — 파일 전체 (현재 VoicePage에서만 사용)
+- [ ] `frontend/src/pages/voice/VoicePage.jsx` — `import AiConnectionCheck` / `getVoiceComfyHealth` + `<AiConnectionCheck .../>` 렌더링
+- [ ] `frontend/src/pages/character/CharacterPage.module.css` — `.aiCheck` 클래스 (VoicePage에서 더 이상 안 쓰면 제거)
 
-## 유지해도 되는 것 (임시 아님)
-
-아래는 정식 AI 모듈이므로 이 정리와 무관하게 유지한다.
-
-- `ai/comfy_client.py`, `ai/core/exceptions.py` — ComfyUI 공통 클라이언트/예외 (정식)
-- `ai/test_comfy_connection.py` — AI 파트 자체 연결 테스트 도구 (`ai/.env`는 직접 생성, gitignore)
+## 유지 (임시 아님)
+- `ai/comfy_client.py`, `ai/core/exceptions.py` — ComfyUI 공통 클라이언트/예외 (정식). 단, ComfyUI 직접 호출 내장 경로(`character.py`/`comfy_workflow_runner.py` 등)의 정리는 별도 작업으로 둔다.
