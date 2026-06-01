@@ -1,9 +1,18 @@
-import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
 from ..repositories.job_repo import job_repository
 from ..schemas.job import JobStatus
+
+
+def _error_detail(exc: Exception, fallback: str) -> str:
+    """실패 Job에 남길 에러 문자열. 실제 예외 메시지를 우선 보존한다.
+
+    예: ComfyUIError("ComfyUI 실행 오류 [KSampler]: ...") → 그 메시지가 job.error에 남아
+    "Character generation failed" 처럼 뭉개지지 않는다.
+    """
+    message = str(exc).strip()
+    return message or fallback
 
 
 class InMemoryJobManager:
@@ -27,8 +36,7 @@ class InMemoryJobManager:
     def __init__(self, job_repo, max_workers: int = 4):
         self._job_repo = job_repo
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
-        # in-memory job_repo를 워커 스레드가 갱신하므로 상태 갱신을 직렬화한다.
-        self._lock = threading.Lock()
+        # 동시성 보호는 job_repo가 내부 lock으로 직렬화한다(여기서 별도 lock 불필요).
 
     def run(
         self,
@@ -48,12 +56,13 @@ class InMemoryJobManager:
         try:
             result = build_result()
             self._job_repo.complete(job_id, result=result)
-        except Exception:  # noqa: BLE001
-            self._job_repo.fail(job_id, failed_detail)
+        except Exception as exc:  # noqa: BLE001
+            detail = _error_detail(exc, failed_detail)
+            self._job_repo.fail(job_id, detail)
             return {
                 "jobId": job_id,
                 "status": JobStatus.failed.value,
-                "message": failed_detail,
+                "message": detail,
             }
 
         return {
@@ -89,16 +98,13 @@ class InMemoryJobManager:
         self, job_id: str, build_result: Callable[[], dict], failed_detail: str
     ) -> None:
         """워커 스레드 본체: running 표시 → build_result 실행 → completed/failed."""
-        with self._lock:
-            self._job_repo.update_status(job_id, JobStatus.running.value, progress=10)
+        self._job_repo.update_status(job_id, JobStatus.running.value, progress=10)
         try:
             result = build_result()
-        except Exception:  # noqa: BLE001
-            with self._lock:
-                self._job_repo.fail(job_id, failed_detail)
+        except Exception as exc:  # noqa: BLE001
+            self._job_repo.fail(job_id, _error_detail(exc, failed_detail))
             return
-        with self._lock:
-            self._job_repo.complete(job_id, result=result)
+        self._job_repo.complete(job_id, result=result)
 
 
 job_manager = InMemoryJobManager(job_repository)

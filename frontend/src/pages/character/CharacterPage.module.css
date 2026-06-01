@@ -192,6 +192,18 @@
   overflow: hidden;
 }
 
+/* 외형 프롬프트 등 보조 메타 (더 흐리게) */
+.cardMeta {
+  font-size: 10px;
+  color: var(--text);
+  opacity: 0.7;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* 선택됨 배지 */
 .selectedBadge {
   font-size: 11px;
