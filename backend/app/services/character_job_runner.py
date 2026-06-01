@@ -1,14 +1,19 @@
-from ai.character_ctrl.character import generate_character
-
 from ..core.config import CHARACTER_STORAGE_DIR, storage_url
 from ..core.exceptions import CharacterGenerationFailedError
 from ..repositories.character_repo import character_repository
 from ..schemas.job import JobType
+from .ai_character_client import generate_character_image
+from .character_service import build_character_final_prompt
 from .job_manager import job_manager
 
 
 def create_character_generation_job(request_data: dict) -> dict:
-    """캐릭터 생성 Job — ComfyUI(HiDream-O1)로 실제 이미지를 생성한다. (비동기)
+    """캐릭터 생성 Job (비동기).
+
+    구조: Backend → 우리 AI FastAPI 서버(/generate-character) → 외부 ComfyUI.
+    Backend는 ComfyUI를 직접 호출하지 않고, appearancePrompt로 finalPrompt를 만들어
+    AI 서버에 `{prompt}`로만 보낸다. seed/steps/cfg/model/width/height/negativePrompt는
+    backend가 다루지 않는다(AI 서버/워크플로 내부 책임).
 
     jobId를 즉시 반환하고 생성은 백그라운드에서 진행된다.
     프론트는 GET /api/jobs/{jobId}로 pending→running→completed/failed를 폴링한다.
@@ -19,16 +24,12 @@ def create_character_generation_job(request_data: dict) -> dict:
         character_id = character_repository.reserve_id()
         name = request_data.get("name")
         appearance_prompt = request_data.get("appearancePrompt")
-        description = request_data.get("description")  # 저장용 메타데이터(ComfyUI엔 안 넘김)
+        description = request_data.get("description")  # 저장용 메타데이터(생성 prompt엔 안 넘김)
 
-        # 2. ComfyUI로 이미지 생성 → AI는 bytes만 반환(저장 경계 계약).
+        # 2. 최종 prompt 조립(description 제외) → AI 서버 1회 호출 → 이미지 bytes 수신.
         #    실패하면 예외 → 파일/record 저장 안 됨 → orphan 없음.
-        #    생성 prompt는 appearancePrompt만 사용한다(description은 표시용 메타라 미사용).
-        image_bytes = generate_character(
-            character_id=character_id,
-            name=name,
-            appearance_prompt=appearance_prompt,
-        )
+        final_prompt = build_character_final_prompt(appearance_prompt)
+        image_bytes = generate_character_image(final_prompt)  # AI 서버에는 {"prompt": final_prompt}
 
         # 3. 저장은 backend 담당: storage 파일 저장 → /storage URL → record 저장
         CHARACTER_STORAGE_DIR.mkdir(parents=True, exist_ok=True)

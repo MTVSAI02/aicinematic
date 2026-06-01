@@ -417,7 +417,7 @@ ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 
 
 | 작업 | 방식 | 비고 |
 |---|---|---|
-| 캐릭터 이미지 생성 | **비동기** (`run_async`) | ComfyUI 호출. `pending` 즉시 반환 → 폴링 |
+| 캐릭터 이미지 생성 | **비동기** (`run_async`) | 우리 AI FastAPI 서버(`AI_SERVER_URL`/generate-character) 호출 → base64 1장 저장 |
 | 배경 이미지 생성 | **비동기** (`run_async`) | 우리 AI FastAPI 서버(`AI_SERVER_URL`/generate) 호출 → base64 후보 저장 |
 | 보이스 클로닝 | **비동기** (예정) | 무거운 1회성 작업 |
 | 최종 영상 렌더링 | **비동기** (예정) | ffmpeg/concat/싱크 |
@@ -437,15 +437,18 @@ ComfyUI 실제 생성으로 전환됨에 따라, 작업 시간이 긴 생성은 
 **저장 책임 경계 (AI ↔ Backend)**
 
 캐릭터·배경 모두 아래 계약으로 동작한다 — **AI는 생성 결과(bytes)만 반환, 저장은 Backend**.
+캐릭터·배경 모두 `Backend → 우리 AI FastAPI 서버 → 외부 ComfyUI` 경로로 통일되어, Backend는 ComfyUI를 직접 호출하지 않는다.
 
 ```text
-AI(생성)  → 이미지 bytes 반환 (저장 위치는 모름)
-            - 캐릭터: in-process ai 모듈(generate_character)이 bytes 반환
-            - 배경:   우리 AI FastAPI 서버(/generate)가 base64 반환 → backend가 디코드
-Backend  → core/config 경로로 파일 저장 → /storage URL 생성 → repository 저장
+AI 서버   → 이미지 base64 반환 (저장 위치는 모름)
+            - 캐릭터: {AI_SERVER_URL}/generate-character → { "images": ["<base64>"] }  (1장, images[0])
+            - 배경:   {AI_SERVER_URL}/generate           → { "images": ["<base64>", ...] }  (batch)
+Backend  → base64 decode → core/config 경로로 파일 저장 → /storage URL 생성 → repository 저장
 ```
 
-- 캐릭터: `ai/character_ctrl/character.py`가 storage 직접 저장을 멈추고 bytes를 반환하도록 전환됨(저장은 `character_job_runner`).
+- Backend는 AI 서버에 `{ "prompt": finalPrompt }`만 보낸다. seed/steps/cfg/model/width/height/negativePrompt는 보내지 않는다(AI 서버/워크플로 내부 책임).
+- 캐릭터 client: [`services/ai_character_client.py`](app/services/ai_character_client.py), finalPrompt 조립: `character_service.build_character_final_prompt`.
+- 내장 `ai/character_ctrl/character.py`(+ `comfy_workflow_runner.py` 캐릭터 경로, `workflows/character_generate.json`)는 더 이상 backend가 호출하지 않으며, AI 서버 방식 안정화 후 정리 대상이다(이번엔 삭제하지 않음).
 - 미구현 씬 이미지 모듈(`face_lock.py`/`pose_expression.py`)도 구현 시 같은 계약을 따른다(직접 저장 금지).
 
 ## 구조 리뷰 / 기술부채 기록
