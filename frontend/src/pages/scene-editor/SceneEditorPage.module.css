@@ -150,6 +150,137 @@
 
 .muted { font-size: 13px; color: var(--text); }
 
+/* 자막 후보/편집 */
+.subtitleCandidate {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.subtitleCandText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* 씬 N-i 표시 라벨(저장 ID 아님, 프론트 계산) */
+.subtitleLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+/* cue 그룹 박스 */
+.cueGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.cueGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+}
+.cueGroupActive {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-bg);
+}
+/* 편집 모드 토글 바 */
+.modeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.modeBtns {
+  display: inline-flex;
+  gap: 6px;
+}
+.modeBtn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 13px;
+  cursor: pointer;
+}
+.modeBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.modeBtnActive {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+/* 그룹 안 개별 자막 항목(클릭=선택) */
+.subtitleUnit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.subtitleUnitSel {
+  color: var(--accent);
+}
+.subtitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cuePick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text);
+  flex: 0 0 auto;
+}
+.cueSelect {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 12px;
+}
+.candActions {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+/* 이미 자막에 쓴 대본 줄(잠금 표시) */
+.usedLine {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.subtitleEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+}
+
 .link {
   color: var(--accent);
   cursor: pointer;

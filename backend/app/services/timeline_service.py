@@ -13,6 +13,7 @@ from ..core.exceptions import (
 from ..repositories.background_repository import background_repository
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
+from .text_overlay_service import build_text_overlays
 
 DEFAULT_DURATION = 3.0
 _TEXT_PREVIEW_MAX = 80
@@ -88,6 +89,7 @@ class TimelineService:
             "textPreview": _text_preview(scene),
             "background": self._background_summary(scene),
             "characters": self._character_summaries(scene),
+            "textOverlays": build_text_overlays(scene),
             "readyStatus": _ready_status(scene),
         }
 
@@ -162,6 +164,7 @@ class TimelineService:
                     "backgroundImageUrl": (bg or {}).get("imageUrl"),
                     "characters": characters,
                     "subtitles": subtitles,
+                    "textOverlays": build_text_overlays(scene),
                 }
             )
         total = round(sum(s["duration"] for s in scenes), 3)

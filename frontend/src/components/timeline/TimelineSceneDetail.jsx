@@ -21,6 +21,7 @@ export default function TimelineSceneDetail({ scene, onDurationChange }) {
         className={styles.detailThumb}
         backgroundUrl={scene.background?.imageUrl}
         characters={chars}
+        textOverlays={scene.textOverlays ?? []}
       />
 
       <div className={styles.detailBody}>

@@ -1,12 +1,34 @@
-// 읽기전용 미니 합성: 배경 위에 캐릭터를 저장된 layout(정규화)대로 겹쳐 보여준다.
+import { useEffect, useRef, useState } from 'react'
+
+// 읽기전용 미니 합성: 배경 위에 캐릭터(layout) + 자막(textOverlays)을 정규화 좌표대로 겹쳐 보여준다.
 // %(정규화) 좌표를 그대로 써서 카드 썸네일/상세 등 어떤 크기에서도 동일 배치로 스케일된다.
 // (scene-editor SceneStage의 편집 버전과 같은 배치를 읽기전용으로 재현)
 
 const DEFAULT_LAYOUT = { x: 0.5, y: 0.55, scale: 0.28, rotation: 0, zIndex: 1, flipX: false }
+const DEFAULT_TEXT_LAYOUT = { x: 0.5, y: 0.86, width: 0.75, fontSize: 0.06, rotation: 0, zIndex: 100, align: 'center' }
 
-export default function SceneComposite({ backgroundUrl, characters = [], className, emptyText = '배경 없음' }) {
+export default function SceneComposite({
+  backgroundUrl,
+  characters = [],
+  textOverlays = [],
+  className,
+  emptyText = '배경 없음',
+}) {
+  const ref = useRef(null)
+  const [h, setH] = useState(0) // 자막 fontSize(정규화) → px 환산용 컨테이너 높이
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const update = () => setH(el.clientHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   return (
-    <div className={className} style={{ position: 'relative', overflow: 'hidden' }}>
+    <div ref={ref} className={className} style={{ position: 'relative', overflow: 'hidden' }}>
       {backgroundUrl ? (
         <img
           src={backgroundUrl}
@@ -43,7 +65,7 @@ export default function SceneComposite({ backgroundUrl, characters = [], classNa
               position: 'absolute',
               left: `${L.x * 100}%`,
               top: `${L.y * 100}%`,
-              width: `${L.scale * 100}%`, // 컨테이너 너비 대비 비율 → 높이는 자동(비율 유지)
+              width: `${L.scale * 100}%`,
               transform: `translate(-50%, -50%) rotate(${L.rotation || 0}deg)${L.flipX ? ' scaleX(-1)' : ''}`,
               transformOrigin: 'center',
               zIndex: L.zIndex ?? 1,
@@ -51,6 +73,40 @@ export default function SceneComposite({ backgroundUrl, characters = [], classNa
               pointerEvents: 'none',
             }}
           />
+        )
+      })}
+
+      {textOverlays.map((o) => {
+        const L = { ...DEFAULT_TEXT_LAYOUT, ...(o.layout || {}) }
+        const st = o.style || {}
+        return (
+          <div
+            key={o.textOverlayId}
+            style={{
+              position: 'absolute',
+              left: `${L.x * 100}%`,
+              top: `${L.y * 100}%`,
+              width: `${L.width * 100}%`,
+              transform: `translate(-50%, -50%) rotate(${L.rotation || 0}deg)`,
+              transformOrigin: 'center',
+              zIndex: L.zIndex ?? 100,
+              fontSize: h ? L.fontSize * h : `${L.fontSize * 100}cqh`,
+              lineHeight: 1.3,
+              textAlign: L.align || 'center',
+              color: st.color || '#ffffff',
+              background: st.backgroundColor || 'rgba(0,0,0,0.45)',
+              fontWeight: st.fontWeight || '600',
+              borderRadius: (st.borderRadius ?? 0.02) * (h || 0),
+              padding: `${(st.padding ?? 0.02) * (h || 0)}px`,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+              pointerEvents: 'none',
+              boxSizing: 'border-box',
+            }}
+          >
+            {o.text}
+          </div>
         )
       })}
     </div>

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from .character import SceneCharacterItem
+from .text_overlay import TextOverlay
 
 
 class StoryParseRequest(BaseModel):
@@ -42,6 +43,9 @@ class SceneResponse(BaseModel):
         description="연결된 캐릭터 목록(씬당 다중). PATCH /api/scenes/{sceneId}/character로 추가/수정, DELETE로 개별 제거. 각 항목에 sceneAppearancePrompt(표정/포즈) 포함",
     )
     items: list[StoryItemResponse]
+    # 자막은 items(대본 줄)에서 줄당 1개 자동 생성. 백엔드가 조립한 결과를 그대로 내려준다(단일 소스).
+    # 프론트는 이 목록을 렌더하고, 변경(cueOrder/layout)만 PATCH /api/scenes/{sceneId}/subtitles 로 보낸다.
+    textOverlays: list[TextOverlay] = Field(default_factory=list)
 
 
 class StoryParseResponse(BaseModel):

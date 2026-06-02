@@ -71,6 +71,7 @@ def parse_script_to_scenes(script: str) -> list[dict]:
                 "duration": 3.0,  # 타임라인 재생 길이(초). 기본 3.0, 1.0~30.0 범위로 조절.
                 "backgroundId": None,
                 "items": items,
+                "subtitleSettings": {},  # item별 자막 설정(cueOrder+layout). 자막 자체는 items에서 자동 생성.
             })
 
     return scenes

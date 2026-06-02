@@ -2,8 +2,13 @@ from fastapi import APIRouter
 
 from ..schemas.background import SceneBackgroundResponse, SceneBackgroundUpdateRequest
 from ..schemas.character import SceneCharactersResponse, SceneCharacterUpdateRequest
+from ..schemas.text_overlay import (
+    SceneSubtitleSettingsRequest,
+    SceneTextOverlaysResponse,
+)
 from ..services.background_service import background_service
 from ..services.character_service import character_service
+from ..services.text_overlay_service import text_overlay_service
 
 router = APIRouter(prefix="/api/scenes", tags=["scenes"])
 
@@ -66,3 +71,22 @@ def disconnect_scene_character(scene_id: str, character_id: str, storyId: str):
     - 반환: 남은 캐릭터 목록.
     """
     return character_service.disconnect_scene_character(storyId, scene_id, character_id)
+
+
+@router.patch(
+    "/{scene_id}/subtitles",
+    response_model=SceneTextOverlaysResponse,
+    summary="씬 자막 설정(cue 그룹 + 배치) 저장",
+)
+def update_scene_subtitles(scene_id: str, request: SceneSubtitleSettingsRequest):
+    """
+    씬 자막들의 **cue 그룹(cueOrder) + 배치(layout)만** 저장한다.
+
+    - 자막은 대본(items)에서 줄당 1개 자동 생성 → **추가/텍스트 변경 없음.**
+    - 기본 cueOrder = 줄 순번+1(각 줄이 자기 cue). 사용자가 다른 줄을 기존 cue 그룹에 묶을 수 있다.
+    - itemIndex 범위 밖은 무시. cueOrder/layout 범위 위반 → 422. story/scene 없음 → 404.
+    - 반환: items + 저장 설정으로 조립한 자막 목록.
+    """
+    return text_overlay_service.update_subtitles(
+        request.storyId, scene_id, request.overlays
+    )
