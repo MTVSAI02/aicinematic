@@ -45,6 +45,13 @@ class BackgroundCandidateRepository:
         with self._lock:
             return self._candidates.pop(candidate_id, None) is not None
 
+    def clear(self) -> list[str]:
+        """모든 후보 레코드를 비운다. (새 배치 생성 시 이전 후보 정리용 — 비운 id 목록 반환)"""
+        with self._lock:
+            ids = list(self._candidates.keys())
+            self._candidates.clear()
+            return ids
+
     def list(self) -> list[dict]:
         with self._lock:
             return list(self._candidates.values())

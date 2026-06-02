@@ -7,6 +7,18 @@ from .background_service import assemble_final_prompt
 from .job_manager import job_manager
 
 
+def _purge_previous_candidates() -> None:
+    """이전 배치의 후보(레코드+이미지 파일)를 모두 정리한다.
+
+    새 배치를 저장하기 직전에 호출해, 선택되지 않은 옛 후보가 storage에 무한히 쌓이지 않게 한다.
+    (저장된 배경은 library로 복사돼 후보 파일에 의존하지 않으므로 영향 없음.)
+    """
+    background_candidate_repository.clear()
+    if BACKGROUND_CANDIDATE_STORAGE_DIR.is_dir():
+        for f in BACKGROUND_CANDIDATE_STORAGE_DIR.glob("*.png"):
+            f.unlink(missing_ok=True)
+
+
 def create_background_generation_job(request_data: dict) -> dict:
     """배경 후보 생성 Job (비동기).
 
@@ -26,7 +38,12 @@ def create_background_generation_job(request_data: dict) -> dict:
         # 1. AI 서버 1회 호출 → 이미지 bytes 목록 (실패하면 예외 → Job failed, 부분 저장 없음)
         images = generate_background_images(final_prompt)  # AI 서버에는 {"prompt": final_prompt}
 
-        # 2. 저장은 backend 담당: 받은 만큼 candidate별로 파일 저장 + imageUrl 생성
+        # 2. 새 배치를 받았으니 이전 후보(파일+record)를 정리한다.
+        #    프론트도 재생성 시 후보 그리드를 새 배치로 교체하므로 동작이 일치한다.
+        #    AI 호출 성공 뒤에만 정리해 실패 시 옛 후보가 사라지지 않게 한다.
+        _purge_previous_candidates()
+
+        # 3. 저장은 backend 담당: 받은 만큼 candidate별로 파일 저장 + imageUrl 생성
         BACKGROUND_CANDIDATE_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
         candidates = []
         for image_bytes in images:
