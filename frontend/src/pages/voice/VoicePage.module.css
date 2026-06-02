@@ -24,9 +24,23 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 3fr; /* 왼쪽 40% 대상 / 오른쪽 60% 목소리 */
   gap: 24px;
   align-items: start;
+}
+
+/* 역할 안내 박스 */
+.infoBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 4px 0 16px;
+  font-size: 13px;
+  color: var(--text-h);
 }
 
 @media (max-width: 760px) {
@@ -340,4 +354,34 @@
   display: flex;
   justify-content: space-between;
   margin-top: 24px;
+}
+
+/* ── 연결 대상 안내/실패 보이스 ── */
+.selectedBanner {
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0 0 12px;
+}
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.failedSection {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.failNote {
+  font-size: 12px;
+  color: var(--danger);
+  margin: 4px 0 0;
+  line-height: 1.5;
 }
