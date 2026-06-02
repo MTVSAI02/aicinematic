@@ -29,7 +29,8 @@ def create_character_generation_job(request_data: dict) -> dict:
         # 2. 최종 prompt 조립(description 제외) → AI 서버 1회 호출 → 이미지 bytes 수신.
         #    실패하면 예외 → 파일/record 저장 안 됨 → orphan 없음.
         final_prompt = build_character_final_prompt(appearance_prompt)
-        image_bytes = generate_character_image(final_prompt)  # AI 서버에는 {"prompt": final_prompt}
+        # AI 서버에는 {"prompt": final_prompt}. 응답에서 이미지 bytes + AI 서버 경로(포즈 reference용)를 받는다.
+        image_bytes, ai_image_path = generate_character_image(final_prompt)
 
         # 3. 저장은 backend 담당: storage 파일 저장 → /storage URL → record 저장
         CHARACTER_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -42,6 +43,8 @@ def create_character_generation_job(request_data: dict) -> dict:
                 "appearancePrompt": appearance_prompt,
                 "description": description,
                 "imageUrl": image_url,
+                # 포즈 생성에 쓸 AI 서버 원본 경로(내부 전용, CharacterResponse엔 노출 안 함). 없으면 None.
+                "aiImagePath": ai_image_path,
             },
         )
 

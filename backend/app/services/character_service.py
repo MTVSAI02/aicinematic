@@ -1,5 +1,8 @@
+from ..core.config import CHARACTER_POSE_STORAGE_DIR, CHARACTER_STORAGE_DIR
 from ..core.exceptions import (
     CharacterNotFoundError,
+    CharacterPoseNotFoundError,
+    CharacterPoseSourceMissingError,
     InvalidCharacterVoiceError,
     NoFieldsToUpdateError,
     SceneNotFoundError,
@@ -69,11 +72,24 @@ class CharacterService:
         return updated
 
     def delete_character(self, character_id: str) -> None:
-        deleted = self._character_repo.delete(character_id)
-        if not deleted:
+        character = self._character_repo.get(character_id)
+        if character is None:
             raise CharacterNotFoundError()
-        # 참조 해제: 이 캐릭터를 연결하던 모든 scene의 characterId를 null로 (배경 삭제와 대칭)
+        # 파일 정리: 원본 + 포즈 이미지(레코드 삭제 전에 poses 목록 확보). 배경 삭제와 대칭(고아 파일 방지).
+        self._delete_character_files(character)
+        self._character_repo.delete(character_id)
+        # 참조 해제: 이 캐릭터를 연결하던 모든 scene 의 characters 에서 제거
         self._detach_character_from_scenes(character_id)
+
+    @staticmethod
+    def _delete_character_files(character: dict) -> None:
+        char_id = character.get("characterId")
+        if char_id:
+            (CHARACTER_STORAGE_DIR / f"{char_id}.png").unlink(missing_ok=True)
+        for pose in character.get("poses") or []:
+            pose_id = pose.get("poseId")
+            if pose_id:
+                (CHARACTER_POSE_STORAGE_DIR / f"{pose_id}.png").unlink(missing_ok=True)
 
     def update_character_voice(self, character_id: str, voice_id: str | None) -> dict:
         """캐릭터에 보이스(voiceId)를 연결/해제한다.
@@ -92,6 +108,52 @@ class CharacterService:
         if updated is None:
             raise CharacterNotFoundError()
         return updated
+
+    # ── 포즈 (캐릭터 1:N) ─────────────────────────────────────
+    def get_pose_source(self, character_id: str) -> str:
+        """포즈 생성용 reference 경로(aiImagePath)를 반환한다.
+
+        캐릭터 없음 → 404. aiImagePath 없음(기능 추가 전 생성 등) → 400.
+        """
+        character = self._character_repo.get(character_id)
+        if character is None:
+            raise CharacterNotFoundError()
+        path = character.get("aiImagePath")
+        if not path:
+            raise CharacterPoseSourceMissingError()
+        return path
+
+    def list_poses(self, character_id: str) -> list:
+        """캐릭터의 포즈 목록. 캐릭터 없음 → 404."""
+        poses = self._character_repo.list_poses(character_id)
+        if poses is None:
+            raise CharacterNotFoundError()
+        return poses
+
+    def set_scene_character_pose(
+        self, story_id: str, scene_id: str, character_id: str, pose_id: str | None
+    ) -> dict:
+        """현재 씬의 캐릭터 연결에 poseId를 지정/해제한다(씬 단위 override). 전역 원본은 안 바꾼다.
+
+        - story/scene 없음 → 404. 그 씬에 연결 안 된 캐릭터 → 404.
+        - pose_id 가 None 이 아니면 그 캐릭터의 실제 포즈여야 함(아니면 404).
+        - 반환: 그 씬의 캐릭터 목록.
+        """
+        scene = self._find_scene(story_id, scene_id)
+        if self._character_repo.get(character_id) is None:
+            raise CharacterNotFoundError()  # 라이브러리에 없는 캐릭터(상태 꼬임 방어)
+        entry = next(
+            (c for c in scene.get("characters", []) if c.get("characterId") == character_id),
+            None,
+        )
+        if entry is None:
+            raise CharacterNotFoundError()  # 씬에 연결되지 않은 캐릭터
+        if pose_id is not None:
+            poses = self._character_repo.list_poses(character_id) or []
+            if not any(p.get("poseId") == pose_id for p in poses):
+                raise CharacterPoseNotFoundError()
+        entry["poseId"] = pose_id
+        return {"storyId": story_id, "sceneId": scene_id, "characters": scene["characters"]}
 
     # ── 씬-캐릭터 연결 (씬당 다중) ─────────────────────────────
     def connect_scene_character(

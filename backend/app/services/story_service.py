@@ -3,19 +3,33 @@ from ..core.exceptions import (
     StoryNotFoundError,
     VoiceNotFoundError,
 )
+from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
+from .image_resolve import resolve_character_display_image
 from .story_parser import parse_script_to_scenes
 from .text_overlay_service import build_text_overlays
 
 
 def _serialize_story(story: dict) -> dict:
-    """응답용으로 각 scene에 파생 자막(textOverlays)을 끼워 넣는다.
+    """응답용 직렬화: 각 scene에 파생 자막(textOverlays)과, 씬 캐릭터의 표시 imageUrl을 끼워 넣는다.
 
-    자막은 items+subtitleSettings에서 백엔드가 단일 소스로 조립한다(프론트는 받아 렌더만).
-    저장 dict는 건드리지 않도록 얕은 복사본을 만든다(파생값을 저장소에 남기지 않음).
+    - 자막: items+subtitleSettings로 백엔드가 단일 소스 조립(프론트는 렌더만).
+    - 캐릭터 표시 이미지: poseId 적용 시 포즈 이미지로 해석해 내려준다(프론트가 poses 전체를 들 필요 없음).
+    저장 dict는 건드리지 않도록 얕은 복사본만 만든다(파생값을 저장소에 남기지 않음).
     """
-    scenes = [{**sc, "textOverlays": build_text_overlays(sc)} for sc in story.get("scenes", [])]
+    scenes = []
+    for sc in story.get("scenes", []):
+        chars = [
+            {
+                **ch,
+                "imageUrl": resolve_character_display_image(
+                    character_repository.get(ch.get("characterId")), ch.get("poseId")
+                ),
+            }
+            for ch in sc.get("characters", [])
+        ]
+        scenes.append({**sc, "characters": chars, "textOverlays": build_text_overlays(sc)})
     return {**story, "scenes": scenes}
 
 

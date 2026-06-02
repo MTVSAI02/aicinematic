@@ -14,24 +14,26 @@ import binascii
 
 import httpx
 
-from ..core.config import AI_SERVER_URL
+from ..core.config import AI_REQUEST_HEADERS, AI_SERVER_URL
 from ..core.exceptions import AIServerError
 
 # 캐릭터 1장 생성도 모델/GPU 상황에 따라 길어질 수 있어 timeout을 넉넉히 둔다(비동기 Job 안에서 호출).
 _GENERATE_TIMEOUT_SECONDS = 180
 
 
-def generate_character_image(prompt: str) -> bytes:
-    """AI FastAPI 서버 `/generate-character` 를 호출해 캐릭터 이미지 1장을 받는다.
+def generate_character_image(prompt: str) -> tuple[bytes, str | None]:
+    """AI FastAPI 서버 `/generate-character` 를 호출해 캐릭터 이미지 1장 + AI 서버 경로를 받는다.
 
     Args:
         prompt: 최종 프롬프트(characterFinalPrompt). AI 서버에는 항상 'prompt' 필드명으로만 보낸다.
 
     Returns:
-        생성된 이미지의 raw bytes (PNG). 저장/URL/repository는 backend가 담당한다.
+        (image_bytes, ai_image_path):
+        - image_bytes: 생성 이미지 raw bytes (PNG). 저장/URL/repository는 backend 담당.
+        - ai_image_path: AI 서버 로컬 파일 경로(있으면). 포즈 생성(reference image)용으로 저장. 없으면 None.
 
     Raises:
-        AIServerError: AI_SERVER_URL 미설정 / 연결 실패 / 비정상 응답 / images 누락·디코드 실패.
+        AIServerError: AI_SERVER_URL 미설정 / 연결 실패 / 비정상 응답 / 이미지 누락·디코드 실패.
                        (mock fallback 없음 — 실패를 그대로 Job.error에 드러낸다.)
     """
     if not AI_SERVER_URL or not AI_SERVER_URL.strip():
@@ -40,7 +42,7 @@ def generate_character_image(prompt: str) -> bytes:
     url = f"{AI_SERVER_URL.rstrip('/')}/generate-character"
     try:
         response = httpx.post(
-            url, json={"prompt": prompt}, timeout=_GENERATE_TIMEOUT_SECONDS
+            url, json={"prompt": prompt}, headers=AI_REQUEST_HEADERS, timeout=_GENERATE_TIMEOUT_SECONDS
         )
     except httpx.RequestError as exc:
         raise AIServerError(f"AI server connection failed: {url}") from exc
@@ -55,12 +57,19 @@ def generate_character_image(prompt: str) -> bytes:
     except ValueError as exc:
         raise AIServerError(f"AI server response is not valid JSON: {url}") from exc
 
-    images_b64 = data.get("images") if isinstance(data, dict) else None
-    if not isinstance(images_b64, list) or not images_b64:
-        raise AIServerError(f"AI server response has no 'images' array: {url}")
+    if not isinstance(data, dict):
+        raise AIServerError(f"AI server response is not an object: {url}")
 
-    # 캐릭터는 1장만 사용한다(응답 형식은 배경과 통일하기 위해 images 배열).
+    # base64는 'images'(배열) 또는 'image'(단수) 둘 다 허용(AI 서버 응답 형식 호환).
+    images_b64 = data.get("images")
+    b64 = images_b64[0] if isinstance(images_b64, list) and images_b64 else data.get("image")
+    if not isinstance(b64, str) or not b64:
+        raise AIServerError(f"AI server response has no image (images[]/image): {url}")
+
+    # 포즈 생성용 reference 경로(있으면). 형식: image_path 우선, 없으면 None.
+    ai_image_path = data.get("image_path") if isinstance(data.get("image_path"), str) else None
+
     try:
-        return base64.b64decode(images_b64[0])
+        return base64.b64decode(b64), ai_image_path
     except (ValueError, binascii.Error, TypeError) as exc:
         raise AIServerError(f"AI server returned invalid base64 image: {url}") from exc

@@ -20,6 +20,7 @@ class JobType(str, Enum):
     """작업 유형."""
 
     character_generate = "character_generate"
+    character_pose_generate = "character_pose_generate"
     background_generate = "background_generate"
     tts_generate = "tts_generate"
 

@@ -133,7 +133,9 @@ backend/
 | GET | `/api/stories/{story_id}` | 저장된 스토리 단건 조회 |
 | PATCH | `/api/stories/{story_id}/narrator-voice` | 나레이션 보이스 연결/해제 (body: voiceId, null이면 해제) |
 | POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (**비동기** → `pending` 반환, 폴링) |
-| GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / background_generate / tts_generate) |
+| GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / character_pose_generate / background_generate / tts_generate) |
+| POST | `/api/characters/{character_id}/poses/generate` | 캐릭터 포즈 생성 Job (body: posePrompt; aiImagePath 없으면 400) |
+| GET | `/api/characters/{character_id}/poses` | 캐릭터 포즈 목록 (1:N) |
 | GET | `/api/characters` | 캐릭터 목록 조회 |
 | POST | `/api/characters` | 캐릭터 결과 직접 저장 |
 | GET | `/api/characters/{character_id}` | 캐릭터 단건 조회 |
@@ -152,6 +154,7 @@ backend/
 | PATCH | `/api/scenes/{scene_id}/character` | 씬에 캐릭터 추가/수정 (**씬당 다중**; body: storyId, characterId, sceneAppearancePrompt?) |
 | DELETE | `/api/scenes/{scene_id}/character/{character_id}` | 씬에서 캐릭터 1명 제거 (query: storyId) |
 | PATCH | `/api/scenes/{scene_id}/subtitles` | 씬 자막 설정 저장 (자막은 items에서 자동 생성; body: storyId, overlays:[{itemIndex, cueOrder, layout}]) |
+| PATCH | `/api/scenes/{scene_id}/characters/{character_id}/pose` | 씬 캐릭터에 포즈 적용/해제 (body: storyId, poseId\|null; 씬 단위) |
 
 | GET | `/api/stories/{story_id}/timeline` | 타임라인 조회 (order 정렬, duration, totalDuration, readyStatus, textPreview, background/character summary) |
 | PATCH | `/api/stories/{story_id}/timeline` | 타임라인 저장 (**전체 scene 목록**; body `scenes:[{sceneId,duration}]`. 순서는 스토리 원본 고정 — duration만 저장) |

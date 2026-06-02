@@ -13,7 +13,7 @@ import binascii
 
 import httpx
 
-from ..core.config import AI_SERVER_URL
+from ..core.config import AI_REQUEST_HEADERS, AI_SERVER_URL
 from ..core.exceptions import AIServerError
 
 # batch로 여러 장 생성하므로 timeout을 넉넉히 둔다(비동기 Job 안에서 호출).
@@ -40,7 +40,7 @@ def generate_background_images(prompt: str) -> list[bytes]:
     url = f"{AI_SERVER_URL.rstrip('/')}/generate-background"
     try:
         response = httpx.post(
-            url, json={"prompt": prompt}, timeout=_GENERATE_TIMEOUT_SECONDS
+            url, json={"prompt": prompt}, headers=AI_REQUEST_HEADERS, timeout=_GENERATE_TIMEOUT_SECONDS
         )
     except httpx.RequestError as exc:
         raise AIServerError(f"AI server connection failed: {url}") from exc
