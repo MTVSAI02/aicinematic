@@ -10,6 +10,7 @@ import {
 import { updateSceneSubtitles, setSceneCharacterPose } from '@/api/scenes'
 import { getApiErrorMessage } from '@/utils/apiError'
 import useCharacterStore from '@/store/useCharacterStore'
+import useStoryStore from '@/store/useStoryStore'
 import SceneStage from '@/components/scene-editor/SceneStage'
 import SubtitleCuePanel from '@/components/scene-editor/SubtitleCuePanel'
 import SceneCharacterPanel from '@/components/scene-editor/SceneCharacterPanel'
@@ -29,6 +30,13 @@ export default function SceneEditorPage() {
   const navigate = useNavigate()
 
   const { characters, setCharacters } = useCharacterStore()
+
+  // 전역 store: 선택한 스토리를 /timeline·/render 가 같이 바라보도록 동기화한다.
+  // (로컬 setStoryId 와 이름이 겹쳐 alias 로 가져온다)
+  const globalStoryId = useStoryStore((s) => s.storyId)
+  const setGlobalStoryId = useStoryStore((s) => s.setStoryId)
+  const setGlobalStoryTitle = useStoryStore((s) => s.setStoryTitle)
+  const setGlobalScenes = useStoryStore((s) => s.setScenes)
 
   const [stories, setStories] = useState([])
   const [backgrounds, setBackgrounds] = useState([])
@@ -64,6 +72,18 @@ export default function SceneEditorPage() {
       })
   }, [setCharacters])
 
+  // 진입/새로고침 후 초기 선택 시드: 로컬 storyId 가 비어 있을 때만.
+  // 1순위 전역(persist) storyId 가 목록에 있으면 그걸, 없거나 비면 최신으로 fallback.
+  // handleStoryChange 를 그대로 써서 로컬·전역·scenes 가 같은 story 로 정렬되게 한다(fallback 도 전역에 반영됨).
+  useEffect(() => {
+    if (storyId || stories.length === 0) return
+    const useGlobal = globalStoryId && stories.some((s) => s.storyId === globalStoryId)
+    const target = useGlobal ? globalStoryId : stories[stories.length - 1].storyId
+    handleStoryChange(target)
+    // handleStoryChange 는 매 렌더 새로 생성되는 클로저라 deps 에서 의도적으로 제외(아래 값들로 충분)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stories, globalStoryId, storyId])
+
   const selectedStory = stories.find((s) => s.storyId === storyId)
   const scenes = selectedStory?.scenes ?? []
   const selectedScene = scenes.find((sc) => sc.sceneId === sceneId)
@@ -88,8 +108,18 @@ export default function SceneEditorPage() {
     ? Math.min(...sceneTextOverlays.map((o) => o.cueOrder))
     : null
 
+  // 선택한 스토리를 전역 store(storyId/title/scenes)에 반영 → /timeline·/render 가 같은 스토리를 봄.
+  function syncStoryToGlobal(sid) {
+    const story = stories.find((s) => s.storyId === sid)
+    if (!story) return
+    setGlobalStoryId(sid)
+    setGlobalStoryTitle(story.title ?? '')
+    setGlobalScenes(story.scenes ?? [])
+  }
+
   function handleStoryChange(value) {
     setStoryId(value)
+    if (value) syncStoryToGlobal(value) // 선택 즉시 전역 반영(빈 선택은 무시)
     setSceneId('')
     // 스토리가 바뀌면 이전 씬에서 고른 선택값을 비운다(다른 씬에 잘못 연결 방지)
     setPickedBackgroundId('')
@@ -459,7 +489,14 @@ export default function SceneEditorPage() {
         <button className={styles.btnSecondary} onClick={() => navigate('/background')}>
           ← 배경
         </button>
-        <button className={styles.btn} onClick={() => navigate('/timeline')}>
+        <button
+          className={styles.btn}
+          onClick={() => {
+            // 안전장치: 선택 시점 반영이 누락됐어도 이동 전에 전역 storyId 를 현재 선택으로 맞춘다.
+            if (storyId && storyId !== globalStoryId) syncStoryToGlobal(storyId)
+            navigate('/timeline')
+          }}
+        >
           타임라인 →
         </button>
       </div>
