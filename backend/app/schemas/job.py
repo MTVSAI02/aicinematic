@@ -24,6 +24,7 @@ class JobType(str, Enum):
     background_generate = "background_generate"
     tts_generate = "tts_generate"
     render_generate = "render_generate"
+    voice_clone = "voice_clone"
 
 
 class JobCreatedResponse(BaseModel):

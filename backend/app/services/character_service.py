@@ -3,11 +3,11 @@ from ..core.exceptions import (
     CharacterNotFoundError,
     CharacterPoseNotFoundError,
     CharacterPoseSourceMissingError,
-    InvalidCharacterVoiceError,
     NoFieldsToUpdateError,
     SceneNotFoundError,
     StoryNotFoundError,
     VoiceNotFoundError,
+    VoiceNotReadyError,
 )
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
@@ -94,16 +94,16 @@ class CharacterService:
     def update_character_voice(self, character_id: str, voice_id: str | None) -> dict:
         """캐릭터에 보이스(voiceId)를 연결/해제한다.
 
-        voice_id가 주어지면 보이스 존재 + voiceType=="character"를 검증한다
-        (narrator preset을 캐릭터에 붙이는 API 직접 호출 방지). None이면 연결 해제.
+        voice_id가 주어지면 보이스 존재(없으면 VoiceNotFoundError) + status=="ready"만 검증한다.
+        voiceType 은 연결을 제한하지 않는다(추천 태그) — narrator 타입도 캐릭터에 연결 가능. None이면 연결 해제.
         캐릭터가 없으면 CharacterNotFoundError.
         """
         if voice_id is not None:
             voice = self._voice_repo.get(voice_id)
             if voice is None:
                 raise VoiceNotFoundError()
-            if voice.get("voiceType") != "character":
-                raise InvalidCharacterVoiceError()
+            if voice.get("status") != "ready":
+                raise VoiceNotReadyError()
         updated = self._character_repo.set_voice(character_id, voice_id)
         if updated is None:
             raise CharacterNotFoundError()

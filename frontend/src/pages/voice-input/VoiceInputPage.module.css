@@ -105,14 +105,16 @@
   background: var(--code-bg);
   border-radius: 10px;
   padding: 20px;
+  min-height: 110px; /* 3~4문장(2~3줄)이 안정적으로 들어가도록 — 문장 전환 시 높이 출렁임 방지 */
 }
 
 .sampleText {
-  font-size: 17px;
+  font-size: 16px;
   color: var(--text-h);
-  line-height: 1.75;
+  line-height: 1.8;
   flex: 1;
   margin: 0;
+  word-break: keep-all; /* 한국어 어절 단위 줄바꿈 */
 }
 
 .refreshBtn {
@@ -407,4 +409,116 @@
   .navRight {
     flex-direction: column;
   }
+}
+
+/* ── 보이스 클로닝: 입력 필드 ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.label {
+  font-size: 13px;
+  color: var(--text-h);
+  font-weight: 600;
+}
+.input,
+.select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── 진행/결과 카드 ── */
+.statusCard {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.statusCardError {
+  border-color: var(--danger);
+}
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-h);
+  font-weight: 600;
+}
+.cardDesc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  max-width: 460px;
+}
+.muted {
+  font-size: 13px;
+  color: var(--text);
+  margin: 0;
+}
+.emoji {
+  font-size: 40px;
+  line-height: 1;
+}
+.resultMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--text-h);
+}
+.cardActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+.spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-bg);
+  border-top-color: var(--accent);
+  animation: voiceSpin 0.8s linear infinite;
+}
+@keyframes voiceSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── 역할 안내 박스 / 필드 도움말 ── */
+.infoBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--text-h);
+}
+.hint {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
 }

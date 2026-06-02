@@ -234,8 +234,9 @@ Voice 라이브러리 → voiceId 발급
   - 생성 직후 `status="pending"`(AI 클로닝 대기). 실제 클로닝 결과(provider/model/sampleAudioUrl/status)는 **AI 통합 단계에서 AI 파트가 채운다** — 현재 백엔드엔 그 통로가 없다(TTS `audioUrl`을 백엔드가 채우지 않는 것과 동일).
   - **수정(`PATCH /api/voices/{id}`)은 사용자 메타(`name`/`description`/`voicePrompt`)만** 바꾼다.
   - **삭제(`DELETE /api/voices/{id}`)**: 보이스 제거 + 참조 캐릭터 `voiceId`·스토리 `narratorVoiceId` null 캐스케이드(AI 무관).
-- **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404) + **`voiceType="character"` 검증**(아니면 400, narrator preset을 캐릭터에 못 붙임).
-- **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_preset_narrator_calm_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404. **`voiceType="narrator"`인 보이스만 연결 가능**(character 타입이면 400 Invalid narrator voice) — 즉 현재는 preset 4개만 narrator로 붙는다. (narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠)
+- **연결 제한 기준 = `status=ready`** (voiceType 아님). `voiceType`(narrator/character)은 **추천 태그일 뿐 연결을 제한하지 않는다** — narrator 추천 보이스도 캐릭터에, character 추천 보이스도 나레이션에 연결 가능. ready 아닌(pending/processing/failed) 보이스는 연결 불가(400 Voice not ready).
+- **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404) + **`status=="ready"` 검증**(아니면 400). voiceType은 제한하지 않음.
+- **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_preset_narrator_calm_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404, **`status=="ready"` 검증**(아니면 400). voiceType 제한 없음(narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠).
 - **삭제 캐스케이드**: 보이스 삭제 시 그 `voiceId`를 참조하던 **모든 캐릭터의 `voiceId`**와 **스토리의 `narratorVoiceId`**를 null로 만든다(배경 삭제와 동일 정책).
 - **TTS 반영(dialogue)**: dialogue의 `speaker`로 저장된 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사. 매칭 캐릭터가 없으면 null. (목소리=character.voiceId 고정, 감정=item.emotion 문장별)
 - **TTS 반영(narration)**: narration은 audio의 voiceId로 **story.`narratorVoiceId`**를 복사한다. 미설정이면 null.

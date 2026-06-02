@@ -16,6 +16,8 @@ BACKGROUND_CANDIDATE_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "candidates"
 # 라이브러리에 저장된(선택된) 배경 이미지. 후보 파일에 의존하지 않도록 여기로 복사한다.
 BACKGROUND_LIBRARY_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "library"
 AUDIO_STORAGE_DIR = STORAGE_ROOT / "audio"
+# 보이스 클로닝 자산: reference/sample 오디오를 voiceId 별 폴더에 저장. (/storage/voices/{voiceId}/...)
+VOICE_STORAGE_DIR = STORAGE_ROOT / "voices"
 RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
 # 렌더 중 프레임 PNG 임시 폴더. 완료/실패 후 정리한다. (jobId가 아니라 renderId 기준)
 RENDER_TMP_DIR = STORAGE_ROOT / "tmp" / "renders"
@@ -30,6 +32,10 @@ RENDER_HEIGHT = 720
 # ⚠️ 실제 주소(IP)는 코드에 하드코딩하지 않고 .env 의 AI_SERVER_URL 로 관리한다.
 #   (예시 값은 backend/.env.example 참고)
 AI_SERVER_URL = os.getenv("AI_SERVER_URL", "")
+
+# 보이스 클로닝 전용 AI 엔드포인트. reference 오디오를 multipart 로 업로드해 클론/샘플을 받는다.
+# ⚠️ 실제 주소는 코드에 하드코딩하지 않고 .env 의 AI_VOICE_CLONE_URL 로 관리한다.
+AI_VOICE_CLONE_URL = os.getenv("AI_VOICE_CLONE_URL", "")
 
 # 외부 AI 서버가 Cloudflare 뒤에 있을 때, 기본 httpx UA(python-httpx/...)는 WAF가 403으로 막는다.
 # 브라우저형 User-Agent를 보내 차단을 피한다(내부 직결 환경에서도 무해).

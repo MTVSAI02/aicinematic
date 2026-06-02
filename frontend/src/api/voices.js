@@ -13,6 +13,13 @@ export function createVoice(payload) {
   return request('/api/voices', { ...jsonBody(payload), method: 'POST' })
 }
 
+// POST /api/voices/clone — 보이스 클로닝(multipart). FormData 를 그대로 보낸다.
+// ⚠️ Content-Type 을 직접 지정하지 않는다 → 브라우저가 multipart boundary 를 자동 설정.
+// 응답: { jobId, voiceId, status, message }
+export function cloneVoice(formData) {
+  return request('/api/voices/clone', { method: 'POST', body: formData })
+}
+
 // GET /api/voices/{voiceId} — 단건 조회
 export function getVoice(voiceId) {
   return request(`/api/voices/${voiceId}`)

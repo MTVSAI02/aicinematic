@@ -1,3 +1,7 @@
+import logging
+import shutil
+
+from ..core.config import VOICE_STORAGE_DIR
 from ..core.exceptions import (
     DefaultVoiceCannotBeDeletedError,
     DefaultVoiceCannotBeModifiedError,
@@ -7,6 +11,8 @@ from ..core.exceptions import (
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
+
+logger = logging.getLogger(__name__)
 
 
 class VoiceService:
@@ -56,7 +62,24 @@ class VoiceService:
         # - 스토리의 narratorVoiceId를 null로
         self._character_repo.detach_voice(voice_id)
         self._story_repo.detach_narrator_voice(voice_id)
+        # reference/sample 등 디스크 파일도 함께 정리 (orphan 방지). 실패해도 삭제 응답은 성공.
+        self._delete_voice_files(voice_id)
         return {"deleted": True, "voiceId": voice_id}
+
+    @staticmethod
+    def _delete_voice_files(voice_id: str) -> None:
+        """storage/voices/{voiceId}/ 폴더(reference/sample) 삭제.
+
+        - 폴더가 이미 없으면 조용히 무시.
+        - 권한 등으로 삭제 실패하면 warning 로그만 남기고 삭제 API 자체는 실패시키지 않는다.
+        """
+        folder = VOICE_STORAGE_DIR / voice_id
+        if not folder.exists():
+            return
+        try:
+            shutil.rmtree(folder)
+        except OSError as e:  # noqa: BLE001 (권한 등 — 레코드 삭제는 이미 성공)
+            logger.warning("voice 파일 정리 실패 (voiceId=%s): %s", voice_id, e)
 
 
 voice_service = VoiceService(voice_repository, character_repository, story_repository)
