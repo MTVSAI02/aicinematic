@@ -7,11 +7,12 @@ import {
   assignCharacterToScene,
   removeCharacterFromScene,
 } from '@/api/characters'
-import { updateSceneSubtitles } from '@/api/scenes'
+import { updateSceneSubtitles, setSceneCharacterPose } from '@/api/scenes'
 import { getApiErrorMessage } from '@/utils/apiError'
 import useCharacterStore from '@/store/useCharacterStore'
 import SceneStage from '@/components/scene-editor/SceneStage'
 import SubtitleCuePanel from '@/components/scene-editor/SubtitleCuePanel'
+import SceneCharacterPanel from '@/components/scene-editor/SceneCharacterPanel'
 import styles from './SceneEditorPage.module.css'
 
 
@@ -35,7 +36,6 @@ export default function SceneEditorPage() {
   const [sceneId, setSceneId] = useState('')
   const [pickedBackgroundId, setPickedBackgroundId] = useState('')
   const [pickedCharacterId, setPickedCharacterId] = useState('')
-  const [sceneAppearancePrompt, setSceneAppearancePrompt] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -47,6 +47,8 @@ export default function SceneEditorPage() {
   // 편집 모드 분리: 'character'(기본) | 'subtitle'. activeCue = 자막 모드에서 편집 중인 cue 그룹.
   const [editMode, setEditMode] = useState('character')
   const [activeCue, setActiveCue] = useState(null)
+  // 캐릭터 패널에서 포즈 생성 UI를 펼친 캐릭터(없으면 null). 스테이지/배치 로직과 독립.
+  const [poseForCharacterId, setPoseForCharacterId] = useState(null)
 
   useEffect(() => {
     Promise.all([getStories(), getBackgrounds(), getCharacters()])
@@ -70,10 +72,12 @@ export default function SceneEditorPage() {
   const sceneBackgroundUrl = backgrounds.find(
     (b) => b.backgroundId === selectedScene?.backgroundId,
   )?.imageUrl
+  // 표시 이미지는 백엔드가 해석해 ch.imageUrl 로 내려준다(poseId 있으면 포즈, 없으면 원본).
+  // 혹시 비어 있으면 store의 원본으로 보강.
   const sceneCharacters = (selectedScene?.characters ?? [])
     .map((ch) => ({
       ...ch,
-      imageUrl: characters.find((c) => c.characterId === ch.characterId)?.imageUrl,
+      imageUrl: ch.imageUrl ?? characters.find((c) => c.characterId === ch.characterId)?.imageUrl,
     }))
     .filter((ch) => ch.imageUrl)
   // 자막: 백엔드가 items+설정으로 조립한 결과를 그대로 사용(단일 소스). 프론트는 렌더 + 변경만 전송.
@@ -90,12 +94,12 @@ export default function SceneEditorPage() {
     // 스토리가 바뀌면 이전 씬에서 고른 선택값을 비운다(다른 씬에 잘못 연결 방지)
     setPickedBackgroundId('')
     setPickedCharacterId('')
-    setSceneAppearancePrompt('')
     setMessage('')
     setError('')
     setSelected(null)
     setEditMode('character')
     setActiveCue(null)
+    setPoseForCharacterId(null)
   }
 
   // 씬을 선택하면 배경은 현재 연결값으로 prefill, 캐릭터 추가폼은 비운다(다중이라 목록은 따로 표시).
@@ -103,12 +107,12 @@ export default function SceneEditorPage() {
     setSceneId(sc.sceneId)
     setPickedBackgroundId(sc.backgroundId ?? '')
     setPickedCharacterId('')
-    setSceneAppearancePrompt('')
     setMessage('')
     setError('')
     setSelected(null)
     setEditMode('character')
     setActiveCue(null)
+    setPoseForCharacterId(null)
   }
 
   // 모드 전환 헬퍼
@@ -142,11 +146,10 @@ export default function SceneEditorPage() {
     setMessage('')
     setError('')
     try {
-      await assignCharacterToScene(sceneId, { storyId, characterId: pickedCharacterId, sceneAppearancePrompt })
+      await assignCharacterToScene(sceneId, { storyId, characterId: pickedCharacterId })
       const list = await getStories() // scene.characters 목록 갱신
       setStories(list)
       setPickedCharacterId('') // 추가 폼 초기화 (연달아 다른 캐릭터 추가 가능)
-      setSceneAppearancePrompt('')
       setMessage('캐릭터가 씬에 추가되었습니다.')
     } catch (e) {
       setError(getApiErrorMessage(e))
@@ -259,9 +262,21 @@ export default function SceneEditorPage() {
     setSelected({ kind: 'text', id: overlayId })
   }
 
+  // 포즈 적용/해제(씬 단위). poseId=null이면 기본 이미지로. 표시 imageUrl은 story 응답이 해석해 주므로 stories만 갱신.
+  async function handleApplyPose(characterId, poseId) {
+    setError('')
+    try {
+      await setSceneCharacterPose(sceneId, characterId, { storyId, poseId })
+      setStories(await getStories())
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    }
+  }
+
   async function handleCharacterRemove(characterId) {
     setMessage('')
     setError('')
+    if (poseForCharacterId === characterId) setPoseForCharacterId(null)
     try {
       await removeCharacterFromScene(sceneId, characterId, storyId)
       const list = await getStories()
@@ -408,68 +423,18 @@ export default function SceneEditorPage() {
                   )}
                 </div>
 
-                <div className={styles.bgPanel}>
-                  <span className={styles.panelLabel}>캐릭터 (씬당 여러 명)</span>
-
-                  {/* 현재 연결된 캐릭터 목록 + 개별 제거 */}
-                  {selectedScene.characters?.length > 0 ? (
-                    selectedScene.characters.map((sc) => {
-                      const name =
-                        characters.find((c) => c.characterId === sc.characterId)?.name ??
-                        sc.characterId
-                      return (
-                        <span key={sc.characterId} className={styles.muted}>
-                          • {name}
-                          {sc.sceneAppearancePrompt ? ` · ${sc.sceneAppearancePrompt}` : ''}{' '}
-                          <button
-                            className={styles.link}
-                            onClick={() => handleCharacterRemove(sc.characterId)}
-                          >
-                            제거
-                          </button>
-                        </span>
-                      )
-                    })
-                  ) : (
-                    <span className={styles.muted}>연결된 캐릭터 없음</span>
-                  )}
-
-                  {/* 캐릭터 추가 */}
-                  {characters.length === 0 ? (
-                    <span className={styles.muted}>
-                      저장된 캐릭터가 없습니다.{' '}
-                      <button className={styles.link} onClick={() => navigate('/character')}>
-                        캐릭터 만들기
-                      </button>
-                    </span>
-                  ) : (
-                    <>
-                      <select
-                        className={styles.select}
-                        value={pickedCharacterId}
-                        onChange={(e) => setPickedCharacterId(e.target.value)}
-                      >
-                        <option value="">추가할 캐릭터 선택</option>
-                        {characters.map((c) => (
-                          <option key={c.characterId} value={c.characterId}>{c.name}</option>
-                        ))}
-                      </select>
-                      <textarea
-                        className={styles.textarea}
-                        value={sceneAppearancePrompt}
-                        onChange={(e) => setSceneAppearancePrompt(e.target.value)}
-                        placeholder="이 씬에서의 연출 (선택). 예) 웃는 표정, 오른쪽을 바라봄"
-                      />
-                      <button
-                        className={styles.panelBtn}
-                        onClick={handleCharacterConnect}
-                        disabled={!pickedCharacterId}
-                      >
-                        이 씬에 캐릭터 추가
-                      </button>
-                    </>
-                  )}
-                </div>
+                <SceneCharacterPanel
+                  sceneCharacters={selectedScene.characters}
+                  characters={characters}
+                  pickedCharacterId={pickedCharacterId}
+                  onPickedCharacterChange={setPickedCharacterId}
+                  onConnect={handleCharacterConnect}
+                  onRemove={handleCharacterRemove}
+                  poseForCharacterId={poseForCharacterId}
+                  onTogglePose={(id) => setPoseForCharacterId(poseForCharacterId === id ? null : id)}
+                  onApplyPose={handleApplyPose}
+                  onGoCreateCharacter={() => navigate('/character')}
+                />
 
                 <SubtitleCuePanel
                   sceneOrder={selectedScene.order}

@@ -13,6 +13,19 @@ export function generateCharacter(payload) {
 
 // (Job 조회는 api/jobs.js 의 getJob 사용 — 캐릭터/배경/보이스 공통)
 
+// POST /api/characters/{characterId}/poses/generate — 포즈 생성 Job (프론트는 characterId+posePrompt만 보냄)
+export function generateCharacterPose(characterId, payload) {
+  return request(`/api/characters/${characterId}/poses/generate`, {
+    ...jsonBody(payload),
+    method: 'POST',
+  })
+}
+
+// GET /api/characters/{characterId}/poses — 캐릭터별 포즈 목록
+export function getCharacterPoses(characterId) {
+  return request(`/api/characters/${characterId}/poses`)
+}
+
 // GET /api/characters — 캐릭터 목록 조회
 export function getCharacters() {
   return request('/api/characters')
