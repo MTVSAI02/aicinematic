@@ -20,16 +20,18 @@ function StatusBadges({ readyStatus }) {
 }
 
 // 씬 카드. 순서는 스토리 원본 고정(재배치 없음). 클릭하면 상세 패널에서 선택.
-export default function TimelineSceneCard({ scene, selected, onSelect }) {
+// playing: 전체 미리보기 재생 중 현재 씬이면 표시.
+export default function TimelineSceneCard({ scene, selected, playing, onSelect }) {
   const chars = scene.characters ?? []
 
   return (
     <div
-      className={`${styles.card}${selected ? ` ${styles.cardSelected}` : ''}`}
+      className={`${styles.card}${selected ? ` ${styles.cardSelected}` : ''}${playing ? ` ${styles.cardPlaying}` : ''}`}
       onClick={() => onSelect(scene.sceneId)}
     >
       <div className={styles.cardHead}>
         <span className={styles.cardOrder}>씬 {scene.order}</span>
+        {playing && <span className={styles.cardPlayingTag}>▶ 재생 중</span>}
       </div>
 
       {/* 배경 + 캐릭터(layout)까지 합성된 씬 미리보기 — scene-editor 배치를 그대로 재현 */}
@@ -40,12 +42,12 @@ export default function TimelineSceneCard({ scene, selected, onSelect }) {
         textOverlays={scene.textOverlays ?? []}
       />
 
-      <span className={styles.charLine}>
-        {chars.length > 0 ? chars.map((c) => c.name).join(', ') : '캐릭터 없음'}
-      </span>
       <p className={styles.textPreview}>{scene.textPreview || '텍스트 없음'}</p>
-      <span className={styles.cardDuration}>{(scene.duration ?? 3).toFixed(1)}초</span>
-      <StatusBadges readyStatus={scene.readyStatus} />
+
+      <div className={styles.cardFoot}>
+        <span className={styles.cardDuration}>{(scene.duration ?? 3).toFixed(1)}초</span>
+        <StatusBadges readyStatus={scene.readyStatus} />
+      </div>
     </div>
   )
 }
