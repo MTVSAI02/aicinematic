@@ -13,6 +13,7 @@ from ..core.exceptions import (
 from ..repositories.background_repository import background_repository
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
+from .image_resolve import resolve_character_display_image
 from .text_overlay_service import build_text_overlays
 
 DEFAULT_DURATION = 3.0
@@ -75,7 +76,7 @@ class TimelineService:
                 {
                     "characterId": char.get("characterId"),
                     "name": char.get("name"),
-                    "imageUrl": char.get("imageUrl"),
+                    "imageUrl": resolve_character_display_image(char, ch.get("poseId")),  # 포즈 적용 시 포즈 이미지
                     "layout": ch.get("layout"),  # 합성 미리보기용 배치(씬-캐릭터 항목에 저장됨)
                 }
             )
@@ -141,7 +142,8 @@ class TimelineService:
                     {
                         "characterId": char.get("characterId"),
                         "name": char.get("name"),
-                        "imageUrl": char.get("imageUrl"),
+                        "imageUrl": resolve_character_display_image(char, ch.get("poseId")),  # 포즈 적용 시 포즈 이미지
+                        "poseId": ch.get("poseId"),
                         "layout": ch.get("layout"),  # x/y/scale/rotation/zIndex/flipX (없으면 None)
                     }
                 )

@@ -82,6 +82,20 @@ class SceneCharacterItem(BaseModel):
     sceneAppearancePrompt: str | None = None
     # 합성 미리보기 배치(위치/크기/순서/반전). 없으면 프론트/서비스 기본값 사용.
     layout: SceneCharacterLayout | None = None
+    # 이 씬에서 이 캐릭터가 쓸 포즈. None이면 원본 character.imageUrl 사용(씬 단위 override, 전역 불변).
+    poseId: str | None = None
+    # 표시용 이미지(백엔드 해석: poseId 있으면 포즈, 없으면 원본). 응답에만 채워짐(저장 X).
+    imageUrl: str | None = None
+
+
+class SceneCharacterPoseUpdateRequest(BaseModel):
+    """PATCH /api/scenes/{sceneId}/characters/{characterId}/pose 의 body.
+
+    현재 씬의 캐릭터 연결에 poseId를 지정/해제한다(씬 단위). poseId=null이면 기본 이미지로 되돌림.
+    """
+
+    storyId: str
+    poseId: str | None = None
 
 
 class SceneCharacterUpdateRequest(BaseModel):
@@ -104,13 +118,25 @@ class SceneCharactersResponse(BaseModel):
     characters: list[SceneCharacterItem] = []
 
 
+class CharacterPoseResponse(BaseModel):
+    """생성된 포즈 1개. (포즈 생성 Job의 result, 포즈 목록 조회 항목, CharacterResponse.poses 공용)"""
+
+    poseId: str
+    characterId: str
+    posePrompt: str
+    imageUrl: str
+
+
 class CharacterResponse(BaseModel):
     characterId: str = Field(description="char_mock_001 형식으로 자동 생성")
     name: str
     appearancePrompt: str
     description: str | None = Field(default=None, description="저장/표시용 설명. 없으면 null")
-    imageUrl: str | None = Field(default=None, description="생성된 이미지 경로. 없으면 null")
+    imageUrl: str | None = Field(default=None, description="생성된 원본 이미지 경로. 없으면 null")
     voiceId: str | None = Field(default=None, description="연결된 보이스 ID. 없으면 null")
+    # 참고: 포즈 목록은 GET /api/characters/{id}/poses 로 따로 조회(목록 응답을 가볍게 유지).
+    #       씬에서의 표시 이미지는 백엔드가 story/timeline 응답에서 해석해 내려준다.
+    #       aiImagePath(AI 서버 원본 경로)는 내부 전용 — 응답에 노출하지 않는다.
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -131,17 +157,12 @@ class CharacterDeleteResponse(BaseModel):
     characterId: str
 
 
-class CharacterGenerateJobResponse(BaseModel):
-    jobId: str = Field(description="job_mock_001 형식으로 자동 생성")
-    status: str = Field(description="생성 Job 상태")
-    message: str
+class PoseGenerateRequest(BaseModel):
+    """POST /api/characters/{characterId}/poses/generate body. (characterId는 URL path)"""
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "jobId": "job_mock_001",
-                "status": "pending",
-                "message": "Character generation job accepted.",
-            }
-        }
-    )
+    posePrompt: str = Field(min_length=1, examples=["running in the snow"])
+
+    @field_validator("posePrompt")
+    @classmethod
+    def not_blank(cls, value: str) -> str:
+        return _not_blank(value)

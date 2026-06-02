@@ -115,3 +115,20 @@ class AIServerError(AppException):
 
     status_code = 502
     detail = "AI server request failed"
+
+
+class CharacterPoseSourceMissingError(AppException):
+    """포즈 생성용 원본 경로(aiImagePath)가 없는 캐릭터 (예: 기능 추가 전 생성된 캐릭터)."""
+
+    status_code = 400
+    detail = "이 캐릭터는 포즈 생성용 원본 경로가 없어 다시 생성이 필요합니다."
+
+
+class PoseGenerationFailedError(AppException):
+    status_code = 502
+    detail = "Character pose generation failed"
+
+
+class CharacterPoseNotFoundError(AppException):
+    status_code = 404
+    detail = "Character pose not found"

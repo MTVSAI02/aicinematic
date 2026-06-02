@@ -85,7 +85,8 @@ class TimelineResponse(BaseModel):
 class RenderPlanCharacter(BaseModel):
     characterId: str
     name: str | None = None
-    imageUrl: str | None = None
+    imageUrl: str | None = None  # 포즈 적용 시 포즈 이미지, 아니면 원본
+    poseId: str | None = None  # 적용된 포즈(없으면 None=원본)
     layout: SceneCharacterLayout | None = None  # x/y/scale/rotation/zIndex/flipX (없으면 None)
 
 

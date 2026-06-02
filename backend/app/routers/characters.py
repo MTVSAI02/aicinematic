@@ -3,13 +3,16 @@ from fastapi import APIRouter
 from ..schemas.character import (
     CharacterCreateRequest,
     CharacterDeleteResponse,
-    CharacterGenerateJobResponse,
     CharacterGenerateRequest,
+    CharacterPoseResponse,
     CharacterResponse,
     CharacterUpdateRequest,
     CharacterVoiceUpdateRequest,
+    PoseGenerateRequest,
 )
+from ..schemas.job import JobCreatedResponse
 from ..services.character_job_runner import create_character_generation_job
+from ..services.character_pose_job_runner import create_character_pose_generation_job
 from ..services.character_service import character_service
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
@@ -17,7 +20,7 @@ router = APIRouter(prefix="/api/characters", tags=["characters"])
 
 @router.post(
     "/generate",
-    response_model=CharacterGenerateJobResponse,
+    response_model=JobCreatedResponse,
     summary="캐릭터 생성 Job 요청",
 )
 def generate_character(request: CharacterGenerateRequest):
@@ -106,3 +109,33 @@ def update_character_voice(character_id: str, request: CharacterVoiceUpdateReque
     - 보이스가 없으면 404(`Voice not found`), 캐릭터가 없으면 404(`Character not found`).
     """
     return character_service.update_character_voice(character_id, request.voiceId)
+
+
+@router.post(
+    "/{character_id}/poses/generate",
+    response_model=JobCreatedResponse,
+    summary="캐릭터 포즈 생성 Job 요청",
+)
+def generate_character_pose(character_id: str, request: PoseGenerateRequest):
+    """
+    기존 캐릭터를 reference 로 새 포즈를 **비동기 Job**으로 생성한다. (characterId는 URL path)
+
+    - body: `{"posePrompt": "running in the snow"}` (빈 문자열 → 422)
+    - 백엔드가 characterId로 캐릭터를 조회해 내부 aiImagePath를 꺼내 AI 서버 `/generate-pose`에 전달.
+      프론트는 image_path를 알거나 보내지 않는다.
+    - 캐릭터 없음 → 404, aiImagePath 없음(기능 추가 전 생성 등) → 400.
+    - jobId 즉시 반환, `GET /api/jobs/{jobId}`로 폴링. 완료 result = CharacterPoseResponse.
+    """
+    # 검증은 동기로(404/400 즉시), 생성만 비동기 Job.
+    ai_image_path = character_service.get_pose_source(character_id)
+    return create_character_pose_generation_job(character_id, ai_image_path, request.posePrompt)
+
+
+@router.get(
+    "/{character_id}/poses",
+    response_model=list[CharacterPoseResponse],
+    summary="캐릭터 포즈 목록 조회",
+)
+def list_character_poses(character_id: str):
+    """캐릭터에 생성된 포즈 목록(1:N). 캐릭터 없음 → 404."""
+    return character_service.list_poses(character_id)
