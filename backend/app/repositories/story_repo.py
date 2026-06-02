@@ -17,6 +17,17 @@ class StoryRepository:
     def list(self) -> list[dict]:
         return list(self._stories.values())
 
+    def set_last_render(self, story_id: str, last_render: dict | None) -> dict | None:
+        """story.lastRender(최신 렌더 결과)를 저장/해제한다. 없는 story면 None.
+
+        스토리당 최신 렌더 1개만 기억한다(새 렌더가 덮어씀).
+        """
+        story = self._stories.get(story_id)
+        if story is None:
+            return None
+        story["lastRender"] = last_render
+        return story
+
     def set_narrator_voice(self, story_id: str, voice_id: str | None) -> dict | None:
         """story.narratorVoiceId를 설정/해제한다. 없는 story면 None 반환."""
         story = self._stories.get(story_id)

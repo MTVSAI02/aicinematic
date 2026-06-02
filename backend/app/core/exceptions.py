@@ -139,3 +139,25 @@ class PoseGenerationFailedError(AppException):
 class CharacterPoseNotFoundError(AppException):
     status_code = 404
     detail = "Character pose not found"
+
+
+class RenderPlanInvalidError(AppException):
+    """렌더 플랜이 비어 있거나 렌더링 불가(예: scene 0개)."""
+
+    status_code = 400
+    detail = "Render plan is empty or invalid."
+
+
+class FFmpegNotInstalledError(AppException):
+    """ffmpeg 실행 파일을 찾지 못함(env/PATH/번들 모두 없음).
+
+    detail 은 프론트(job.error)에 그대로 노출되므로 사용자용 한국어 문구로 둔다.
+    """
+
+    status_code = 500
+    detail = "ffmpeg가 설치되어 있지 않아 렌더링할 수 없습니다."
+
+
+class FFmpegRenderFailedError(AppException):
+    status_code = 500
+    detail = "Video render (ffmpeg) failed"
