@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import NavBar from '@/components/NavBar'
 import HomePage from '@/pages/home/HomePage'
@@ -10,6 +10,7 @@ import SceneEditorPage from '@/pages/scene-editor/SceneEditorPage'
 import VoiceInputPage from '@/pages/voice-input/VoiceInputPage'
 import VoicePage from '@/pages/voice/VoicePage'
 import TimelinePage from '@/pages/timeline/TimelinePage'
+import RenderPage from '@/pages/render/RenderPage'
 import ExportPage from '@/pages/export/ExportPage'
 import useStoryStore from '@/store/useStoryStore'
 import { getStories } from '@/api/stories'
@@ -32,22 +33,26 @@ function scenesToScript(scenes) {
 }
 
 export default function App() {
-  // store에 스토리가 없으면 백엔드의 최신 스토리를 불러와 채운다.
-  // → /story-input(제목·대본), /scene-check(씬)이 시드/이전 스토리를 그대로 보여준다.
-  //   (사용자가 입력/파싱을 시작하면 storyId가 생겨 더 이상 덮어쓰지 않음)
+  // 초기 스토리 결정(최초 1회). persist 로 복원된 storyId 가 있으면 그것을 우선하고,
+  // 없거나(빈 값) 목록에 존재하지 않으면(삭제됨) 최신 스토리로 fallback 한다.
+  // scenes 는 persist 하지 않으므로 결정된 스토리 기준으로 백엔드에서 다시 채운다.
   const storyId = useStoryStore((s) => s.storyId)
+  const initedRef = useRef(false)
   useEffect(() => {
-    if (storyId) return
+    if (storyId && initedRef.current) return // 이미 초기화 끝났고 storyId 있으면 건드리지 않음
     getStories()
       .then((list) => {
         if (!Array.isArray(list) || list.length === 0) return
-        const latest = list[list.length - 1] // 가장 최근 스토리
         const { setStoryId, setStoryTitle, setStoryText, setScenes } =
           useStoryStore.getState()
-        setStoryId(latest.storyId)
-        setStoryTitle(latest.title)
-        setScenes(latest.scenes)
-        setStoryText(scenesToScript(latest.scenes))
+        // 복원 storyId 가 목록에 있으면 그대로, 없으면 최신으로
+        const restored = storyId ? list.find((s) => s.storyId === storyId) : null
+        const target = restored ?? list[list.length - 1]
+        initedRef.current = true
+        setStoryId(target.storyId)
+        setStoryTitle(target.title)
+        setScenes(target.scenes)
+        setStoryText(scenesToScript(target.scenes))
       })
       .catch(() => {}) // 백엔드 미가동 등은 조용히 무시(빈 화면 유지)
   }, [storyId])
@@ -65,6 +70,7 @@ export default function App() {
         <Route path="/scene-editor" element={<SceneEditorPage />} />
         <Route path="/voice" element={<VoicePage />} />
         <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/render" element={<RenderPage />} />
         <Route path="/export" element={<ExportPage />} />
       </Routes>
     </BrowserRouter>

@@ -267,7 +267,7 @@ export default function TimelinePage() {
 
       <div className={styles.actions}>
         <button className={styles.btnSecondary} onClick={() => navigate('/scene-editor')}>← 씬 편집</button>
-        <button className={styles.btn} onClick={() => navigate('/export')}>출력 준비 →</button>
+        <button className={styles.btn} onClick={() => navigate('/render')}>영상 생성 →</button>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 function matchesScene(scene, sceneId) {
   return scene.sceneId === sceneId || scene.id === sceneId
@@ -8,11 +9,15 @@ function getDuration(scene) {
   return scene.duration ?? scene.durationSec ?? 1
 }
 
-const useStoryStore = create((set) => ({
-  storyId: null,
-  storyTitle: '',
-  storyText: '',
-  scenes: [],
+// 새로고침 후에도 사용자가 고른 스토리를 유지하기 위해 storyId/storyTitle 만 localStorage 에 persist.
+// scenes 는 persist 하지 않는다 — 새로고침 후 백엔드에서 다시 조회해야 최신과 일치한다(App.jsx).
+const useStoryStore = create(
+  persist(
+    (set) => ({
+      storyId: null,
+      storyTitle: '',
+      storyText: '',
+      scenes: [],
 
   setStoryText: (text) => set({ storyText: text }),
 
@@ -76,7 +81,14 @@ const useStoryStore = create((set) => ({
       ),
     })),
 
-  reset: () => set({ storyId: null, storyTitle: '', storyText: '', scenes: [] }),
-}))
+      reset: () => set({ storyId: null, storyTitle: '', storyText: '', scenes: [] }),
+    }),
+    {
+      name: 'mongle-story-store',
+      // storyId/storyTitle 만 저장. scenes/storyText 는 새로고침 시 백엔드에서 재조회.
+      partialize: (state) => ({ storyId: state.storyId, storyTitle: state.storyTitle }),
+    },
+  ),
+)
 
 export default useStoryStore
