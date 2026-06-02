@@ -151,6 +151,9 @@ class BackgroundService:
         if not deleted:
             raise BackgroundNotFoundError()
 
+        # 저장본 이미지 파일도 함께 삭제 (record만 지우면 library 파일이 고아로 남음).
+        (BACKGROUND_LIBRARY_STORAGE_DIR / f"{background_id}.png").unlink(missing_ok=True)
+
         # 참조 해제: 모든 story의 모든 scene을 순회해 backgroundId를 null로 만든다.
         self._detach_background_from_scenes(background_id)
         return {"deleted": True, "backgroundId": background_id}
