@@ -12,11 +12,21 @@ from .text_overlay import TextOverlay
 
 
 # ── PATCH 요청 ──────────────────────────────────────────────
+class CueTimingUpdate(BaseModel):
+    """cue 그룹 1개의 타이밍. startSec/durationSec 만 다룬다(텍스트/배치/cueOrder는 scene-editor 소유)."""
+
+    cueOrder: int = Field(ge=1)
+    startSec: float = Field(ge=0.0)
+    durationSec: float = Field(gt=0.0)
+
+
 class TimelineSceneUpdate(BaseModel):
-    """타임라인 저장 요청의 scene 1개. 재생 길이(duration)만 저장한다(순서 변경 없음)."""
+    """타임라인 저장 요청의 scene 1개. 재생 길이(duration) + (선택) cue 타이밍을 저장한다(순서 변경 없음)."""
 
     sceneId: str = Field(min_length=1)
     duration: float = Field(ge=1.0, le=30.0)
+    # 자막 cue 그룹별 타이밍. None이면 미변경(기본 균등분할 유지). cueOrder 당 1개.
+    cueTimings: list[CueTimingUpdate] | None = None
 
 
 class TimelineUpdateRequest(BaseModel):
@@ -44,6 +54,19 @@ class TimelineReadyStatus(BaseModel):
     # hasAudio 는 이번 범위 아님(추후 TTS 붙으면 확장). 1차에선 내려보내지 않는다.
 
 
+class CueTiming(BaseModel):
+    """cue 그룹(씬 N-cue)의 등장 타이밍. 같은 cueOrder 자막들이 이 시간창에 함께 표시된다.
+
+    audioUrl/audioDurationSec 은 TTS 확장용 자리(이번엔 항상 null). 들어오면 durationSec 자동 보정 예정.
+    """
+
+    cueOrder: int
+    startSec: float
+    durationSec: float
+    audioUrl: str | None = None
+    audioDurationSec: float | None = None
+
+
 class TimelineSceneResponse(BaseModel):
     sceneId: str
     order: int  # 스토리 원본 순서. 타임라인에서 변경하지 않는다.
@@ -52,6 +75,7 @@ class TimelineSceneResponse(BaseModel):
     background: TimelineBackgroundSummary | None = None
     characters: list[TimelineCharacterSummary] = []
     textOverlays: list[TextOverlay] = []  # 타임라인 합성 미리보기에서 자막까지 재현
+    cueTimings: list[CueTiming] = []  # cue 그룹별 타이밍(없으면 균등분할 기본값으로 파생)
     readyStatus: TimelineReadyStatus
 
 
@@ -107,6 +131,7 @@ class RenderPlanScene(BaseModel):
     characters: list[RenderPlanCharacter] = []
     subtitles: list[RenderPlanSubtitle] = []  # 원본 대본 라인(타이밍/자막 텍스트 출처)
     textOverlays: list[TextOverlay] = []  # 사용자가 배치한 자막 레이어(2차 ffmpeg가 좌표대로 그림)
+    cueTimings: list[CueTiming] = []  # cue 그룹별 등장 시각(cueOrder로 textOverlays와 매칭)
 
 
 class RenderPlanResponse(BaseModel):

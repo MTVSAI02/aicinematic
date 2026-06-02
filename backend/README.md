@@ -157,7 +157,7 @@ backend/
 | PATCH | `/api/scenes/{scene_id}/characters/{character_id}/pose` | 씬 캐릭터에 포즈 적용/해제 (body: storyId, poseId\|null; 씬 단위) |
 
 | GET | `/api/stories/{story_id}/timeline` | 타임라인 조회 (order 정렬, duration, totalDuration, readyStatus, textPreview, background/character summary) |
-| PATCH | `/api/stories/{story_id}/timeline` | 타임라인 저장 (**전체 scene 목록**; body `scenes:[{sceneId,duration}]`. 순서는 스토리 원본 고정 — duration만 저장) |
+| PATCH | `/api/stories/{story_id}/timeline` | 타임라인 저장 (**전체 scene 목록**; body `scenes:[{sceneId,duration,cueTimings?:[{cueOrder,startSec,durationSec}]}]`. 순서는 스토리 원본 고정 — duration + cue 그룹 타이밍만 저장) |
 | GET | `/api/stories/{story_id}/render-plan` | 렌더 플랜(2차 ffmpeg 렌더용 데이터: duration/배경/캐릭터 layout/자막). 실제 렌더 X |
 
 | GET | `/api/tts?storyId=&sceneId=` | 씬별 TTS 결과 목록 조회 |
@@ -428,12 +428,17 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - **스토리보드 기반**이다 — 프리미어식 멀티트랙 편집기가 아니다(자유 배치/오디오 파형 편집 X, **순서 재정렬 X**, duration 조절 O).
   - 순서 재정렬을 뺀 이유: 각 씬의 텍스트·보이스·감정이 스토리 순서에 묶여 있어, 재배치하면 서사 흐름이 깨진다. 타임라인의 역할은 재생 길이 조절 + 준비 상태 확인.
 - 조회 `GET /api/stories/{storyId}/timeline`, 저장 `PATCH /api/stories/{storyId}/timeline`.
-  - 저장은 **전체 scene 목록**을 받는다(부분 업데이트 X). body는 `scenes:[{sceneId,duration}]`. `order`는 받지 않으며 **원본 그대로 유지**된다.
+  - 저장은 **전체 scene 목록**을 받는다(부분 업데이트 X). body는 `scenes:[{sceneId,duration,cueTimings?}]`. `order`는 받지 않으며 **원본 그대로 유지**된다.
   - `duration`: 기본 3.0, 범위 **1.0~30.0**(위반 422). 누락/초과/중복 scene 목록 → 400, 없는 sceneId → 404.
+- **자막 cue 그룹 타이밍** — 타이밍 단위는 **개별 textOverlay 가 아니라 cue 그룹(`cueOrder`)** 이다. 같은 cueOrder 자막은 한 시간 구간을 공유한다.
+  - 타임라인은 **시간만** 소유한다: cue별 `startSec`/`durationSec` 만 편집. 텍스트/위치(layout)/cueOrder/sourceItemIndex 는 scene-editor 소유 — **여기서 변경 안 함**.
+  - 응답 `scene.cueTimings = [{cueOrder, startSec, durationSec, audioUrl, audioDurationSec}]`. 저장값이 없는 cue 는 **씬 duration 균등 분할**로 파생(예: 6초/3 cue → 각 2초, start 0/2/4). cueOrder 는 그 씬 자막(textOverlays)에 실제 존재하는 것만 대상.
+  - 저장 시 검증: `startSec≥0`·`durationSec>0`(Field 422), `startSec+durationSec ≤ scene.duration`·cueOrder 가 씬에 존재·cueOrder 당 1개(중복 금지) 위반 시 **400**.
+  - `audioUrl`/`audioDurationSec` 는 **TTS 확장용 예약 필드(현재 null)**. 확장 규칙 예정: `finalDurationSec = max(userDurationSec, audioDurationSec + 0.4)`. TTS 생성은 이번 범위 아님.
 - `readyStatus`는 백엔드 계산: `hasBackground`(backgroundId 유무) / `hasCharacters`(연결 수>0) / `hasText`(item text 유무). `hasAudio`는 이번 범위 아님.
 - `totalDuration`은 scene duration 합. `textPreview`는 첫 narration(없으면 dialogue) 80자.
-- scene의 `duration`(및 파싱 시 고정된 `order`)은 dev_persist(`SEED_DEV`)로 **재시작 후에도 유지**된다.
-- **render plan**(`build_render_plan` + `GET /api/stories/{storyId}/render-plan`)은 **2차 ffmpeg 렌더가 그대로 쓸 데이터**(duration/배경 imageUrl/캐릭터 layout/자막)를 모으는 구조다.
+- scene의 `duration`·`cueTimings`(및 파싱 시 고정된 `order`)은 dev_persist(`SEED_DEV`)로 **재시작 후에도 유지**된다.
+- **render plan**(`build_render_plan` + `GET /api/stories/{storyId}/render-plan`)은 **2차 ffmpeg 렌더가 그대로 쓸 데이터**(duration/배경 imageUrl/캐릭터 layout/자막/`cueTimings`)를 모으는 구조다.
   - ⚠️ **Voice/TTS는 이번 범위 제외.** ffmpeg 렌더링은 **제외가 아니라 2차(무음 mp4 MVP)** 로 분리 — 1차는 데이터/플랜까지만, mp4 생성 안 함.
 
 ## 비동기 Job / 저장 구조

@@ -846,15 +846,22 @@ finalDurationSec = max(userDurationSec, audioDurationSec + 0.4)
 ### 실제 구현 (1차 — 코드 기준)
 
 - `/timeline` 은 **스토리보드 기반 타임라인**이다. 멀티트랙/자유배치/오디오 파형 편집은 지원하지 않는다.
-- **재생 길이(duration)** 만 조절한다. **씬 순서는 스토리 원본 고정**(재배치 UI 없음) — 서사 흐름이 텍스트·보이스에 묶여 있어 의도적으로 뺐다. Voice/TTS 및 ffmpeg/mp4 렌더링도 이번 범위 제외(렌더는 2차).
+- **시간만** 조절한다 — (1) 씬 **재생 길이(duration)**, (2) 자막 **cue 그룹 타이밍**(cue별 startSec/durationSec). **씬 순서는 스토리 원본 고정**(재배치 UI 없음) — 서사 흐름이 텍스트·보이스에 묶여 있어 의도적으로 뺐다. 자막 텍스트/위치/cueOrder 는 `/scene-editor` 소유 — 여기선 안 바꾼다. Voice/TTS 및 ffmpeg/mp4 렌더링도 이번 범위 제외(렌더는 2차).
 - API: `GET /api/stories/{storyId}/timeline` 조회, `PATCH /api/stories/{storyId}/timeline` 저장(`src/api/timeline.js`).
-  - 저장은 **전체 scene 목록**을 보낸다. body는 `[{sceneId, duration}]` — 순서는 보내지도, 바꾸지도 않는다(원본 고정).
+  - 저장은 **전체 scene 목록**을 보낸다. body는 `[{sceneId, duration, cueTimings:[{cueOrder,startSec,durationSec}]}]` — 순서는 보내지도, 바꾸지도 않는다(원본 고정).
 - duration: 프론트에서 **1.0~30.0 clamp**, 0.5초 단위(`DurationControl`). 백엔드도 422로 검증.
+- **자막 cue 타이밍 편집기(`CueTimingEditor`)**: 타이밍 단위는 **cue 그룹(cueOrder)** — 같은 cueOrder 자막은 한 시간 구간 공유.
+  - 1차 UI = **숫자 입력(startSec/durationSec) + 미니 duration bar + "자동 균등 분할" 버튼**(풀 드래그 바는 후속). 선택 씬 상세에만 노출.
+  - 기본값은 **씬 duration 균등 분할**(백엔드 파생). 전송 전 cue 를 씬 duration 안으로 clamp(`startSec`/`durationSec`)해 422 방지.
+  - cue(미니 바 segment 또는 행) 클릭 시 **미리보기 필터**: 해당 cueOrder 자막만 `SceneComposite` 에 표시(다시 누르면 전체). 텍스트/위치는 읽기전용.
+- **전체 미리보기 재생(브라우저, 무음)** — 출력 전 씬 흐름 확인용. **ffmpeg/mp4/오디오/TTS 없음**, React state + `requestAnimationFrame` 으로만 구현.
+  - `[▶ 전체 미리보기]` → 씬을 `order` 순서대로 각 `duration` 만큼 표시. `[▶ 재생]/[⏸ 일시정지]/[■ 정지]` 컨트롤 + 상태(씬 N/M · 전체 시간 · 현재 씬 시간).
+  - 시간→씬→cue 매핑은 순수 함수(`previewPlayback.js`): globalTime 으로 현재 씬·`sceneLocalTime` 계산 → `startSec ≤ local < startSec+durationSec` 인 cueOrder 자막만 표시. 재생 중에는 선택 씬 미리보기 영역이 재생 씬을 자동으로 따라가고, 카드에 `▶ 재생 중` 표시.
 - `readyStatus`(배경/캐릭터/텍스트) 를 카드·상세에 뱃지로 표시. `totalDuration` 은 로컬 합산 표시.
-- 저장: **optimistic update** + **debounce(연타 합산, 350ms)** + **최신 요청만 반영**(늦게 온 stale 응답 무시, `saveSeq` 가드) + 실패 시 마지막 저장값으로 **rollback** + 저장 상태(저장 중/완료/실패) 표시.
+- 저장: **optimistic update** + **debounce(연타 합산, 350ms)** + **최신 요청만 반영**(늦게 온 stale 응답 무시, `saveSeq` 가드) + 실패 시 마지막 저장값으로 **rollback** + 저장 상태(저장 중/완료/실패) 표시. duration·cue 변경 모두 같은 `persist()` 경로를 탄다.
 - 카드는 **클릭 = 상세 선택**. 드래그/순서 변경 UI는 없다.
 - 합성 미리보기(`SceneComposite`): 배경 위에 캐릭터를 씬 편집에서 저장한 `layout`(정규화 좌표)대로 겹쳐 카드/상세 썸네일에 동일 배치로 렌더(읽기전용).
-- 컴포넌트: `pages/timeline/TimelinePage.jsx` + `components/timeline/`(TimelineSceneCard / TimelineSceneDetail / DurationControl / SceneComposite / Timeline.module.css, 디자인 토큰 사용).
+- 컴포넌트: `pages/timeline/TimelinePage.jsx` + `components/timeline/`(TimelineSceneCard / TimelineSceneDetail / DurationControl / CueTimingEditor / SceneComposite / Timeline.module.css, 디자인 토큰 사용).
 - storyId 는 `useStoryStore` 에서 가져온다(없으면 "스토리 먼저 입력" 안내). storyId 가 바뀌면 선택 씬을 첫 씬으로 리셋한다.
 
 ---

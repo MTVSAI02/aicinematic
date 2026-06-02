@@ -75,6 +75,15 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-bg);
 }
+.cardPlaying {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 12px var(--accent-bg);
+}
+.cardPlayingTag {
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+}
 
 .cardHead {
   display: flex;
@@ -107,44 +116,6 @@
   font-size: 12px;
 }
 
-.charLine {
-  font-size: 12px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.charRow {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-}
-.charAvatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--code-bg);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: var(--text);
-  flex: 0 0 auto;
-}
-.charAvatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.charNames {
-  font-size: 12px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .textPreview {
   font-size: 12px;
   color: var(--text-h);
@@ -160,49 +131,136 @@
   font-weight: 600;
 }
 
-/* ── readyStatus 뱃지 ── */
+/* ── readyStatus 뱃지(작게) ── */
 .badges {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   flex-wrap: wrap;
 }
 .badge {
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.4;
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--accent-bg);
   color: var(--accent);
+  white-space: nowrap;
 }
 .badgeWarn {
   background: var(--code-bg);
   color: var(--text);
 }
 
-/* ── 상세 패널 ── */
+/* 카드 하단: duration + 상태 배지 한 줄 */
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: auto;
+}
+
+/* ── 상세 패널: 왼쪽 미리보기 / 오른쪽 편집 ── */
 .detail {
-  margin-top: 8px;
+  margin-top: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
   background: var(--bg);
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) 1fr;
+  gap: 20px;
+  align-items: start;
 }
-.detailThumb {
-  flex: 0 0 240px;
-  max-width: 240px;
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-  object-fit: cover;
-  background: var(--code-bg);
+@media (max-width: 720px) {
+  .detail {
+    grid-template-columns: 1fr;
+  }
 }
-.detailBody {
-  flex: 1 1 280px;
-  min-width: 240px;
+
+/* 왼쪽: 미리보기 */
+.detailPreview {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  position: sticky;
+  top: 12px;
+}
+.detailPreviewLabel {
+  font-size: 12px;
+  color: var(--text);
+}
+.detailStage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+}
+
+/* 전체 미리보기 재생 컨트롤 + 상태 */
+.playBar {
+  display: flex;
+  gap: 8px;
+}
+.playMain {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+.playMain:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.playBtn {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 14px;
+  cursor: pointer;
+}
+.playBtn:hover {
+  border-color: var(--accent);
+}
+.playStatus {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 오른쪽: 정보 + 편집 패널 */
+.detailPanel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.detailHeadRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 .detailTitle {
   font-weight: 600;
@@ -212,6 +270,7 @@
   color: var(--text);
   font-size: 14px;
   line-height: 1.5;
+  margin: 0;
 }
 .detailChars {
   display: flex;
@@ -299,3 +358,131 @@
   background: var(--bg);
   color: var(--text-h);
 }
+
+/* ── 자막 cue 타이밍 편집기(cue별 카드) ── */
+.cueTiming {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.cueTimingHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cueHint {
+  font-size: 12px;
+  color: var(--text);
+  margin-top: 2px;
+}
+.cueSave {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--accent);
+}
+.cueSaveFail {
+  color: var(--danger);
+}
+.cueAutoBtn {
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+.cueAutoBtn:hover { border-color: var(--accent); }
+.cueEmpty {
+  font-size: 13px;
+  color: var(--text);
+}
+.cueList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* cue 카드: 라벨 + 자막 요약 + 시작/길이 + 미니바 */
+.cueCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cueCard:hover { border-color: var(--accent-border); }
+.cueCardActive {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.cueCardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cueLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.cueShown {
+  font-size: 11px;
+  color: var(--accent);
+}
+.cueTextPreview {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-h);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cueFields {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.cueField {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text);
+}
+.cueInput {
+  width: 60px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.cueBar {
+  position: relative;
+  height: 10px;
+  background: var(--code-bg);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.cueSeg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--accent-border);
+  border-radius: 999px;
+  min-width: 4px;
+}
+.cueSegActive { background: var(--accent); }

@@ -1,49 +1,84 @@
+import { useEffect, useState } from 'react'
 import styles from './Timeline.module.css'
 import DurationControl from './DurationControl'
 import SceneComposite from './SceneComposite'
+import CueTimingEditor from './CueTimingEditor'
 
-// 선택한 씬 상세 패널: 배경 썸네일 / 텍스트 / duration 조절 / readyStatus / 캐릭터 목록.
-export default function TimelineSceneDetail({ scene, onDurationChange }) {
+// 선택한 씬 상세: 왼쪽 = 큰 미리보기, 오른쪽 = 씬 정보 / 재생 길이 / 자막 타이밍.
+// 전체 미리보기 재생 중에는 왼쪽 미리보기가 재생 씬을 자동으로 따라간다(렌더링 아님, 무음 preview).
+export default function TimelineSceneDetail({ scene, saveStatus, playback, onDurationChange, onCueTimingChange, onAutoSplitCues }) {
+  const [selectedCue, setSelectedCue] = useState(null)
+  // 선택 씬이 바뀌면 cue 미리보기 필터 초기화(다른 씬의 cue 번호가 남아 빈 화면 보이는 것 방지)
+  useEffect(() => setSelectedCue(null), [scene?.sceneId])
   if (!scene) {
     return <div className={styles.detail}><span className={styles.empty}>씬을 선택하세요.</span></div>
   }
-  const chars = scene.characters ?? []
+
+  const pb = playback ?? {}
+  const engaged = pb.engaged && pb.scene // 재생/일시정지 중이면 재생 씬을 보여줌
+  const previewScene = engaged ? pb.scene : scene
+  const previewChars = previewScene.characters ?? []
+  const previewAllOverlays = previewScene.textOverlays ?? []
+  // 미리보기 자막: 재생 중이면 현재 시간의 cue만, 아니면 수동 선택 cue(없으면 전체)
+  const shownOverlays = engaged
+    ? (pb.visibleCueOrders ? previewAllOverlays.filter((o) => pb.visibleCueOrders.has(o.cueOrder)) : [])
+    : (selectedCue == null ? previewAllOverlays : previewAllOverlays.filter((o) => o.cueOrder === selectedCue))
+
+  const allOverlays = scene.textOverlays ?? []
   const rs = scene.readyStatus ?? {}
   const statusLine = [
     ['배경', rs.hasBackground],
     ['캐릭터', rs.hasCharacters],
     ['텍스트', rs.hasText],
   ]
+  const fmt = (v) => (v ?? 0).toFixed(1)
 
   return (
     <div className={styles.detail}>
-      <SceneComposite
-        className={styles.detailThumb}
-        backgroundUrl={scene.background?.imageUrl}
-        characters={chars}
-        textOverlays={scene.textOverlays ?? []}
-      />
-
-      <div className={styles.detailBody}>
-        <div className={styles.detailTitle}>씬 {scene.order}</div>
-        <p className={styles.detailText}>{scene.textPreview || '텍스트 없음'}</p>
-
-        <div>
-          <div className={styles.detailTitle} style={{ marginBottom: 6 }}>재생 길이</div>
-          <DurationControl duration={scene.duration} onChange={(d) => onDurationChange(scene.sceneId, d)} />
+      {/* 왼쪽: 미리보기 + 전체 재생 컨트롤 */}
+      <div className={styles.detailPreview}>
+        <div className={styles.detailPreviewLabel}>
+          {engaged
+            ? <>재생 중 · 씬 {previewScene.order}</>
+            : <>선택한 씬 미리보기{selectedCue != null && <span className={styles.cueShown}> · 씬 {scene.order}-{selectedCue} 자막만</span>}</>}
         </div>
 
-        <div className={styles.badges}>
-          {statusLine.map(([label, ok]) => (
-            <span key={label} className={`${styles.badge}${ok ? '' : ` ${styles.badgeWarn}`}`}>
-              {label} {ok ? '✅' : '없음 ⚠'}
-            </span>
-          ))}
+        <SceneComposite
+          className={styles.detailStage}
+          backgroundUrl={previewScene.background?.imageUrl}
+          characters={previewChars}
+          textOverlays={shownOverlays}
+        />
+
+        {/* 재생 컨트롤 + 상태 */}
+        <div className={styles.playBar}>
+          {!engaged ? (
+            <button type="button" className={styles.playMain} onClick={pb.onPlay} disabled={!pb.total}>
+              ▶ 전체 미리보기
+            </button>
+          ) : (
+            <>
+              {pb.playing ? (
+                <button type="button" className={styles.playBtn} onClick={pb.onPause}>⏸ 일시정지</button>
+              ) : (
+                <button type="button" className={styles.playBtn} onClick={pb.onPlay}>▶ 재생</button>
+              )}
+              <button type="button" className={styles.playBtn} onClick={pb.onStop}>■ 정지</button>
+            </>
+          )}
         </div>
 
-        {chars.length > 0 && (
+        {engaged && (
+          <div className={styles.playStatus}>
+            <span>씬 {pb.sceneIndex + 1} / {pb.sceneCount}</span>
+            <span>전체 {fmt(pb.globalTime)} / {fmt(pb.total)}초</span>
+            <span>씬 {fmt(pb.localTime)} / {fmt(pb.sceneDuration)}초</span>
+          </div>
+        )}
+
+        {previewChars.length > 0 && (
           <div className={styles.detailChars}>
-            {chars.map((c) => (
+            {previewChars.map((c) => (
               <span key={c.characterId} className={styles.chip}>
                 {c.imageUrl && <img className={styles.chipAvatar} src={c.imageUrl} alt="" draggable={false} />}
                 {c.name}
@@ -51,6 +86,39 @@ export default function TimelineSceneDetail({ scene, onDurationChange }) {
             ))}
           </div>
         )}
+      </div>
+
+      {/* 오른쪽: 씬 정보 + 재생 길이 + 자막 타이밍 (선택 씬 기준 — 재생과 무관하게 편집 가능) */}
+      <div className={styles.detailPanel}>
+        <div className={styles.detailHeadRow}>
+          <div className={styles.detailTitle}>씬 {scene.order}</div>
+          <div className={styles.badges}>
+            {statusLine.map(([label, ok]) => (
+              <span key={label} className={`${styles.badge}${ok ? '' : ` ${styles.badgeWarn}`}`}>
+                {label} {ok ? '✅' : '⚠'}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <p className={styles.detailText}>{scene.textPreview || '텍스트 없음'}</p>
+
+        <div className={styles.detailSection}>
+          <div className={styles.detailTitle}>재생 길이</div>
+          <DurationControl duration={scene.duration} onChange={(d) => onDurationChange(scene.sceneId, d)} />
+        </div>
+
+        <CueTimingEditor
+          sceneOrder={scene.order}
+          duration={scene.duration ?? 3}
+          cueTimings={scene.cueTimings ?? []}
+          textOverlays={allOverlays}
+          saveStatus={saveStatus}
+          selectedCue={selectedCue}
+          onSelectCue={setSelectedCue}
+          onChange={(cueOrder, patch) => onCueTimingChange(scene.sceneId, cueOrder, patch)}
+          onAutoSplit={() => onAutoSplitCues(scene.sceneId)}
+        />
       </div>
     </div>
   )

@@ -66,6 +66,13 @@ class TimelineValidationError(AppException):
     detail = "Timeline request must include exactly all scenes of the story (once each)."
 
 
+class CueTimingValidationError(AppException):
+    """자막 cue 타이밍이 잘못됐을 때 (씬에 없는 cueOrder / cueOrder 중복 / 씬 duration 초과)."""
+
+    status_code = 400
+    detail = "Invalid cue timing: cueOrder must exist in the scene, be unique, and fit within the scene duration."
+
+
 class TTSGenerationFailedError(AppException):
     status_code = 500
     detail = "TTS generation failed"
