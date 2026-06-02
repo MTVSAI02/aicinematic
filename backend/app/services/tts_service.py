@@ -23,6 +23,34 @@ DEFAULT_EMOTION = {
     "dialogue": ("neutral", "기본"),
 }
 
+# emotion 키 → Qwen 합성용 자연어 instruction. (Qwen3-TTS 0.6B 는 단순 키보다 instruction 이 안정적)
+EMOTION_PROMPT = {
+    "neutral": "Speak in a natural and neutral tone.",
+    "calm": "Speak in a calm and gentle tone.",
+    "happy": "Speak in a bright and happy tone.",
+    "sad": "Speak in a sad and quiet tone.",
+    "angry": "Speak in an angry and strong tone.",
+    "scared": "Speak in a nervous and scared tone.",
+    "excited": "Speak in an excited and energetic tone.",
+    "friendly": "Speak in a warm and friendly tone.",
+    "serious": "Speak in a serious and focused tone.",
+    "curious": "Speak in a curious and gentle tone.",
+}
+DEFAULT_EMOTION_PROMPT = EMOTION_PROMPT["neutral"]  # 알 수 없는 emotion → neutral fallback
+
+
+def _character_prompt(character: dict | None) -> str | None:
+    """캐릭터 대사 합성용 prompt. 1순위 description → 2순위 appearancePrompt → 3순위 name 기반 기본 설명."""
+    if not character:
+        return None
+    desc = (character.get("description") or "").strip()
+    if desc:
+        return desc
+    appearance = (character.get("appearancePrompt") or "").strip()
+    if appearance:
+        return appearance
+    return f"{character.get('name') or '캐릭터'} 캐릭터의 말투로 말합니다."
+
 class TTSService:
     """scene.items 기반 TTS 생성/조회/삭제 비즈니스 로직.
 
@@ -66,6 +94,7 @@ class TTSService:
             character_id = None
             voice_id = None
             voice = None
+            matched = None
             if item_type == "dialogue":
                 matched = chars_by_name.get(item.get("speaker"))
                 if matched:
@@ -75,6 +104,13 @@ class TTSService:
                 voice_id = narrator_voice_id  # 나레이터 보이스 (없으면 None)
             if voice_id:
                 voice = self._voice_repo.get(voice_id)
+                # ready 가 아닌 voice(pending/processing/failed/삭제됨)는 합성에서 제외.
+                # → voiceId/voice 를 null 처리해 AI 가 voiceType 기본 목소리로 fallback.
+                if not voice or voice.get("status") != "ready":
+                    voice_id = None
+                    voice = None
+
+            emotion_value = item.get("emotion") or default_emotion
 
             audio_targets.append(
                 {
@@ -84,13 +120,22 @@ class TTSService:
                     "type": item_type,
                     "speaker": item.get("speaker"),
                     "text": item.get("text"),
-                    "emotion": item.get("emotion") or default_emotion,
+                    "emotion": emotion_value,
                     "emotionLabel": item.get("emotionLabel") or default_label,
+                    # emotion 키 → Qwen 합성용 instruction (unknown 은 neutral fallback)
+                    "emotionPrompt": EMOTION_PROMPT.get(emotion_value, DEFAULT_EMOTION_PROMPT),
                     "voiceType": VOICE_TYPE.get(item_type, "narrator"),
                     "characterId": character_id,
+                    # dialogue 매칭 캐릭터 이름/말투 prompt (narration·미매칭이면 None)
+                    "characterName": matched.get("name") if matched else None,
+                    "characterPrompt": _character_prompt(matched),
                     "voiceId": voice_id,  # 실제 합성/클로닝은 AI 파트, 여기선 참조만
                     "voiceName": voice.get("name") if voice else None,
                     "voicePrompt": voice.get("voicePrompt") if voice else None,
+                    # Qwen3-TTS 0.6B ref 기반 — AI cache miss 대비. preset/미연결이면 None.
+                    # AI payload 전용(프론트 응답엔 미노출 — TTSAudioResponse 에 필드 없음).
+                    "referenceAudioUrl": voice.get("referenceAudioUrl") if voice else None,
+                    "referenceText": voice.get("referenceText") if voice else None,
                     "audioUrl": None,
                     "durationSec": None,
                     "error": None,

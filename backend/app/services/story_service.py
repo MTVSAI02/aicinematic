@@ -1,7 +1,7 @@
 from ..core.exceptions import (
-    InvalidNarratorVoiceError,
     StoryNotFoundError,
     VoiceNotFoundError,
+    VoiceNotReadyError,
 )
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
@@ -60,9 +60,9 @@ class StoryService:
     def update_narrator_voice(self, story_id: str, voice_id: str | None) -> dict:
         """나레이션 보이스를 연결/해제한다.
 
-        voiceId가 있으면 그 보이스 존재(없으면 VoiceNotFoundError)와
-        voiceType=="narrator"(아니면 InvalidNarratorVoiceError)를 검증한다.
-        null이면 검증 없이 해제한다. (캐릭터용 character 타입 보이스는 나레이터로 못 붙임)
+        voiceId가 있으면 보이스 존재(없으면 VoiceNotFoundError)와 status=="ready"만 검증한다.
+        voiceType 은 연결을 제한하지 않는다(추천 태그일 뿐) — character 타입도 나레이션에 연결 가능.
+        null이면 검증 없이 해제한다.
         """
         if self._story_repo.get(story_id) is None:
             raise StoryNotFoundError()
@@ -70,8 +70,8 @@ class StoryService:
             voice = self._voice_repo.get(voice_id)
             if voice is None:
                 raise VoiceNotFoundError()
-            if voice.get("voiceType") != "narrator":
-                raise InvalidNarratorVoiceError()
+            if voice.get("status") != "ready":
+                raise VoiceNotReadyError()
         updated = self._story_repo.set_narrator_voice(story_id, voice_id)
         return {
             "storyId": updated["storyId"],

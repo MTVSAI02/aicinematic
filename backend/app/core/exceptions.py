@@ -113,6 +113,13 @@ class InvalidCharacterVoiceError(AppException):
     detail = 'Character voice must have voiceType="character".'
 
 
+class VoiceNotReadyError(AppException):
+    """연결하려는 보이스가 아직 ready 가 아님 (pending/processing/failed). voiceType 은 제한하지 않음."""
+
+    status_code = 400
+    detail = "이 보이스는 아직 사용할 수 없습니다 (클로닝 완료(ready) 후 연결 가능)."
+
+
 class AIServerError(AppException):
     """우리 AI FastAPI 서버 호출 실패 (연결/설정/응답).
 
@@ -161,3 +168,29 @@ class FFmpegNotInstalledError(AppException):
 class FFmpegRenderFailedError(AppException):
     status_code = 500
     detail = "Video render (ffmpeg) failed"
+
+
+class VoiceCloneValidationError(AppException):
+    """보이스 클로닝 입력이 잘못됨 (referenceText 비었음, voiceType 잘못 등)."""
+
+    status_code = 400
+    detail = "Invalid voice clone request."
+
+
+class InvalidAudioFileError(AppException):
+    """업로드한 오디오 파일이 없거나 허용 확장자(webm/wav/mp3/m4a)가 아님."""
+
+    status_code = 400
+    detail = "Invalid audio file (allowed: webm/wav/mp3/m4a)."
+
+
+class VoiceCloneFailedError(AppException):
+    status_code = 500
+    detail = "Voice clone failed"
+
+
+class AiVoiceServerError(AppException):
+    """AI 보이스 클로닝 서버 호출 실패 (미설정/연결/응답). detail 이 job.error 로 노출된다."""
+
+    status_code = 502
+    detail = "AI voice clone server request failed"
