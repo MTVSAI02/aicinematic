@@ -6,6 +6,17 @@ from ..core.exceptions import (
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
 from .story_parser import parse_script_to_scenes
+from .text_overlay_service import build_text_overlays
+
+
+def _serialize_story(story: dict) -> dict:
+    """응답용으로 각 scene에 파생 자막(textOverlays)을 끼워 넣는다.
+
+    자막은 items+subtitleSettings에서 백엔드가 단일 소스로 조립한다(프론트는 받아 렌더만).
+    저장 dict는 건드리지 않도록 얕은 복사본을 만든다(파생값을 저장소에 남기지 않음).
+    """
+    scenes = [{**sc, "textOverlays": build_text_overlays(sc)} for sc in story.get("scenes", [])]
+    return {**story, "scenes": scenes}
 
 
 class StoryService:
@@ -21,16 +32,16 @@ class StoryService:
 
     def parse_and_save(self, title: str, script: str) -> dict:
         scenes = parse_script_to_scenes(script)
-        return self._story_repo.save({"title": title, "scenes": scenes})
+        return _serialize_story(self._story_repo.save({"title": title, "scenes": scenes}))
 
     def list_stories(self) -> list[dict]:
-        return self._story_repo.list()
+        return [_serialize_story(s) for s in self._story_repo.list()]
 
     def get_story(self, story_id: str) -> dict:
         story = self._story_repo.get(story_id)
         if story is None:
             raise StoryNotFoundError()
-        return story
+        return _serialize_story(story)
 
     def update_narrator_voice(self, story_id: str, voice_id: str | None) -> dict:
         """나레이션 보이스를 연결/해제한다.

@@ -1,25 +1,44 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Moveable from 'react-moveable'
 import styles from './SceneStage.module.css'
 
-// 씬 합성 미리보기 + 캐릭터 배치 (react-moveable, PC 웹 단일 캐릭터 편집 기준).
-// - 배경 위에 연결된 캐릭터(투명 PNG)를 올리고, 클릭 선택 → 이동/리사이즈/회전 + 스냅.
-// - layout 은 정규화 좌표: x/y=중심(0~1), scale=스테이지 너비 대비 너비 비율, rotation=각도(도), flipX=좌우반전.
-// - 위치는 transform translate 로만 관리(= Moveable 표현과 동일) → 렌더/Moveable 상태 일치, 점프 없음.
-// - 드래그/리사이즈/회전 종료 시 onLayoutChange 로 저장 → 새로고침 후 복원.
+// 씬 합성 미리보기 + 배치 편집 (react-moveable).
+// 레이어: 배경 → 캐릭터(img) → 자막(div). 캐릭터/자막을 하나의 선택 모델로 다룬다.
+//   selected = { kind: 'character' | 'text', id } | null  (페이지에서 관리)
+// layout 은 모두 정규화 좌표(미리보기/타임라인/2차 렌더 해상도 무관):
+//   - 캐릭터: x/y=중심, scale=너비 비율, rotation, zIndex, flipX
+//   - 자막:   x/y=중심, width=박스 폭 비율, fontSize=글자 크기(높이 대비), rotation, zIndex, align
+// 위치는 transform translate(px) 로만 관리(= Moveable 표현과 동일) → 점프 없음.
+// 1차 자막 리사이즈는 "글자 크기 스케일"(A안): 박스 폭과 fontSize 를 같은 비율로 키운다.
 
-const DEFAULT_LAYOUT = { x: 0.5, y: 0.55, scale: 0.28, rotation: 0, zIndex: 1, flipX: false }
+const DEFAULT_CHAR_LAYOUT = { x: 0.5, y: 0.55, scale: 0.28, rotation: 0, zIndex: 1, flipX: false }
+export const DEFAULT_TEXT_LAYOUT = {
+  x: 0.5, y: 0.86, width: 0.75, fontSize: 0.06, rotation: 0, zIndex: 100, align: 'center',
+}
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
-export default function SceneStage({ backgroundUrl, characters, onLayoutChange }) {
+export default function SceneStage({
+  backgroundUrl,
+  characters,
+  textOverlays = [],
+  selected,
+  onSelect,
+  onCharacterLayoutChange,
+  onTextOverlayLayoutChange,
+  editMode = 'character', // 'character' | 'subtitle'
+  activeCue = null, // 자막 모드에서 보여줄 cue 그룹 번호
+}) {
+  const charMode = editMode === 'character'
+  // 자막 모드에선 active cue 자막만 보인다. 캐릭터 모드에선 자막 숨김.
+  const visibleOverlays = charMode ? [] : textOverlays.filter((o) => o.cueOrder === activeCue)
   const stageRef = useRef(null)
   const [stage, setStage] = useState({ w: 0, h: 0 })
   const [bgAspect, setBgAspect] = useState(16 / 9)
   const [aspects, setAspects] = useState({}) // characterId -> naturalW/naturalH
-  const [selectedId, setSelectedId] = useState(null)
-  const targetRefs = useRef({}) // characterId -> DOM element
+  const [textHeights, setTextHeights] = useState({}) // textOverlayId -> 측정된 px 높이(자동 높이 중심정렬용)
+  const targetRefs = useRef({}) // `${kind}:${id}` -> DOM element
   // 조작 중 누적 상태(렌더 없이 ref). translate = 박스 좌상단(스테이지 좌표, 절대).
-  const frame = useRef({ translate: [0, 0], rotate: 0, width: 0, height: 0 })
+  const frame = useRef({ translate: [0, 0], rotate: 0, width: 0, height: 0, baseWidth: 0, baseFont: 0 })
 
   useEffect(() => {
     const el = stageRef.current
@@ -31,42 +50,74 @@ export default function SceneStage({ backgroundUrl, characters, onLayoutChange }
     return () => ro.disconnect()
   }, [])
 
-  // 선택된 캐릭터가 목록에서 사라지면(제거 등) 선택 해제 → detached DOM 을 Moveable 이 잡지 않게.
+  // 선택된 요소가 목록에서 사라지면 선택 해제 → detached DOM 을 Moveable 이 잡지 않게.
   useEffect(() => {
-    if (selectedId && !characters.some((c) => c.characterId === selectedId)) {
-      setSelectedId(null)
-    }
-  }, [characters, selectedId])
+    if (!selected) return
+    const exists =
+      selected.kind === 'character'
+        ? characters.some((c) => c.characterId === selected.id)
+        : textOverlays.some((o) => o.textOverlayId === selected.id)
+    if (!exists) onSelect(null)
+  }, [characters, textOverlays, selected, onSelect])
 
-  // layout(정규화) → px 기하. translate = 박스 좌상단(스테이지 좌표).
-  function geomOf(c) {
-    const layout = { ...DEFAULT_LAYOUT, ...(c.layout || {}) }
+  // 자막 div 는 높이가 내용에 따라 자동이라, 중심정렬(ty) 계산용으로 실제 높이를 측정해 둔다.
+  useLayoutEffect(() => {
+    if (stage.w === 0) return
+    let changed = false
+    const next = {}
+    for (const o of visibleOverlays) {
+      const el = targetRefs.current[`text:${o.textOverlayId}`]
+      if (el) {
+        const h = el.offsetHeight
+        next[o.textOverlayId] = h
+        if (Math.abs((textHeights[o.textOverlayId] || 0) - h) > 0.5) changed = true
+      }
+    }
+    if (changed || Object.keys(next).length !== Object.keys(textHeights).length) setTextHeights(next)
+  })
+
+  // ── 기하 (정규화 layout → px) ─────────────────────────────
+  function charGeom(c) {
+    const layout = { ...DEFAULT_CHAR_LAYOUT, ...(c.layout || {}) }
     const aspect = aspects[c.characterId]
     const width = clamp(layout.scale, 0.05, 1) * stage.w
     const height = aspect ? width / aspect : width
-    const tx = layout.x * stage.w - width / 2
-    const ty = layout.y * stage.h - height / 2
-    return { layout, width, height, tx, ty }
+    return { layout, width, height, tx: layout.x * stage.w - width / 2, ty: layout.y * stage.h - height / 2 }
+  }
+  function textGeom(o) {
+    const layout = { ...DEFAULT_TEXT_LAYOUT, ...(o.layout || {}) }
+    const width = clamp(layout.width, 0.1, 1) * stage.w
+    const fontSize = clamp(layout.fontSize, 0.01, 0.2) * stage.h
+    const height = textHeights[o.textOverlayId] ?? fontSize * 1.6
+    return { layout, width, fontSize, height, tx: layout.x * stage.w - width / 2, ty: layout.y * stage.h - height / 2 }
   }
 
-  const selectedChar = characters.find((c) => c.characterId === selectedId) || null
-  const selectedTarget = selectedId ? targetRefs.current[selectedId] : null
-  // 스냅 가이드: 선택된 캐릭터 외 나머지 캐릭터 요소(= 다른 캐릭터와 정렬 맞춤용)
-  const otherTargets = selectedId
-    ? characters
-        .filter((c) => c.characterId !== selectedId)
-        .map((c) => targetRefs.current[c.characterId])
-        .filter(Boolean)
+  const selKey = selected ? `${selected.kind}:${selected.id}` : null
+  // 현재 모드와 맞는 선택만 활성(캐릭터는 캐릭터 모드, 자막은 자막 모드에서만)
+  const modeMatches = selected && (selected.kind === 'character') === charMode
+  const selectedTarget = modeMatches && selKey ? targetRefs.current[selKey] : null
+  const isTextSel = selected?.kind === 'text' && !charMode
+
+  // 스냅 가이드: 선택 외 다른 요소들과 정렬 맞춤
+  const otherTargets = selected
+    ? Object.entries(targetRefs.current)
+        .filter(([k, el]) => el && k !== selKey)
+        .map(([, el]) => el)
     : []
 
   function startFrame() {
-    if (!selectedChar) return
-    const g = geomOf(selectedChar)
-    frame.current = {
-      translate: [g.tx, g.ty],
-      rotate: g.layout.rotation || 0,
-      width: g.width,
-      height: g.height,
+    if (!selected) return
+    if (selected.kind === 'character') {
+      const c = characters.find((x) => x.characterId === selected.id)
+      if (!c) return
+      const g = charGeom(c)
+      frame.current = { translate: [g.tx, g.ty], rotate: g.layout.rotation || 0, width: g.width, height: g.height, baseWidth: g.width, baseFont: 0 }
+    } else {
+      const o = textOverlays.find((x) => x.textOverlayId === selected.id)
+      if (!o) return
+      const g = textGeom(o)
+      // mode: 'scale'(코너=글자+폭 비례) | 'width'(좌우 변=폭만, 글자 고정 → 자동 줄바꿈)
+      frame.current = { translate: [g.tx, g.ty], rotate: g.layout.rotation || 0, width: g.width, height: g.height, baseWidth: g.width, baseFont: g.fontSize, mode: 'scale' }
     }
   }
 
@@ -75,20 +126,37 @@ export default function SceneStage({ backgroundUrl, characters, onLayoutChange }
     target.style.transform = `translate(${f.translate[0]}px, ${f.translate[1]}px) rotate(${f.rotate}deg)`
   }
 
-  // 종료 시: frame(절대 translate/크기/각도) → 정규화 layout 으로 변환해 저장.
   function commit() {
-    if (!selectedChar) return
+    if (!selected) return
     const f = frame.current
     const centerX = f.translate[0] + f.width / 2
     const centerY = f.translate[1] + f.height / 2
-    const layout = { ...DEFAULT_LAYOUT, ...(selectedChar.layout || {}) }
-    onLayoutChange(selectedChar.characterId, {
-      ...layout,
-      x: clamp(centerX / stage.w, 0, 1),
-      y: clamp(centerY / stage.h, 0, 1),
-      scale: clamp(f.width / stage.w, 0.05, 1),
-      rotation: f.rotate,
-    })
+    if (selected.kind === 'character') {
+      const c = characters.find((x) => x.characterId === selected.id)
+      if (!c) return
+      const layout = { ...DEFAULT_CHAR_LAYOUT, ...(c.layout || {}) }
+      onCharacterLayoutChange(selected.id, {
+        ...layout,
+        x: clamp(centerX / stage.w, 0, 1),
+        y: clamp(centerY / stage.h, 0, 1),
+        scale: clamp(f.width / stage.w, 0.05, 1),
+        rotation: f.rotate,
+      })
+    } else {
+      const o = textOverlays.find((x) => x.textOverlayId === selected.id)
+      if (!o) return
+      const layout = { ...DEFAULT_TEXT_LAYOUT, ...(o.layout || {}) }
+      // ratio = 현재폭 / 시작폭. 코너(scale)는 글자도 같이, 좌우 변(width)은 글자 고정(자동 줄바꿈).
+      const ratio = f.baseWidth > 0 ? f.width / f.baseWidth : 1
+      onTextOverlayLayoutChange(selected.id, {
+        ...layout,
+        x: clamp(centerX / stage.w, 0, 1),
+        y: clamp(centerY / stage.h, 0, 1),
+        width: clamp(layout.width * ratio, 0.1, 1),
+        fontSize: f.mode === 'width' ? layout.fontSize : clamp(layout.fontSize * ratio, 0.01, 0.2),
+        rotation: f.rotate,
+      })
+    }
   }
 
   return (
@@ -97,7 +165,7 @@ export default function SceneStage({ backgroundUrl, characters, onLayoutChange }
       className={styles.stage}
       style={{ aspectRatio: String(bgAspect) }}
       onPointerDown={(e) => {
-        if (e.target === stageRef.current || e.target.dataset?.bg) setSelectedId(null)
+        if (e.target === stageRef.current || e.target.dataset?.bg) onSelect(null)
       }}
     >
       {backgroundUrl ? (
@@ -107,34 +175,33 @@ export default function SceneStage({ backgroundUrl, characters, onLayoutChange }
           data-bg="1"
           draggable={false}
           className={styles.bg}
-          onLoad={(e) => {
-            const img = e.currentTarget
-            setBgAspect(img.naturalWidth / img.naturalHeight)
-          }}
+          onLoad={(e) => setBgAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
         />
       ) : (
         <div className={styles.placeholder}>배경을 연결하면 합성 미리보기가 표시됩니다</div>
       )}
 
+      {/* 캐릭터 레이어 */}
       {stage.w > 0 &&
         characters.map((c) => {
-          const g = geomOf(c)
-          const isSelected = c.characterId === selectedId
+          const g = charGeom(c)
+          const isSel = selected?.kind === 'character' && selected.id === c.characterId
           return (
             <div
-              key={c.characterId}
+              key={`char:${c.characterId}`}
               ref={(el) => {
-                // stale ref 방지: 마운트 시 등록, 언마운트(el===null) 시 제거
-                if (el) targetRefs.current[c.characterId] = el
-                else delete targetRefs.current[c.characterId]
+                if (el) targetRefs.current[`character:${c.characterId}`] = el
+                else delete targetRefs.current[`character:${c.characterId}`]
               }}
-              onPointerDown={() => setSelectedId(c.characterId)}
-              className={`${styles.char}${isSelected ? '' : ` ${styles.charUnselected}`}`}
+              onPointerDown={charMode ? () => onSelect({ kind: 'character', id: c.characterId }) : undefined}
+              className={`${styles.char}${charMode && !isSel ? ` ${styles.charUnselected}` : ''}`}
               style={{
                 width: g.width,
                 height: g.height,
                 zIndex: g.layout.zIndex,
                 transform: `translate(${g.tx}px, ${g.ty}px) rotate(${g.layout.rotation || 0}deg)`,
+                // 자막 모드: 캐릭터는 참고용으로만 보이고 선택/이동 잠금
+                pointerEvents: charMode ? 'auto' : 'none',
               }}
             >
               <img
@@ -143,12 +210,44 @@ export default function SceneStage({ backgroundUrl, characters, onLayoutChange }
                 draggable={false}
                 className={styles.charImg}
                 onLoad={(e) => {
-                  const img = e.currentTarget
-                  const ratio = img.naturalWidth / img.naturalHeight
+                  const ratio = e.currentTarget.naturalWidth / e.currentTarget.naturalHeight
                   setAspects((prev) => ({ ...prev, [c.characterId]: ratio }))
                 }}
                 style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
               />
+            </div>
+          )
+        })}
+
+      {/* 자막 레이어 — 자막 모드에서 active cue 자막만 */}
+      {stage.w > 0 &&
+        visibleOverlays.map((o) => {
+          const g = textGeom(o)
+          const isSel = selected?.kind === 'text' && selected.id === o.textOverlayId
+          const st = o.style || {}
+          return (
+            <div
+              key={`text:${o.textOverlayId}`}
+              ref={(el) => {
+                if (el) targetRefs.current[`text:${o.textOverlayId}`] = el
+                else delete targetRefs.current[`text:${o.textOverlayId}`]
+              }}
+              onPointerDown={() => onSelect({ kind: 'text', id: o.textOverlayId })}
+              className={`${styles.textOverlay}${isSel ? ` ${styles.textOverlaySelected}` : ''}`}
+              style={{
+                width: g.width,
+                zIndex: g.layout.zIndex,
+                transform: `translate(${g.tx}px, ${g.ty}px) rotate(${g.layout.rotation || 0}deg)`,
+                fontSize: g.fontSize,
+                textAlign: g.layout.align,
+                color: st.color || '#ffffff',
+                background: st.backgroundColor || 'rgba(0,0,0,0.45)',
+                fontWeight: st.fontWeight || '600',
+                borderRadius: (st.borderRadius ?? 0.02) * stage.h,
+                padding: `${(st.padding ?? 0.02) * stage.h}px`,
+              }}
+            >
+              {o.text}
             </div>
           )
         })}
@@ -160,11 +259,11 @@ export default function SceneStage({ backgroundUrl, characters, onLayoutChange }
           draggable
           resizable
           rotatable
-          keepRatio
+          keepRatio={!isTextSel}
+          renderDirections={isTextSel ? ['nw', 'ne', 'sw', 'se', 'e', 'w'] : undefined}
           throttleDrag={0}
           throttleResize={0}
           throttleRotate={0}
-          // ── 2단계: 스냅/가이드 ─────────────────────────────
           snappable
           snapContainer={stageRef.current}
           snapThreshold={7}
@@ -182,12 +281,24 @@ export default function SceneStage({ backgroundUrl, characters, onLayoutChange }
             frame.current.translate = beforeTranslate
             applyTransform(target)
           }}
-          onResize={({ target, width, height, drag }) => {
+          onResize={({ target, width, height, drag, direction }) => {
             frame.current.width = width
-            frame.current.height = height
             frame.current.translate = drag.beforeTranslate
-            target.style.width = `${width}px`
-            target.style.height = `${height}px`
+            if (isTextSel) {
+              // 좌우 변(x만 변하는 핸들) → 폭만(글자 고정, 자동 줄바꿈). 코너 → 글자+폭 비례 스케일.
+              const isSide = direction[0] !== 0 && direction[1] === 0
+              frame.current.mode = isSide ? 'width' : 'scale'
+              target.style.width = `${width}px`
+              if (!isSide) {
+                const ratio = frame.current.baseWidth > 0 ? width / frame.current.baseWidth : 1
+                target.style.fontSize = `${frame.current.baseFont * ratio}px`
+              }
+              frame.current.height = target.offsetHeight // 줄바꿈 후 실제 높이(중심정렬용)
+            } else {
+              frame.current.height = height
+              target.style.width = `${width}px`
+              target.style.height = `${height}px`
+            }
             applyTransform(target)
           }}
           onRotate={({ target, beforeRotate }) => {

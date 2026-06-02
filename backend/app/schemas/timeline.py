@@ -8,6 +8,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from .character import SceneCharacterLayout
+from .text_overlay import TextOverlay
 
 
 # ── PATCH 요청 ──────────────────────────────────────────────
@@ -50,6 +51,7 @@ class TimelineSceneResponse(BaseModel):
     textPreview: str
     background: TimelineBackgroundSummary | None = None
     characters: list[TimelineCharacterSummary] = []
+    textOverlays: list[TextOverlay] = []  # 타임라인 합성 미리보기에서 자막까지 재현
     readyStatus: TimelineReadyStatus
 
 
@@ -102,7 +104,8 @@ class RenderPlanScene(BaseModel):
     duration: float
     backgroundImageUrl: str | None = None
     characters: list[RenderPlanCharacter] = []
-    subtitles: list[RenderPlanSubtitle] = []
+    subtitles: list[RenderPlanSubtitle] = []  # 원본 대본 라인(타이밍/자막 텍스트 출처)
+    textOverlays: list[TextOverlay] = []  # 사용자가 배치한 자막 레이어(2차 ffmpeg가 좌표대로 그림)
 
 
 class RenderPlanResponse(BaseModel):

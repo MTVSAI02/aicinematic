@@ -37,6 +37,7 @@ export default function TimelineSceneCard({ scene, selected, onSelect }) {
         className={styles.thumb}
         backgroundUrl={scene.background?.imageUrl}
         characters={chars}
+        textOverlays={scene.textOverlays ?? []}
       />
 
       <span className={styles.charLine}>

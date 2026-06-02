@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStories } from '@/api/stories'
 import { getBackgrounds, assignBackgroundToScene } from '@/api/backgrounds'
@@ -7,10 +7,13 @@ import {
   assignCharacterToScene,
   removeCharacterFromScene,
 } from '@/api/characters'
+import { updateSceneSubtitles } from '@/api/scenes'
 import { getApiErrorMessage } from '@/utils/apiError'
 import useCharacterStore from '@/store/useCharacterStore'
 import SceneStage from '@/components/scene-editor/SceneStage'
+import SubtitleCuePanel from '@/components/scene-editor/SubtitleCuePanel'
 import styles from './SceneEditorPage.module.css'
+
 
 // 씬 편집(skeleton). 현재는 "씬 ↔ 배경 연결"만 실제 동작한다.
 // (배경 라이브러리 생성/저장은 배경 페이지 담당, 씬에 배정은 여기 담당)
@@ -39,6 +42,11 @@ export default function SceneEditorPage() {
   const [loadError, setLoadError] = useState('')
   // 캐릭터 배치 자동 저장 상태 (저장 버튼이 없으므로 사용자에게 저장 여부를 보여준다)
   const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | error
+  // 스테이지 선택 모델: 캐릭터/자막 공통. { kind: 'character' | 'text', id } | null
+  const [selected, setSelected] = useState(null)
+  // 편집 모드 분리: 'character'(기본) | 'subtitle'. activeCue = 자막 모드에서 편집 중인 cue 그룹.
+  const [editMode, setEditMode] = useState('character')
+  const [activeCue, setActiveCue] = useState(null)
 
   useEffect(() => {
     Promise.all([getStories(), getBackgrounds(), getCharacters()])
@@ -68,6 +76,13 @@ export default function SceneEditorPage() {
       imageUrl: characters.find((c) => c.characterId === ch.characterId)?.imageUrl,
     }))
     .filter((ch) => ch.imageUrl)
+  // 자막: 백엔드가 items+설정으로 조립한 결과를 그대로 사용(단일 소스). 프론트는 렌더 + 변경만 전송.
+  const sceneTextOverlays = selectedScene?.textOverlays ?? []
+  // 배정 가능한 cue 슬롯(고정): 1..N (N = 자막 수). 기본은 각 줄이 자기 cue.
+  const cueSlots = Array.from({ length: sceneTextOverlays.length }, (_, i) => i + 1)
+  const firstCue = sceneTextOverlays.length
+    ? Math.min(...sceneTextOverlays.map((o) => o.cueOrder))
+    : null
 
   function handleStoryChange(value) {
     setStoryId(value)
@@ -78,6 +93,9 @@ export default function SceneEditorPage() {
     setSceneAppearancePrompt('')
     setMessage('')
     setError('')
+    setSelected(null)
+    setEditMode('character')
+    setActiveCue(null)
   }
 
   // 씬을 선택하면 배경은 현재 연결값으로 prefill, 캐릭터 추가폼은 비운다(다중이라 목록은 따로 표시).
@@ -88,6 +106,20 @@ export default function SceneEditorPage() {
     setSceneAppearancePrompt('')
     setMessage('')
     setError('')
+    setSelected(null)
+    setEditMode('character')
+    setActiveCue(null)
+  }
+
+  // 모드 전환 헬퍼
+  function enterCharacterMode() {
+    setEditMode('character')
+    setActiveCue(null)
+    setSelected(null)
+  }
+  function enterSubtitleCue(cueOrder) {
+    setEditMode('subtitle')
+    setActiveCue(cueOrder)
   }
 
   async function handleConnect() {
@@ -164,6 +196,69 @@ export default function SceneEditorPage() {
     }
   }
 
+  // ── 자막 설정(cue 그룹 + 배치) 저장 ───────────────────────────
+  // 자막은 백엔드가 단일 소스로 조립 → 프론트는 textOverlays 목록을 패치해 보낸다. 저장은 cueOrder/layout만.
+  const saveSeq = useRef(0) // 빠른 연속 조작에서 최신 요청만 반영(stale 응답/rollback 방지)
+
+  // 선택 씬의 textOverlays 목록만 교체 (optimistic / rollback / 서버 동기화 공용)
+  function applyOverlaysToStories(overlays) {
+    setStories((prev) =>
+      prev.map((s) =>
+        s.storyId !== storyId
+          ? s
+          : {
+              ...s,
+              scenes: s.scenes.map((sc) =>
+                sc.sceneId !== sceneId ? sc : { ...sc, textOverlays: overlays },
+              ),
+            },
+      ),
+    )
+  }
+
+  // 패치된 자막 목록 전체 저장(cueOrder/layout만). 최신 요청만 반영, 실패 시 직전 목록으로 rollback.
+  async function persistOverlays(nextOverlays) {
+    const prevOverlays = sceneTextOverlays
+    applyOverlaysToStories(nextOverlays) // optimistic
+    setSaveStatus('saving')
+    setError('')
+    const seq = ++saveSeq.current
+    try {
+      const res = await updateSceneSubtitles(sceneId, {
+        storyId,
+        overlays: nextOverlays.map((o) => ({
+          itemIndex: o.sourceItemIndex,
+          cueOrder: o.cueOrder,
+          layout: o.layout,
+        })),
+      })
+      if (seq !== saveSeq.current) return // 더 최신 요청이 진행 중 → 이 응답 버림
+      if (res?.textOverlays) applyOverlaysToStories(res.textOverlays) // 서버 기준 동기화
+      setSaveStatus('saved')
+    } catch (e) {
+      if (seq !== saveSeq.current) return
+      applyOverlaysToStories(prevOverlays) // 실패 → 직전 목록으로 복구
+      setSaveStatus('error')
+      setError(getApiErrorMessage(e))
+    }
+  }
+
+  // 드래그/리사이즈/회전 종료 → 해당 자막 layout 갱신(cueOrder 유지)
+  function handleTextOverlayLayoutChange(overlayId, layout) {
+    const next = sceneTextOverlays.map((o) => (o.textOverlayId === overlayId ? { ...o, layout } : o))
+    persistOverlays(next)
+  }
+
+  // 자막을 다른 cue 그룹에 묶기(cueOrder 변경, layout 유지). cue 번호 자체는 고정 슬롯.
+  function handleSetCueGroup(overlayId, cueOrder) {
+    const ov = sceneTextOverlays.find((o) => o.textOverlayId === overlayId)
+    if (!ov || ov.cueOrder === cueOrder) return
+    const next = sceneTextOverlays.map((o) => (o.textOverlayId === overlayId ? { ...o, cueOrder } : o))
+    persistOverlays(next)
+    enterSubtitleCue(cueOrder) // 옮긴 cue 로 따라가서 그 그룹을 편집 중으로
+    setSelected({ kind: 'text', id: overlayId })
+  }
+
   async function handleCharacterRemove(characterId) {
     setMessage('')
     setError('')
@@ -230,10 +325,39 @@ export default function SceneEditorPage() {
             <div className={styles.placeholder}>씬을 선택하면 편집 영역이 표시돼요.</div>
           ) : (
             <>
+              {/* 편집 모드 토글 + 현재 상태 */}
+              <div className={styles.modeBar}>
+                <div className={styles.modeBtns}>
+                  <button
+                    className={`${styles.modeBtn} ${editMode === 'character' ? styles.modeBtnActive : ''}`}
+                    onClick={enterCharacterMode}
+                  >
+                    캐릭터 배치
+                  </button>
+                  <button
+                    className={`${styles.modeBtn} ${editMode === 'subtitle' ? styles.modeBtnActive : ''}`}
+                    onClick={() => enterSubtitleCue(activeCue ?? firstCue)}
+                    disabled={sceneTextOverlays.length === 0}
+                  >
+                    자막 배치
+                  </button>
+                </div>
+                <span className={styles.muted}>
+                  현재 모드: {editMode === 'character' ? '캐릭터 배치' : '자막 배치'}
+                  {editMode === 'subtitle' && activeCue != null && ` · 편집 중: 씬 ${selectedScene.order}-${activeCue}`}
+                </span>
+              </div>
+
               <SceneStage
                 backgroundUrl={sceneBackgroundUrl}
                 characters={sceneCharacters}
-                onLayoutChange={handleLayoutChange}
+                textOverlays={sceneTextOverlays}
+                selected={selected}
+                onSelect={setSelected}
+                onCharacterLayoutChange={handleLayoutChange}
+                onTextOverlayLayoutChange={handleTextOverlayLayoutChange}
+                editMode={editMode}
+                activeCue={activeCue}
               />
               <p
                 className={styles.muted}
@@ -244,7 +368,9 @@ export default function SceneEditorPage() {
                 {saveStatus === 'saved' && '✓ 자동 저장됨'}
                 {saveStatus === 'error' && '⚠ 저장 실패 — 잠시 후 다시 시도해 주세요'}
                 {saveStatus === 'idle' &&
-                  '캐릭터를 드래그·크기조절·회전하면 자동 저장됩니다 (별도 저장 버튼 없음)'}
+                  (editMode === 'character'
+                    ? '캐릭터를 드래그·크기조절·회전하면 자동 저장됩니다 (별도 저장 버튼 없음)'
+                    : '자막을 드래그·크기조절·회전하면 자동 저장됩니다. 배경·캐릭터는 참고용(선택 잠금)')}
               </p>
               <div className={styles.panel}>
                 <div className={styles.bgPanel}>
@@ -344,6 +470,18 @@ export default function SceneEditorPage() {
                     </>
                   )}
                 </div>
+
+                <SubtitleCuePanel
+                  sceneOrder={selectedScene.order}
+                  overlays={sceneTextOverlays}
+                  cueSlots={cueSlots}
+                  selected={selected}
+                  editMode={editMode}
+                  activeCue={activeCue}
+                  onEnterCue={enterSubtitleCue}
+                  onSelectOverlay={(id) => setSelected({ kind: 'text', id })}
+                  onSetCueGroup={handleSetCueGroup}
+                />
               </div>
               {message && <p className={styles.message}>{message}</p>}
               {error && <p className={styles.errorText}>{error}</p>}

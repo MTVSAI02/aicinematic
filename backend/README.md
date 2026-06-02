@@ -151,6 +151,7 @@ backend/
 | POST | `/api/tts/scene` | 씬 TTS 생성 Job (`AI_TTS_URL`/`QWEN_TTS_ENABLED` 설정 시 실제 합성, 미설정 시 audioUrl=null) |
 | PATCH | `/api/scenes/{scene_id}/character` | 씬에 캐릭터 추가/수정 (**씬당 다중**; body: storyId, characterId, sceneAppearancePrompt?) |
 | DELETE | `/api/scenes/{scene_id}/character/{character_id}` | 씬에서 캐릭터 1명 제거 (query: storyId) |
+| PATCH | `/api/scenes/{scene_id}/subtitles` | 씬 자막 설정 저장 (자막은 items에서 자동 생성; body: storyId, overlays:[{itemIndex, cueOrder, layout}]) |
 
 | GET | `/api/stories/{story_id}/timeline` | 타임라인 조회 (order 정렬, duration, totalDuration, readyStatus, textPreview, background/character summary) |
 | PATCH | `/api/stories/{story_id}/timeline` | 타임라인 저장 (**전체 scene 목록**; body `scenes:[{sceneId,duration}]`. 순서는 스토리 원본 고정 — duration만 저장) |
