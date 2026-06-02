@@ -15,6 +15,17 @@ _DEFAULT_WIDTH = 0.75
 _DEFAULT_FONT = 0.06
 
 
+def _display_text(item_type: str, text: str) -> str:
+    """표시용 자막 텍스트. dialogue 면 "..." 로 감싼다(나레이션은 그대로).
+
+    - 원본 item.text 는 수정하지 않는다 — 파생되는 overlay text 에만 적용(표시/렌더 전용).
+    - 이미 큰따옴표로 시작·끝나면 중복으로 붙이지 않는다.
+    """
+    if item_type == "dialogue" and not (text.startswith('"') and text.endswith('"')):
+        return f'"{text}"'
+    return text
+
+
 def _default_layout(index: int) -> dict:
     """줄이 여러 개면 하단에서 위로 살짝 쌓아 겹침을 줄인다."""
     return {
@@ -44,14 +55,15 @@ def build_text_overlays(scene: dict) -> list[dict]:
         if not text:
             continue
         s = settings.get(str(i)) or settings.get(i) or {}
+        item_type = it.get("type") or "narration"
         result.append(
             {
                 "textOverlayId": f"{scene_id}_t{i}",
                 "sourceItemIndex": i,
                 "cueOrder": s.get("cueOrder") if isinstance(s.get("cueOrder"), int) and s.get("cueOrder") >= 1 else i + 1,
-                "type": it.get("type") or "narration",
+                "type": item_type,
                 "speaker": it.get("speaker"),
-                "text": text,
+                "text": _display_text(item_type, text),  # dialogue → "..." (표시용, 원본 미수정)
                 "layout": s.get("layout") or _default_layout(i),
                 "style": None,
             }

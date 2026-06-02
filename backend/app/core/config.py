@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 
 # 생성 결과(이미지/오디오/렌더) 저장 루트. backend/app/storage
@@ -16,6 +17,13 @@ BACKGROUND_CANDIDATE_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "candidates"
 BACKGROUND_LIBRARY_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "library"
 AUDIO_STORAGE_DIR = STORAGE_ROOT / "audio"
 RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
+# 렌더 중 프레임 PNG 임시 폴더. 완료/실패 후 정리한다. (jobId가 아니라 renderId 기준)
+RENDER_TMP_DIR = STORAGE_ROOT / "tmp" / "renders"
+
+# 렌더 출력 규격 (무음 mp4 MVP). 16:9.
+RENDER_FPS = 24
+RENDER_WIDTH = 1280
+RENDER_HEIGHT = 720
 
 # 우리 AI FastAPI 서버 주소 (외부 ComfyUI는 이 AI 서버가 호출한다).
 # Backend는 ComfyUI를 직접 호출하지 않고 이 서버의 /generate-character·/generate-background 만 호출한다.
@@ -43,3 +51,37 @@ def storage_url(*parts: str) -> str:
         → "/storage/characters/char_mock_001.png"
     """
     return "/".join([STORAGE_URL_PREFIX, *parts])
+
+
+def storage_path(url: str | None) -> Path | None:
+    """storage_url 역변환: /storage URL → 실제 디스크 경로.
+
+    예: "/storage/backgrounds/library/bg.png" → STORAGE_ROOT/"backgrounds/library/bg.png"
+    /storage 로 시작하지 않는 외부 URL(http…)이나 빈 값은 None(렌더러가 placeholder 처리).
+    """
+    if not url:
+        return None
+    prefix = STORAGE_URL_PREFIX + "/"
+    if not url.startswith(prefix):
+        return None
+    return STORAGE_ROOT / url[len(prefix):]
+
+
+def resolve_ffmpeg_bin() -> str | None:
+    """ffmpeg 실행 파일 경로를 우선순위로 찾는다.
+
+    1) FFMPEG_BIN 환경변수(직접 지정) → 2) PATH 의 시스템 ffmpeg → 3) imageio-ffmpeg 번들 바이너리.
+    셋 다 없으면 None (렌더러가 FFmpegNotInstalledError 로 명확히 실패).
+    """
+    env_bin = os.getenv("FFMPEG_BIN")
+    if env_bin and Path(env_bin).exists():
+        return env_bin
+    system_bin = shutil.which("ffmpeg")
+    if system_bin:
+        return system_bin
+    try:
+        import imageio_ffmpeg
+
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:  # noqa: BLE001  (패키지 미설치/바이너리 미동봉 등)
+        return None
