@@ -10,3 +10,12 @@ export function updateSceneSubtitles(sceneId, payload) {
     method: 'PATCH',
   })
 }
+
+// PATCH /api/scenes/{sceneId}/characters/{characterId}/pose — 씬 캐릭터에 포즈 적용/해제.
+// payload: { storyId, poseId } (poseId=null이면 기본 이미지로)
+export function setSceneCharacterPose(sceneId, characterId, payload) {
+  return request(`/api/scenes/${sceneId}/characters/${characterId}/pose`, {
+    ...jsonBody(payload),
+    method: 'PATCH',
+  })
+}

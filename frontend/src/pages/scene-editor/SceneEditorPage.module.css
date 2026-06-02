@@ -344,3 +344,11 @@
 }
 
 .btnSecondary:hover { background: var(--code-bg); }
+
+/* 연결된 캐릭터 1줄(이름 + 포즈/제거 + 인라인 포즈 패널) */
+.connectedChar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0;
+}
