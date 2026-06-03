@@ -99,6 +99,13 @@ if os.getenv("SEED_DEV") == "1":
         return response
 
 
+@app.on_event("startup")
+def _resume_unfinished_tts_jobs():
+    from .services.tts_service import tts_service
+
+    tts_service.resume_unfinished_story_tts_jobs()
+
+
 # 생성된 이미지/오디오 정적 서빙 — 경로는 core/config.py 에서 관리(절대경로)
 # 예: /storage/characters/{id}.png
 STORAGE_ROOT.mkdir(parents=True, exist_ok=True)

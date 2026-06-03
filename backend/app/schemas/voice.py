@@ -62,6 +62,7 @@ class VoiceResponse(BaseModel):
     status: str
     # 미리듣기 샘플 URL. AI/TTS 파트가 채우며 현재는 null일 수 있음.
     sampleAudioUrl: str | None = None
+    durationSec: float | None = None
     # 클로닝 보이스용 필드(없으면 null). referenceAudioPath(절대경로)는 절대 노출하지 않는다.
     speakerLabel: str | None = None  # 누가 녹음했는지(엄마/아이/아빠 등). voiceType과 독립.
     characterId: str | None = None

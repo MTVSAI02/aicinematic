@@ -4,8 +4,20 @@ import DurationControl from './DurationControl'
 import SceneComposite from './SceneComposite'
 import CueTimingEditor from './CueTimingEditor'
 
+function audioKindLabel(audio) {
+  if (audio.type === 'narration') return '나레이션'
+  return audio.speaker ? `대사 · ${audio.speaker}` : '대사'
+}
+
+function totalAudioDuration(audios) {
+  const durations = audios
+    .map((audio) => audio.durationSec)
+    .filter((value) => typeof value === 'number' && value > 0)
+  if (durations.length === 0) return 0
+  return durations.reduce((sum, value) => sum + value, 0)
+}
+
 // 전체 미리보기 재생 큐: 씬 order 순 → cueOrder 순 → items(sourceItemIndex 순) → audioUrl 있는 것만.
-// (전체 미리보기는 전 씬을 훑으므로 audio 도 전 씬을 순서대로 이어서 재생한다.)
 function buildAudioQueue(scenes) {
   const list = [...(scenes ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const urls = []
@@ -20,9 +32,19 @@ function buildAudioQueue(scenes) {
   return urls
 }
 
-// 선택한 씬 상세: 왼쪽 = 큰 미리보기(기존 UI 유지), 오른쪽 = 씬 정보 / 재생 길이 / 자막 타이밍.
-// 미리보기 재생 시 기존 화면/자막 흐름은 그대로 두고, 선택 씬의 TTS audio 를 순서대로 함께 재생한다.
-export default function TimelineSceneDetail({ scene, allScenes, saveStatus, playback, onDurationChange, onCueTimingChange, onAutoSplitCues, onFitToAudio }) {
+// 선택한 씬 상세: 왼쪽 = 큰 미리보기, 오른쪽 = 씬 정보 / 재생 길이 / 자막 타이밍.
+// 전체 미리보기 재생 중에는 왼쪽 미리보기가 재생 씬을 자동으로 따라간다(렌더링 아님, 무음 preview).
+export default function TimelineSceneDetail({
+  scene,
+  allScenes,
+  saveStatus,
+  playback,
+  onDurationChange,
+  onCueTimingChange,
+  onAutoSplitCues,
+  onSyncCuesToAudio,
+  onFitToAudio,
+}) {
   const [selectedCue, setSelectedCue] = useState(null)
 
   // ── 선택 씬 음성 순차 재생(기존 재생/정지에 얹음) ──
@@ -96,6 +118,20 @@ export default function TimelineSceneDetail({ scene, allScenes, saveStatus, play
     : (selectedCue == null ? previewAllOverlays : previewAllOverlays.filter((o) => o.cueOrder === selectedCue))
 
   const allOverlays = scene.textOverlays ?? []
+  const ttsAudioItems = scene.ttsAudioItems ?? []
+  const playableAudioItems = ttsAudioItems.filter((audio) => audio.audioUrl)
+  const audioDurationSec = totalAudioDuration(playableAudioItems)
+  const overlayByItemIndex = new Map(
+    allOverlays.map((overlay) => [overlay.sourceItemIndex, overlay]),
+  )
+  const timedAudioItemIndexes = new Set(
+    ttsAudioItems
+      .filter((audio) => audio.audioUrl && typeof audio.durationSec === 'number' && audio.durationSec > 0)
+      .map((audio) => audio.itemIndex),
+  )
+  const canSyncAudioCues =
+    allOverlays.length > 0 &&
+    allOverlays.every((overlay) => timedAudioItemIndexes.has(overlay.sourceItemIndex))
   const rs = scene.readyStatus ?? {}
   const statusLine = [
     ['배경', rs.hasBackground],
@@ -193,6 +229,61 @@ export default function TimelineSceneDetail({ scene, allScenes, saveStatus, play
         </div>
 
         <p className={styles.detailText}>{scene.textPreview || '텍스트 없음'}</p>
+
+        <div className={styles.detailSection}>
+          <div className={styles.detailTitle}>TTS 음성</div>
+          {ttsAudioItems.length === 0 ? (
+            <p className={styles.audioHint}>
+              아직 생성된 TTS가 없습니다. /voice에서 보이스 설정을 확정하면 백그라운드에서 생성됩니다.
+            </p>
+          ) : (
+            <>
+              <div className={styles.audioSummary}>
+                <span>생성된 음성 {playableAudioItems.length}개</span>
+                <span>총 길이 {audioDurationSec ? `${audioDurationSec.toFixed(1)}초` : '-'}</span>
+                <button
+                  type="button"
+                  className={styles.cueAutoBtn}
+                  disabled={!audioDurationSec}
+                  onClick={() => onDurationChange(scene.sceneId, audioDurationSec)}
+                >
+                  음성 길이로 맞추기
+                </button>
+                <button
+                  type="button"
+                  className={styles.cueAutoBtn}
+                  disabled={!canSyncAudioCues}
+                  onClick={() => onSyncCuesToAudio(scene.sceneId)}
+                >
+                  자막 타이밍도 음성에 맞추기
+                </button>
+              </div>
+              <div className={styles.audioList}>
+                {ttsAudioItems.map((audio) => {
+                  const overlay = overlayByItemIndex.get(audio.itemIndex)
+                  return (
+                    <div className={styles.audioItem} key={audio.audioId}>
+                      <div className={styles.audioMeta}>
+                        <span>{audioKindLabel(audio)}</span>
+                        <span>Item {audio.itemIndex + 1}</span>
+                        {overlay && <span>Cue {scene.order}-{overlay.cueOrder}</span>}
+                        <span>{audio.durationSec ? `${audio.durationSec.toFixed(1)}초` : '길이 미확인'}</span>
+                      </div>
+                      <p className={styles.audioText}>{audio.text}</p>
+                      {audio.error && <p className={styles.audioError}>{audio.error}</p>}
+                      {audio.audioUrl ? (
+                        // eslint-disable-next-line jsx-a11y/media-has-caption
+                        <audio className={styles.audioPlayer} controls src={audio.audioUrl} />
+                      ) : (
+                        <p className={styles.audioHint}>아직 재생 가능한 audioUrl이 없습니다.</p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
 
         <div className={styles.detailSection}>
           <div className={styles.detailTitle}>재생 길이</div>

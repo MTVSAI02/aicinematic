@@ -121,6 +121,11 @@ def _apply_optional_mapping(
 
 
 def _item_values(item: dict[str, Any]) -> dict[str, Any]:
+    reference_audio_url = item.get("referenceAudioUrl")
+    reference_text = item.get("referenceText")
+    emotion_prompt = item.get("emotionPrompt")
+    character_prompt = item.get("characterPrompt")
+
     return {
         "audioId": item.get("audioId"),
         "itemIndex": item.get("itemIndex"),
@@ -134,9 +139,13 @@ def _item_values(item: dict[str, Any]) -> dict[str, Any]:
         "voiceId": item.get("voiceId"),
         "voiceName": item.get("voiceName"),
         "voicePrompt": item.get("voicePrompt"),
+        "emotionPrompt": emotion_prompt,
+        "characterPrompt": character_prompt,
+        "referenceAudioUrl": reference_audio_url,
+        "referenceText": reference_text,
         "speaker": item.get("speaker"),
-        "refAudio": item.get("refAudio"),
-        "refText": item.get("refText"),
+        "refAudio": item.get("refAudio") or reference_audio_url,
+        "refText": item.get("refText") or reference_text,
         "sampleAudioUrl": item.get("sampleAudioUrl"),
     }
 
