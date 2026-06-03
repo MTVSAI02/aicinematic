@@ -1,37 +1,146 @@
 .page {
-  padding: 48px 24px;
+  min-height: calc(100vh - 120px);
+  padding: 10px 24px 20px 24px; /* Reduced vertical padding to prevent scrolling */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between; /* Evenly distribute title and card sections */
+  box-sizing: border-box;
+}
+
+.centerSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  margin-top: -95px; /* Shunted upwards by an additional 50px (from -45px to -95px) */
+  margin-bottom: 20px;
+  max-width: 600px;
+  width: 100%;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.titleLogo {
+  width: 450px; /* Reduced from 500px to gain vertical viewport space */
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 10px;
+  /* animation has been migrated to JS physics loop to avoid conflicts */
 }
 
 .sub {
-  color: var(--text);
-  margin-bottom: 32px;
-}
-
-.cta {
-  padding: 12px 32px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.cta:hover {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 15px; /* Reduced from 24px as requested */
+  color: #000;
+  margin-bottom: 6px; /* Decreased by an additional 5px (from 11px to 6px) to nudge the button further up */
+  font-weight: 400;
   opacity: 0.85;
 }
 
-.section {
-  margin-top: 48px;
-  text-align: left;
+.cta {
+  display: inline-flex;
+  width: 200px;
+  height: 45px;
+  padding: 10px 12px 8px 12px; /* Fine-tuned padding to prevent wrap with the star icon */
+  justify-content: center;
+  align-items: center;
+  gap: 6px; /* Adjusted gap slightly to accommodate star icon */
+  box-sizing: border-box;
+
+  border-radius: 11px;
+  border: 1px solid #BAAEE6; /* User requested bordercolor #BAAEE6 */
+  background: linear-gradient(180deg, rgba(247, 235, 255, 0.60) 0%, rgba(214, 196, 254, 0.60) 51.78%, rgba(136, 117, 216, 0.60) 100%);
+  box-shadow: 1px 1px 1px 0 rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(7.4px);
+  -webkit-backdrop-filter: blur(7.4px);
+
+  color: #FFF;
+  text-align: center;
+  -webkit-text-stroke-width: 0.5px;
+  -webkit-text-stroke-color: #BAAEE6;
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 700; /* Set font to Bold (700) as requested */
+  line-height: 120%; /* 24px */
+  letter-spacing: -1.2px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, filter 0.2s ease;
 }
 
-.empty {
-  color: var(--text);
-  padding: 32px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
+.cta:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 1px 3px 6px rgba(136, 117, 216, 0.4);
+  filter: brightness(1.05); /* Soft glowing effect */
+}
+
+.cta:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.starIcon {
+  font-size: 16px; /* Icon size matching 20px bold font line height */
+  display: inline-block;
+  transform: translateY(-1px);
+}
+
+.emptySection {
+  width: 1120px;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.emptyCard {
+  width: 100%;
+  border: 2px dashed rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 50px 24px; /* Sized up height by 50px via padding as requested */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  box-sizing: border-box;
+}
+
+.bookImage {
+  width: 240px; /* Sized up from 180px as requested by the user */
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.emptyTitle {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 22px; /* Reduced by 3px (from 25px to 22px) as requested */
+  font-weight: 700; /* Styled with true bold weight (700) */
+  color: #000;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.5px;
+}
+
+.emptySub {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 13px;
+  color: #555;
+  margin: 0;
+  font-weight: 400;
 }
