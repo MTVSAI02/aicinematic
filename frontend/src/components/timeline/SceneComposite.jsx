@@ -93,14 +93,12 @@ export default function SceneComposite({
               fontSize: h ? L.fontSize * h : `${L.fontSize * 100}cqh`,
               lineHeight: 1.3,
               textAlign: L.align || 'center',
-              color: st.color || '#ffffff',
-              background: st.backgroundColor || 'rgba(0,0,0,0.45)',
-              fontWeight: st.fontWeight || '600',
-              borderRadius: (st.borderRadius ?? 0.02) * (h || 0),
-              padding: `${(st.padding ?? 0.02) * (h || 0)}px`,
+              color: st.color || '#111111',
+              background: 'transparent', // 자막 배경 박스 없음(렌더와 동일)
+              fontFamily: "'Hakgyoansim Dunggeunmiso', sans-serif", // 자막 전용 폰트(Regular)
+              fontWeight: 400, // Regular 만 사용(굵게 X)
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              textShadow: '0 1px 2px rgba(0,0,0,0.6)',
               pointerEvents: 'none',
               boxSizing: 'border-box',
             }}
