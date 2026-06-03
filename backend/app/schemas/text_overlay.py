@@ -51,7 +51,10 @@ class TextOverlay(BaseModel):
 
 
 class SceneSubtitleSetting(BaseModel):
-    """PATCH 요청의 자막 1개. itemIndex = 대본 줄 번호(자막은 줄당 1개)."""
+    """PATCH 요청의 자막 1개. itemIndex = 대본 줄 번호(자막은 줄당 1개).
+
+    정렬(layout.align)은 cue 단위로 다를 수 있다. 글자색은 씬 단위(SceneSubtitleSettingsRequest.sceneTextColor).
+    """
 
     itemIndex: int = Field(ge=0)
     cueOrder: int = Field(ge=1)
@@ -61,11 +64,12 @@ class SceneSubtitleSetting(BaseModel):
 class SceneSubtitleSettingsRequest(BaseModel):
     """PATCH /api/scenes/{sceneId}/subtitles body.
 
-    자막은 대본(items)에서 자동 생성 → **추가/텍스트 변경 없음**. 저장하는 건 줄별 **cueOrder(그룹) + layout**뿐.
-    전체 교체. itemIndex 가 items 범위를 벗어나면 무시한다.
+    저장하는 건 줄별 **cueOrder(그룹) + layout(정렬 포함)** + 씬 단위 **sceneTextColor(글자색)**.
+    전체 교체. itemIndex 가 items 범위를 벗어나면 무시한다. sceneTextColor=None 이면 자동 색(배경 밝기).
     """
 
     storyId: str
+    sceneTextColor: str | None = Field(default=None, description="씬 전체 자막 글자색 hex(없으면 자동 색)")
     overlays: list[SceneSubtitleSetting] = []
 
 

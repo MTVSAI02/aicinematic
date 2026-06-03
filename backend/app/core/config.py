@@ -22,10 +22,17 @@ RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
 # 렌더 중 프레임 PNG 임시 폴더. 완료/실패 후 정리한다. (jobId가 아니라 renderId 기준)
 RENDER_TMP_DIR = STORAGE_ROOT / "tmp" / "renders"
 
-# 렌더 출력 규격 (무음 mp4 MVP). 16:9.
+# 렌더 출력 규격. 16:9.
 RENDER_FPS = 24
 RENDER_WIDTH = 1280
 RENDER_HEIGHT = 720
+
+# 자막 폰트: 레포의 design/assets/fonts (학교안심 둥근미소). 렌더(Pillow)가 이 OTF로 자막을 그린다.
+# core/config.py → parents[3] = 레포 루트.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+SUBTITLE_FONT_PATH = (
+    _REPO_ROOT / "design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF R.otf"
+)
 
 # 우리 AI FastAPI 서버 주소 (외부 ComfyUI는 이 AI 서버가 호출한다).
 # Backend는 ComfyUI를 직접 호출하지 않고 이 서버의 /generate-character·/generate-background 만 호출한다.
