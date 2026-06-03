@@ -5,6 +5,10 @@
 - Voice/TTS, ffmpeg 렌더링은 이번 범위 아님. render plan 은 "2차 ffmpeg 가 그대로 쓸 데이터"까지만 만든다.
 """
 
+import logging
+import wave
+
+from ..core.config import storage_path
 from ..core.exceptions import (
     CueTimingValidationError,
     SceneNotFoundError,
@@ -14,11 +18,36 @@ from ..core.exceptions import (
 from ..repositories.background_repository import background_repository
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
+from ..repositories.tts_audio_repository import tts_audio_repository
+from ..repositories.voice_repository import voice_repository
 from .image_resolve import resolve_character_display_image
 from .text_overlay_service import build_text_overlays
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_DURATION = 3.0
 _TEXT_PREVIEW_MAX = 80
+
+
+def _wav_duration_sec(audio_url: str | None) -> float | None:
+    """/storage 의 wav 파일에서 실제 재생 길이(초)를 계산한다.
+
+    AI /tts 가 durationSec 을 null 로 주는 동안 백엔드가 직접 길이를 구한다(자막↔음성 길이 비교/맞추기용).
+    파일이 없거나 PCM wav 가 아니면 None.
+    """
+    if not audio_url:
+        return None
+    path = storage_path(audio_url)
+    if not path or not path.is_file():
+        return None
+    try:
+        with wave.open(str(path), "rb") as wf:
+            rate = wf.getframerate()
+            if rate:
+                return round(wf.getnframes() / float(rate), 3)
+    except Exception as exc:  # noqa: BLE001 - 비표준 wav 등은 None 으로 무시
+        logger.warning("wav 길이 계산 실패(%s): %s", audio_url, exc)
+    return None
 
 
 def _duration_of(scene: dict) -> float:
@@ -46,10 +75,12 @@ def _ready_status(scene: dict) -> dict:
 
 
 class TimelineService:
-    def __init__(self, story_repo, background_repo, character_repo):
+    def __init__(self, story_repo, background_repo, character_repo, tts_audio_repo, voice_repo):
         self._story_repo = story_repo
         self._background_repo = background_repo
         self._character_repo = character_repo
+        self._tts_audio_repo = tts_audio_repo
+        self._voice_repo = voice_repo
 
     def _get_story_or_404(self, story_id: str) -> dict:
         story = self._story_repo.get(story_id)
@@ -83,17 +114,90 @@ class TimelineService:
             )
         return result
 
-    def _cue_timings(self, scene: dict) -> list[dict]:
-        """cue 그룹별 타이밍. 저장값 있으면 사용, 없는 cue는 씬 duration 균등 분할 기본값으로 파생.
+    def _voice_name(self, voice_id: str | None) -> str | None:
+        if not voice_id:
+            return None
+        voice = self._voice_repo.get(voice_id)
+        return voice.get("name") if voice else None
 
-        cueOrder 는 그 씬 자막(textOverlays)에 실제 존재하는 것만 대상. audioUrl/audioDurationSec 은 TTS 확장용(현재 null).
+    def _item_tts_status(
+        self, story: dict, item_type: str | None, character_id: str | None, audio_url: str | None
+    ) -> str:
+        """item 의 TTS 상태. audio 있으면 ready, 없으면 그 대상(나레이션/캐릭터) 잠금 상태에서 도출."""
+        if audio_url:
+            return "ready"
+        locks = story.get("voiceLocks", {})
+        state = locks.get("narration") if item_type == "narration" else (
+            locks.get(character_id) if character_id else None
+        )
+        st = (state or {}).get("ttsStatus")
+        return st if st in ("generating", "failed", "stale") else "none"
+
+    def _build_cue_item(self, story, scene_id, overlay, audios_by_item, chars_by_name) -> dict:
+        """cue 안 한 줄(sourceItem) → audio/화자/보이스 정보. itemIndex 로 tts_audio 매칭."""
+        idx = overlay["sourceItemIndex"]
+        item_type = overlay.get("type")
+        speaker = overlay.get("speaker")
+        audio = audios_by_item.get(idx)
+        audio_url = audio.get("audioUrl") if audio else None
+
+        if item_type == "narration":
+            display_name = "나레이션"
+            character_id = None
+            character_image = None
+            voice_id = story.get("narratorVoiceId")
+        else:
+            char = chars_by_name.get(speaker)
+            display_name = speaker
+            character_id = char.get("characterId") if char else None
+            character_image = resolve_character_display_image(char, None) if char else None
+            voice_id = char.get("voiceId") if char else None
+
+        voice_name = (audio.get("voiceName") if audio else None) or self._voice_name(voice_id)
+        return {
+            "sourceItemIndex": idx,
+            "type": item_type,
+            "speaker": speaker,
+            "displayName": display_name,
+            "characterId": character_id,
+            "characterImageUrl": character_image,
+            "voiceId": voice_id,
+            "voiceName": voice_name,
+            "audioId": audio.get("audioId") if audio else None,
+            "audioUrl": audio_url,
+            "audioDurationSec": _wav_duration_sec(audio_url),
+            "ttsStatus": self._item_tts_status(story, item_type, character_id, audio_url),
+            "text": overlay.get("text"),
+        }
+
+    def _cue_timings(self, story: dict, scene: dict) -> list[dict]:
+        """cue 그룹별 타이밍 + items[](줄별 TTS). 매칭: cueOrder → sourceItemIndex → tts_audio(itemIndex).
+
+        cue 엔 cueId/cueOrder/startSec/durationSec 만. 텍스트/화자/음성은 items[] 단위.
+        startSec/durationSec 는 저장값 있으면 사용, 없으면 씬 duration 균등 분할.
         """
-        cue_orders = sorted({o["cueOrder"] for o in build_text_overlays(scene)})
+        story_id = story.get("storyId")
+        scene_id = scene.get("sceneId")
+        by_cue: dict = {}
+        for o in build_text_overlays(scene):
+            by_cue.setdefault(o["cueOrder"], []).append(o)
+        for group in by_cue.values():
+            group.sort(key=lambda o: o["sourceItemIndex"])
+        cue_orders = sorted(by_cue)
+
         stored = {ct.get("cueOrder"): ct for ct in scene.get("cueTimings") or []}
+        audios_by_item = {
+            a.get("itemIndex"): a for a in self._tts_audio_repo.list_by_scene(story_id, scene_id)
+        }
+        chars_by_name = {c.get("name"): c for c in self._character_repo.list() if c.get("name")}
         dur = _duration_of(scene)
         n = len(cue_orders)
         result = []
         for i, co in enumerate(cue_orders):
+            items = [
+                self._build_cue_item(story, scene_id, o, audios_by_item, chars_by_name)
+                for o in by_cue[co]
+            ]
             s = stored.get(co)
             if s:
                 start, length = float(s.get("startSec", 0.0)), float(s.get("durationSec", 0.0))
@@ -101,11 +205,36 @@ class TimelineService:
                 length = round(dur / n, 3) if n else dur
                 start = round(i * length, 3)
             result.append(
-                {"cueOrder": co, "startSec": start, "durationSec": length, "audioUrl": None, "audioDurationSec": None}
+                {
+                    "cueId": f"{scene_id}_cue_{co:03d}",
+                    "cueOrder": co,
+                    "startSec": start,
+                    "durationSec": length,
+                    "items": items,
+                }
             )
         return result
 
-    def _scene_response(self, scene: dict) -> dict:
+    @staticmethod
+    def _scene_audio_status(cue_timings: list[dict]) -> str:
+        """씬 음성 상태: failed > generating > ready(전부 audio) > none."""
+        statuses = [it.get("ttsStatus") for c in cue_timings for it in c.get("items", [])]
+        if not statuses:
+            return "none"
+        if any(s == "failed" for s in statuses):
+            return "failed"
+        if any(s == "generating" for s in statuses):
+            return "generating"
+        if all(s == "ready" for s in statuses):
+            return "ready"
+        return "none"
+
+    def _scene_response(self, story: dict, scene: dict) -> dict:
+        cue_timings = self._cue_timings(story, scene)
+        ready = _ready_status(scene)
+        audio_status = self._scene_audio_status(cue_timings)
+        ready["hasAudio"] = audio_status == "ready"
+        ready["audioStatus"] = audio_status
         return {
             "sceneId": scene.get("sceneId"),
             "order": scene.get("order"),
@@ -114,14 +243,14 @@ class TimelineService:
             "background": self._background_summary(scene),
             "characters": self._character_summaries(scene),
             "textOverlays": build_text_overlays(scene),
-            "cueTimings": self._cue_timings(scene),
-            "readyStatus": _ready_status(scene),
+            "cueTimings": cue_timings,
+            "readyStatus": ready,
         }
 
     # ── 조회 ──────────────────────────────────────────────
     def get_timeline(self, story_id: str) -> dict:
         story = self._get_story_or_404(story_id)
-        scenes = [self._scene_response(s) for s in self._sorted_scenes(story)]
+        scenes = [self._scene_response(story, s) for s in self._sorted_scenes(story)]
         total = round(sum(s["duration"] for s in scenes), 3)
         return {"storyId": story_id, "totalDuration": total, "scenes": scenes}
 
@@ -240,11 +369,17 @@ class TimelineService:
                     "characters": characters,
                     "subtitles": subtitles,
                     "textOverlays": build_text_overlays(scene),
-                    "cueTimings": self._cue_timings(scene),
+                    "cueTimings": self._cue_timings(story, scene),
                 }
             )
         total = round(sum(s["duration"] for s in scenes), 3)
         return {"storyId": story_id, "totalDuration": total, "scenes": scenes}
 
 
-timeline_service = TimelineService(story_repository, background_repository, character_repository)
+timeline_service = TimelineService(
+    story_repository,
+    background_repository,
+    character_repository,
+    tts_audio_repository,
+    voice_repository,
+)

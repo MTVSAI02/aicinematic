@@ -51,20 +51,43 @@ class TimelineReadyStatus(BaseModel):
     hasBackground: bool
     hasCharacters: bool
     hasText: bool
-    # hasAudio 는 이번 범위 아님(추후 TTS 붙으면 확장). 1차에선 내려보내지 않는다.
+    hasAudio: bool = False  # 씬의 모든 줄 음성이 ready 인지(=audioStatus=="ready")
+    audioStatus: str = "none"  # ready / generating / failed / none
+
+
+class CueTimingItem(BaseModel):
+    """cue 안 한 줄(sourceItem)의 TTS 정보. 1 sourceItem = 1 audio.
+
+    매칭: sourceItemIndex ↔ tts_audio.itemIndex. audioDurationSec 은 백엔드가 wav 에서 계산.
+    ttsStatus: ready(audio 있음) / generating / failed / stale / none.
+    """
+
+    sourceItemIndex: int
+    type: str | None = None  # narration | dialogue
+    speaker: str | None = None
+    displayName: str | None = None  # "나레이션" 또는 캐릭터 이름
+    characterId: str | None = None
+    characterImageUrl: str | None = None  # 캐릭터 썸네일(나레이션이면 null)
+    voiceId: str | None = None
+    voiceName: str | None = None
+    audioId: str | None = None
+    audioUrl: str | None = None
+    audioDurationSec: float | None = None
+    ttsStatus: str = "none"
+    text: str | None = None
 
 
 class CueTiming(BaseModel):
-    """cue 그룹(씬 N-cue)의 등장 타이밍. 같은 cueOrder 자막들이 이 시간창에 함께 표시된다.
+    """cue 그룹(씬 N-cue)의 자막 시간창. 음성/텍스트는 items[](줄별)로 내려간다.
 
-    audioUrl/audioDurationSec 은 TTS 확장용 자리(이번엔 항상 null). 들어오면 durationSec 자동 보정 예정.
+    cue.durationSec = 자막 길이(시간창), sum(items[].audioDurationSec) = 음성 합계 → 둘을 비교.
     """
 
+    cueId: str | None = None
     cueOrder: int
     startSec: float
     durationSec: float
-    audioUrl: str | None = None
-    audioDurationSec: float | None = None
+    items: list[CueTimingItem] = []
 
 
 class TimelineSceneResponse(BaseModel):
