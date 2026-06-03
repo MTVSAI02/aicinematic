@@ -1,0 +1,31 @@
+{
+  "page": {
+    "paddingX": "24px",
+    "paddingY": "40px",
+    "maxWidth": "980px"
+  },
+  "section": {
+    "gap": "32px",
+    "gapLarge": "48px"
+  },
+  "component": {
+    "cardPadding": "16px",
+    "cardRadius": "10px",
+    "cardRadiusLarge": "12px",
+    "inputPadding": "10px 12px",
+    "inputRadius": "8px",
+    "btnPaddingMd": "10px 24px",
+    "btnPaddingSm": "6px 14px",
+    "btnRadius": "8px",
+    "badgePadding": "2px 8px",
+    "badgeRadius": "4px"
+  },
+  "gap": {
+    "xs": "4px",
+    "sm": "6px",
+    "md": "8px",
+    "lg": "12px",
+    "xl": "16px",
+    "2xl": "24px"
+  }
+}
