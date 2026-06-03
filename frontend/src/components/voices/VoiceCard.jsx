@@ -2,16 +2,9 @@ import { useState } from 'react'
 import useVoiceStore from '@/store/useVoiceStore'
 import { assignNarratorVoiceToStory } from '@/api/stories'
 import { assignVoiceToCharacter } from '@/api/characters'
-import {
-  updateVoice as apiUpdateVoice,
-  deleteVoice as apiDeleteVoice,
-  generateVoiceSample,
-  getVoices,
-} from '@/api/voices'
+import { updateVoice as apiUpdateVoice, deleteVoice as apiDeleteVoice } from '@/api/voices'
 import { getApiErrorMessage } from '@/utils/apiError'
 import styles from '@/pages/voice/VoicePage.module.css'
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 // 보이스 한 개 카드: 미리듣기 / 연결 / (preset 아니면) 수정·삭제.
 // 연결은 voiceType 과 무관하게 status==ready 면 가능(추천 태그일 뿐). 선택 대상이 locked 면 연결 비활성.
@@ -23,7 +16,6 @@ export default function VoiceCard({ voice }) {
   const refreshVoiceLocks = useVoiceStore((s) => s.refreshVoiceLocks)
   const setNarratorVoiceId = useVoiceStore((s) => s.setNarratorVoiceId)
   const setCharacterVoiceId = useVoiceStore((s) => s.setCharacterVoiceId)
-  const setVoices = useVoiceStore((s) => s.setVoices)
   const updateVoiceInStore = useVoiceStore((s) => s.updateVoice)
   const removeVoice = useVoiceStore((s) => s.removeVoice)
   const detachDeletedVoice = useVoiceStore((s) => s.detachDeletedVoice)
@@ -32,8 +24,6 @@ export default function VoiceCard({ voice }) {
 
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(voice.name)
-  const [sampleLoading, setSampleLoading] = useState(false)
-  const [sampleError, setSampleError] = useState(null)
 
   // 연결 가능 조건은 voiceType 이 아니라 status 로 판단한다(추천 태그일 뿐).
   // 대상이 선택돼 있고 + 보이스가 ready 면 narrator/character 어디든 연결 가능.
@@ -57,9 +47,6 @@ export default function VoiceCard({ voice }) {
 
   const hasSample = Boolean(voice.sampleAudioUrl)
   const isFailed = voice.status === 'failed'
-  const canGenerateSample = voice.isPreset && isReady && !hasSample
-  const sampleVersion = voice.updatedAt ? `?v=${encodeURIComponent(voice.updatedAt)}` : ''
-  const sampleSrc = hasSample ? `${BASE_URL}${voice.sampleAudioUrl}${sampleVersion}` : ''
 
   const recommendTag = voice.voiceType === 'narrator' ? '나레이션 추천' : '캐릭터 추천'
   const statusLabel = isReady ? 'ready (연결 가능)' : isFailed ? '생성 실패' : '생성 중'
@@ -119,23 +106,6 @@ export default function VoiceCard({ voice }) {
     }
   }
 
-  async function handleGenerateSample() {
-    setError(null)
-    setMessage(null)
-    setSampleError(null)
-    setSampleLoading(true)
-    try {
-      await generateVoiceSample(voice.voiceId)
-      const refreshed = await getVoices()
-      setVoices(refreshed)
-      setMessage(`“${voice.name}” 미리듣기 샘플을 생성했습니다.`)
-    } catch (err) {
-      setSampleError(getApiErrorMessage(err))
-    } finally {
-      setSampleLoading(false)
-    }
-  }
-
   return (
     <li className={`${styles.voiceCard} ${connectedHere ? styles.voiceCardConnected : ''}`}>
       <div className={styles.voiceHead}>
@@ -160,27 +130,13 @@ export default function VoiceCard({ voice }) {
         </>
       ) : (
         <>
-          {/* 미리듣기: sampleAudioUrl이 없어도 ready 보이스는 연결 가능하다.
-              preset 샘플은 백엔드 storage/voices/{voiceId}/sample.wav 파일로 채워진다. */}
+          {/* 미리듣기: sampleAudioUrl 있으면 재생, 없으면 "샘플 없음"(비활성).
+              preset 샘플은 백엔드 storage/voices/{voiceId}/sample.wav 고정 파일, 클론은 AI 결과로 채워진다. */}
           {hasSample ? (
             // eslint-disable-next-line jsx-a11y/media-has-caption
-            <audio className={styles.audio} controls src={sampleSrc} />
+            <audio className={styles.audio} controls src={voice.sampleAudioUrl} />
           ) : (
-            <>
-              <span className={styles.samplePending}>
-                미리듣기 샘플 준비 중 · 연결 가능
-              </span>
-              {canGenerateSample && (
-                <button
-                  className={styles.cardBtn}
-                  onClick={handleGenerateSample}
-                  disabled={sampleLoading}
-                >
-                  {sampleLoading ? '샘플 생성 중' : '샘플 생성'}
-                </button>
-              )}
-              {sampleError && <p className={styles.sampleError}>{sampleError}</p>}
-            </>
+            <button className={styles.cardBtn} disabled>샘플 없음</button>
           )}
 
           {editing ? (

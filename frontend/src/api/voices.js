@@ -20,16 +20,6 @@ export function cloneVoice(formData) {
   return request('/api/voices/clone', { method: 'POST', body: formData })
 }
 
-// POST /api/voices/{voiceId}/sample — preset/보이스 미리듣기 sample.wav 생성
-export function generateVoiceSample(voiceId) {
-  return request(`/api/voices/${voiceId}/sample`, { method: 'POST' })
-}
-
-// POST /api/voices/presets/samples — 기본 나레이션 preset 4개 샘플 일괄 생성
-export function generatePresetVoiceSamples() {
-  return request('/api/voices/presets/samples', { method: 'POST' })
-}
-
 // GET /api/voices/{voiceId} — 단건 조회
 export function getVoice(voiceId) {
   return request(`/api/voices/${voiceId}`)
