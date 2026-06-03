@@ -2,50 +2,36 @@ import useVoiceStore from '@/store/useVoiceStore'
 import VoiceTargetCard from './VoiceTargetCard'
 import styles from '@/pages/voice/VoicePage.module.css'
 
-// 스토리 scenes 의 dialogue speaker 를 등장 순서대로 중복 없이 추출한다.
-function extractSpeakers(story) {
-  const speakers = []
-  for (const scene of story?.scenes ?? []) {
-    for (const item of scene.items ?? []) {
-      if (item.type === 'dialogue' && item.speaker && !speakers.includes(item.speaker)) {
-        speakers.push(item.speaker)
-      }
-    }
-  }
-  return speakers
-}
-
+// 보이스를 적용할 대상(나레이션 + 등장 캐릭터) 목록.
+// 대상/상태는 백엔드 GET /voice-locks 결과(store.voiceLocks)로 그린다.
 export default function VoiceTargetPanel() {
-  const story = useVoiceStore((s) => s.story)
-  const characters = useVoiceStore((s) => s.characters)
+  const voiceLocks = useVoiceStore((s) => s.voiceLocks)
 
-  if (!story) return null
+  if (!voiceLocks.length) {
+    return <p className={styles.validation}>연결할 대상이 없습니다.</p>
+  }
 
-  const speakers = extractSpeakers(story)
+  const narration = voiceLocks.filter((l) => l.targetType === 'narration')
+  const characters = voiceLocks.filter((l) => l.targetType === 'character')
 
   return (
     <div className={styles.targetList}>
-      <h3 className={styles.sectionTitle}>나레이션</h3>
-      <VoiceTargetCard target={{ type: 'narrator', name: '나레이션' }} />
+      {narration.length > 0 && (
+        <>
+          <h3 className={styles.sectionTitle}>나레이션</h3>
+          {narration.map((lock) => (
+            <VoiceTargetCard key={lock.targetId} lock={lock} />
+          ))}
+        </>
+      )}
 
       <h3 className={styles.sectionTitle}>등장 캐릭터</h3>
-      {speakers.length === 0 ? (
+      {characters.length === 0 ? (
         <p className={styles.validation}>이 스토리에는 대사(dialogue) 화자가 없습니다.</p>
       ) : (
-        speakers.map((speaker) => {
-          const matched = characters.find((c) => c.name === speaker)
-          return (
-            <VoiceTargetCard
-              key={speaker}
-              target={{
-                type: 'character',
-                name: speaker,
-                characterId: matched?.characterId ?? null,
-                matched: Boolean(matched),
-              }}
-            />
-          )
-        })
+        characters.map((lock) => (
+          <VoiceTargetCard key={`${lock.targetType}:${lock.targetId}`} lock={lock} />
+        ))
       )}
     </div>
   )

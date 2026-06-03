@@ -28,3 +28,25 @@ export function assignNarratorVoiceToStory(storyId, payload) {
     method: 'PATCH',
   })
 }
+
+// GET /api/stories/{storyId}/voice-locks — 대상별(나레이션/캐릭터) 잠금 상태
+// 응답: { storyId, allLocked, nextStepEnabled, voiceLocks:[{targetType,targetId,displayName,imageUrl,matched,voiceId,voiceName,lockStatus,ttsStatus,reason}] }
+export function getVoiceLocks(storyId) {
+  return request(`/api/stories/${storyId}/voice-locks`)
+}
+
+// POST /api/stories/{storyId}/voice-locks/{targetType}/{targetId}/lock — 대상 잠금 + 그 대상 TTS 생성 시작
+export function lockVoiceTarget(storyId, targetType, targetId) {
+  return request(
+    `/api/stories/${storyId}/voice-locks/${targetType}/${encodeURIComponent(targetId)}/lock`,
+    { method: 'POST' },
+  )
+}
+
+// POST /api/stories/{storyId}/voice-locks/{targetType}/{targetId}/unlock — 대상 잠금 해제(ttsStatus=stale)
+export function unlockVoiceTarget(storyId, targetType, targetId) {
+  return request(
+    `/api/stories/${storyId}/voice-locks/${targetType}/${encodeURIComponent(targetId)}/unlock`,
+    { method: 'POST' },
+  )
+}

@@ -5,7 +5,10 @@ from ..schemas.story import (
     NarratorVoiceUpdateRequest,
     StoryParseRequest,
     StoryParseResponse,
+    VoiceLockActionResponse,
+    VoiceLocksResponse,
 )
+from ..services import voice_lock_service
 from ..services.story_service import story_service
 
 router = APIRouter(prefix="/api/stories", tags=["stories"])
@@ -64,3 +67,49 @@ def update_narrator_voice(story_id: str, request: NarratorVoiceUpdateRequest):
     - TTS 생성 시 narration item의 voiceId로 이 값이 복사됩니다. (dialogue는 캐릭터 보이스)
     """
     return story_service.update_narrator_voice(story_id, request.voiceId)
+
+
+@router.get(
+    "/{story_id}/voice-locks",
+    response_model=VoiceLocksResponse,
+    summary="대상별 보이스 잠금 상태 조회",
+)
+def get_voice_locks(story_id: str):
+    """
+    나레이션/캐릭터 대상별 보이스 연결·잠금 상태를 조회합니다.
+
+    - 각 대상: `lockStatus`(unlocked/locked) + `ttsStatus`(idle/generating/ready/failed/stale)
+    - `allLocked`/`nextStepEnabled`: 모든 필수 대상이 locked 여야 true → [배경 →] 활성 기준.
+    - 매칭 캐릭터가 없는 speaker는 `matched=false` + `reason=character_not_found` (잠금 불가).
+    """
+    return voice_lock_service.get_voice_locks(story_id)
+
+
+@router.post(
+    "/{story_id}/voice-locks/{target_type}/{target_id}/lock",
+    response_model=VoiceLockActionResponse,
+    summary="대상별 보이스 잠금 + 해당 대상 TTS 생성 시작",
+)
+def lock_voice_target(story_id: str, target_type: str, target_id: str):
+    """
+    한 대상(나레이션 또는 캐릭터)의 보이스를 잠그고, 그 대상 item 의 TTS 생성을 백그라운드로 시작합니다.
+
+    - `target_type`: `narration` | `character`, `target_id`: `narration` 또는 characterId
+    - 검증: voiceId 연결(없으면 400 voice_not_connected) + voice.status==ready(아니면 400 voice_not_ready)
+    - 성공 시 lockStatus=locked, ttsStatus=generating. 진행은 GET `/voice-locks` 로 폴링.
+    """
+    return voice_lock_service.lock_target(story_id, target_type, target_id)
+
+
+@router.post(
+    "/{story_id}/voice-locks/{target_type}/{target_id}/unlock",
+    response_model=VoiceLockActionResponse,
+    summary="대상별 보이스 잠금 해제",
+)
+def unlock_voice_target(story_id: str, target_type: str, target_id: str):
+    """
+    한 대상의 잠금을 해제해 다시 연결을 바꿀 수 있게 합니다(ttsStatus=stale).
+
+    다시 잠그면 그 대상 item 의 TTS 만 재생성합니다(다른 대상 audio는 유지).
+    """
+    return voice_lock_service.unlock_target(story_id, target_type, target_id)
