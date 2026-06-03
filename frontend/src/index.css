@@ -1,9 +1,24 @@
+
+@font-face {
+  font-family: 'Hakgyoansim';
+  src: url('@design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF R.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Hakgyoansim';
+  src: url('@design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF B.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+
 /* 자막 폰트(학교안심 둥근미소 Regular) — /scene-editor·/timeline 미리보기 자막에 사용. 렌더(ffmpeg)도 같은 OTF. */
 @font-face {
   font-family: 'Hakgyoansim Dunggeunmiso';
   src: url('/fonts/Hakgyoansim-Dunggeunmiso-R.otf') format('opentype');
   font-weight: 400;
   font-display: swap;
+
 }
 
 :root {
@@ -28,7 +43,6 @@
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -60,19 +74,53 @@
   }
 }
 
+html {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  scrollbar-gutter: stable; /* Keeps horizontal layout perfectly aligned when scrollbars appear */
+}
+
 body {
   margin: 0;
+  background: transparent;
+}
+
+.global-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('@design/assets/figma-images/Background.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  z-index: -10;
+  pointer-events: none;
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
+  width: calc(100% - 128px); /* Enforces exactly 64px margin on both sides */
+  max-width: 1126px;
   margin: 0 auto;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  background: transparent;
+}
+
+@media (max-width: 1024px) {
+  #root {
+    width: calc(100% - 48px); /* 24px margins on tablets */
+  }
+}
+
+@media (max-width: 768px) {
+  #root {
+    width: calc(100% - 32px); /* 16px margins on mobile */
+  }
 }
 
 h1,
