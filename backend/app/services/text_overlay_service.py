@@ -79,13 +79,13 @@ class TextOverlayService:
     def __init__(self, story_repo):
         self._story_repo = story_repo
 
-    def _find_scene(self, story_id: str, scene_id: str) -> dict:
+    def _find_story_scene(self, story_id: str, scene_id: str) -> tuple[dict, dict]:
         story = self._story_repo.get(story_id)
         if story is None:
             raise StoryNotFoundError()
         for scene in story.get("scenes", []):
             if scene.get("sceneId") == scene_id:
-                return scene
+                return story, scene
         raise SceneNotFoundError()
 
     def update_subtitles(
@@ -96,7 +96,7 @@ class TextOverlayService:
         overlays: [{itemIndex, cueOrder, layout}] — itemIndex 는 items 범위 안만 반영.
         scene_text_color: 씬 전체 자막 글자색(None 이면 자동 색). 반환: 조립한 자막 목록.
         """
-        scene = self._find_scene(story_id, scene_id)
+        story, scene = self._find_story_scene(story_id, scene_id)
         item_count = len(scene.get("items") or [])
         scene["sceneTextColor"] = scene_text_color  # 씬 단위 글자색(None=자동)
         scene["subtitleSettings"] = {
@@ -107,6 +107,7 @@ class TextOverlayService:
             for o in overlays
             if 0 <= o.itemIndex < item_count
         }
+        self._story_repo.save_story(story)
         return {
             "storyId": story_id,
             "sceneId": scene_id,

@@ -13,6 +13,7 @@ PREFIX: dict[str, str] = {
     "user": "user_",
     "story": "story_",
     "scene": "scene_",
+    "scene_character": "scenechar_",
     "character": "char_",
     "pose": "pose_",
     "background": "bg_",

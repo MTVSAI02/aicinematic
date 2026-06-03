@@ -14,11 +14,27 @@ ComfyUI/AI 서버 없이 scene-editor 흐름을 테스트하기 위해, storage 
 from .config import (
     BACKGROUND_LIBRARY_STORAGE_DIR,
     CHARACTER_STORAGE_DIR,
+    VOICE_STORAGE_DIR,
     storage_url,
 )
+from ..db.models import Voice
+from ..db.session import SessionLocal
 from ..repositories.background_repository import background_repository
 from ..repositories.character_repo import character_repository
+from ..repositories.voice_repository import voice_repository
 from ..services.story_service import story_service
+
+# ⚠️ 임시 클로닝 보이스 샘플(storage/voices/<id>/sample.wav 직접 넣어둠).
+#    "내가 만든 보이스"(isPreset=false, voiceType=character) 로 노출 + 캐릭터에 연동.
+#    실제 클론 플로우가 안정화되면 이 시드와 샘플을 제거한다.
+_CLONED_VOICES = [
+    {"voiceId": "voice_test_little_prince_001", "characterId": "char_mock_001",
+     "name": "엄마가 연기한 어린왕자 목소리", "voicePrompt": "맑고 순수한 소년 느낌의 따뜻한 목소리"},
+    {"voiceId": "voice_test_rose_001", "characterId": "char_mock_002",
+     "name": "아이처럼 밝은 장미 목소리", "voicePrompt": "새침하지만 사랑스러운 느낌의 밝은 목소리"},
+    {"voiceId": "voice_test_wind_001", "characterId": "char_mock_003",
+     "name": "장난스러운 바람 목소리", "voicePrompt": "장난스럽고 신비로운 바람 정령 느낌의 목소리"},
+]
 
 # storage에 직접 넣어둔 파일 기준. 파일이 없으면 그 항목은 건너뛴다.
 _CHARACTERS = [
@@ -96,3 +112,37 @@ def seed_dev_data() -> None:
     # 가라 스토리(씬 자동 생성) — scene-editor에서 스토리/씬을 고를 수 있게.
     if not story_service.list_stories():
         story_service.parse_and_save(_STORY["title"], _STORY["script"])
+
+
+def seed_dev_cloned_voices() -> int:
+    """임시 클로닝 보이스(voice_test_*)를 DB 에 보장하고 해당 캐릭터에 연동한다(idempotent).
+
+    "내가 만든 보이스"(isPreset=false, voiceType=character)로 노출된다. sample.wav 존재 시 ready.
+    매 부팅 호출해도 안전(이미 있으면 갱신만). 캐릭터가 있으면 voiceId 를 연결한다.
+    """
+    seeded = 0
+    with SessionLocal() as db:
+        for v in _CLONED_VOICES:
+            vid = v["voiceId"]
+            sample = VOICE_STORAGE_DIR / vid / "sample.wav"
+            sample_url = storage_url("voices", vid, "sample.wav") if sample.is_file() else None
+            status = "ready" if sample_url else "pending"
+            row = db.get(Voice, vid)
+            if row is None:
+                db.add(Voice(
+                    id=vid, name=v["name"], voice_prompt=v["voicePrompt"],
+                    voice_type="character", is_preset=False, status=status,
+                    character_id=v["characterId"], reference_text="테스트용 클론 보이스",
+                    sample_audio_url=sample_url,
+                ))
+                seeded += 1
+            else:
+                row.sample_audio_url = sample_url
+                row.status = status
+        db.commit()
+    # 캐릭터 ↔ 보이스 연동(캐릭터가 있고 아직 연결 안 됐으면)
+    for v in _CLONED_VOICES:
+        char = character_repository.get(v["characterId"])
+        if char and char.get("voiceId") != v["voiceId"]:
+            character_repository.set_voice(v["characterId"], v["voiceId"])
+    return seeded

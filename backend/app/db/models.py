@@ -150,6 +150,7 @@ class SceneCharacter(Base):
     pose_id: Mapped[str | None] = mapped_column(
         Text, ForeignKey("character_poses.id", ondelete="SET NULL")
     )
+    scene_appearance_prompt: Mapped[str | None] = mapped_column(Text)  # 씬별 캐릭터 연출(저장만)
     layout: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
     __table_args__ = (
@@ -181,9 +182,7 @@ class TtsAudio(Base):
     duration_sec: Mapped[float | None] = mapped_column(Float)
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
-    __table_args__ = (
-        UniqueConstraint("scene_id", "item_index", name="uq_ttsaudio_scene_item"),
-    )
+    # (scene_id,item_index) UNIQUE 없음 — TTS 재생성 시 old/new 가 잠시 공존(success-after-replace).
 
 
 class RenderResult(Base):

@@ -153,28 +153,21 @@ class BackgroundService:
 
         # 저장본 이미지 파일도 함께 삭제 (record만 지우면 library 파일이 고아로 남음).
         (BACKGROUND_LIBRARY_STORAGE_DIR / f"{background_id}.png").unlink(missing_ok=True)
-
-        # 참조 해제: 모든 story의 모든 scene을 순회해 backgroundId를 null로 만든다.
-        self._detach_background_from_scenes(background_id)
+        # scene.backgroundId 참조는 FK ondelete=SET NULL 이 자동 정리(배경 row 삭제 → 참조 null).
         return {"deleted": True, "backgroundId": background_id}
-
-    def _detach_background_from_scenes(self, background_id: str) -> None:
-        for story in self._story_repo.list():
-            for scene in story.get("scenes", []):
-                if scene.get("backgroundId") == background_id:
-                    scene["backgroundId"] = None
 
     # ── 씬-배경 연결 ─────────────────────────────────────────
 
     def connect_scene_background(
         self, story_id: str, scene_id: str, background_id: str
     ) -> dict:
-        scene = self._find_scene(story_id, scene_id)
+        story, scene = self._find_story_scene(story_id, scene_id)
 
         if self._background_repo.get(background_id) is None:
             raise BackgroundNotFoundError()
 
         scene["backgroundId"] = background_id
+        self._story_repo.save_story(story)
         return {
             "storyId": story_id,
             "sceneId": scene_id,
@@ -184,12 +177,15 @@ class BackgroundService:
     # ── 내부 헬퍼 ────────────────────────────────────────────
 
     def _find_scene(self, story_id: str, scene_id: str) -> dict:
+        return self._find_story_scene(story_id, scene_id)[1]
+
+    def _find_story_scene(self, story_id: str, scene_id: str) -> tuple[dict, dict]:
         story = self._story_repo.get(story_id)
         if story is None:
             raise StoryNotFoundError()
         for scene in story.get("scenes", []):
             if scene.get("sceneId") == scene_id:
-                return scene
+                return story, scene
         raise SceneNotFoundError()
 
 
