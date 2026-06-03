@@ -203,6 +203,30 @@ class RenderResult(Base):
     )
 
 
+class Job(Base):
+    """비동기 작업(캐릭터/배경/TTS/클론/렌더) 상태. PostgreSQL 영속 → 재시작 후 복구 가능.
+
+    id = prefix+ULID (job_…) → 카운터 충돌 없음. result/payload 는 JSONB.
+    story_id 는 plain text(FK 아님) — 작업이 스토리보다 오래 남거나 임의 참조 가능.
+    """
+    __tablename__ = "jobs"
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    story_id: Mapped[str | None] = mapped_column(Text, index=True)
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="pending", index=True)
+    progress: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    result: Mapped[dict | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    payload: Mapped[dict | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
+    __table_args__ = (
+        CheckConstraint(
+            "status in ('pending','running','completed','failed')", name="job_status_valid"
+        ),
+    )
+
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(Text, primary_key=True)

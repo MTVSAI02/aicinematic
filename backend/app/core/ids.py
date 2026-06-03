@@ -11,6 +11,7 @@ from ulid import ULID
 # 도메인 → prefix. (검증·생성 단일 출처)
 PREFIX: dict[str, str] = {
     "user": "user_",
+    "job": "job_",
     "story": "story_",
     "scene": "scene_",
     "scene_character": "scenechar_",
