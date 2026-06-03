@@ -255,6 +255,29 @@ def _scene_at(starts, durations, t):
     return 0
 
 
+def _collect_audio_inputs(scenes, starts):
+    """timeline 기준 (offsetSec, wav 절대경로) 목록.
+
+    배치: 씬 순서 → cue.startSec → cue.items(sourceItemIndex 순, 같은 cue 안은 순차).
+    absoluteStartSec = sceneStart + cue.startSec + (같은 cue 앞 item들의 audioDurationSec 합).
+    audioUrl 없거나 파일 없는 item 은 제외(앞 item 길이는 누적엔 반영).
+    """
+    inputs = []
+    for idx, scene in enumerate(scenes):
+        scene_start = starts[idx] if idx < len(starts) else 0.0
+        for cue in sorted(scene.get("cueTimings") or [], key=lambda c: c.get("cueOrder", 0)):
+            cue_start = float(cue.get("startSec", 0.0))
+            item_off = 0.0
+            for item in sorted(cue.get("items") or [], key=lambda x: x.get("sourceItemIndex", 0)):
+                url = item.get("audioUrl")
+                if url:
+                    p = storage_path(url)
+                    if p is not None and p.exists():
+                        inputs.append((round(scene_start + cue_start + item_off, 3), str(p)))
+                item_off += float(item.get("audioDurationSec") or 0.0)
+    return inputs
+
+
 def render_video(render_id: str, plan: dict) -> str:
     """render plan → 무음 mp4 생성, /storage URL 반환. 임시 프레임은 항상 정리한다."""
     ffmpeg_bin = resolve_ffmpeg_bin()
@@ -300,15 +323,41 @@ def render_video(render_id: str, plan: dict) -> str:
 
         RENDER_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
         out_path = RENDER_STORAGE_DIR / f"{render_id}.mp4"
+
+        # 오디오: timeline cue.items[].audioUrl 을 absoluteStartSec 에 배치 → adelay → amix → mp4 mux.
+        audio_inputs = _collect_audio_inputs(scenes, starts)
         cmd = [
             ffmpeg_bin, "-y",
             "-framerate", str(fps),
             "-i", str(tmp_dir / "frame_%05d.png"),
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
-            str(out_path),
         ]
+        for _, path in audio_inputs:
+            cmd += ["-i", path]
+        if audio_inputs:
+            # 입력 0 = 프레임(video). 오디오 입력은 1번부터. 각자 offset 만큼 지연 후 합성.
+            delays = [
+                f"[{i}:a]adelay={int(round(off * 1000))}:all=1[a{i}]"
+                for i, (off, _) in enumerate(audio_inputs, start=1)
+            ]
+            mix_in = "".join(f"[a{i}]" for i in range(1, len(audio_inputs) + 1))
+            filter_complex = ";".join(delays) + f";{mix_in}amix=inputs={len(audio_inputs)}:normalize=0[aout]"
+            cmd += [
+                "-filter_complex", filter_complex,
+                "-map", "0:v:0", "-map", "[aout]",
+                "-c:v", "libx264", "-c:a", "aac",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                "-shortest",  # 오디오가 영상보다 길면 영상 길이에 맞춰 컷(타임라인에서 맞추는 게 원칙)
+                str(out_path),
+            ]
+        else:
+            # 음성이 하나도 없으면 기존 무음 인코딩(방어적 fallback)
+            cmd += [
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                str(out_path),
+            ]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0 or not out_path.exists():
             tail = (proc.stderr or "").strip().splitlines()
