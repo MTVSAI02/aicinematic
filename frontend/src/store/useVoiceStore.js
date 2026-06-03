@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getVoiceLocks } from '@/api/stories'
 
 /**
  * 보이스 매핑 페이지 전역 상태 (백엔드 Voice/Story/Character API 기준).
@@ -6,16 +7,16 @@ import { create } from 'zustand'
  * - voices: 보이스 라이브러리 (preset narrator + 사용자 character). GET /api/voices 동기화.
  * - story: 선택된 스토리 (scenes / narratorVoiceId 포함). 나레이션 연결 대상.
  * - characters: GET /api/characters 결과. dialogue speaker 와 name 으로 매칭.
- * - selectedTarget: 현재 보이스를 붙일 대상.
- *     { type: 'narrator', name, accept: 'narrator' }
- *     { type: 'character', characterId, name, accept: 'character' }
+ * - selectedTarget: 현재 보이스를 붙일 대상. (voiceType 제한 없음 — status==ready 면 연결)
+ *     { type: 'narrator'|'character', name, characterId, targetType, targetId }
+ * - voiceLocks: 대상별 잠금/TTS 상태(GET /voice-locks). 연결 가능/잠금 여부 판단에 사용.
  * - selectedVoiceId: (보조) 선택한 보이스 기억용.
  *
  * 최종 저장소는 백엔드이며 이 store 는 전역 캐시 역할. 연결 성공 시 로컬도 갱신해
  * 대상 카드의 "현재 목소리" 표시가 바로 반영되게 한다.
  * provider/model, 실제 클로닝/샘플/합성은 프론트가 다루지 않는다(AI 단계).
  */
-const useVoiceStore = create((set) => ({
+const useVoiceStore = create((set, get) => ({
   voices: [],
   story: null,
   characters: [],
@@ -24,6 +25,12 @@ const useVoiceStore = create((set) => ({
   loading: false,
   error: null,
   message: null,
+
+  // ── 대상별 보이스 잠금 상태 (GET /voice-locks 로 동기화) ──
+  // voiceLocks: [{targetType,targetId,displayName,imageUrl,matched,voiceId,voiceName,lockStatus,ttsStatus,reason}]
+  voiceLocks: [],
+  allLocked: false,
+  nextStepEnabled: false,
 
   // ── 보이스 라이브러리 ──────────────────────────
   setVoices: (voices) => set({ voices }),
@@ -66,6 +73,30 @@ const useVoiceStore = create((set) => ({
       ),
     })),
 
+  // GET /voice-locks 응답 반영
+  setVoiceLocks: (data) =>
+    set({
+      voiceLocks: data?.voiceLocks ?? [],
+      allLocked: Boolean(data?.allLocked),
+      nextStepEnabled: Boolean(data?.nextStepEnabled),
+    }),
+
+  // 현재 story 기준 대상별 잠금 상태 재조회 (연결/잠금/해제 후 호출)
+  refreshVoiceLocks: async () => {
+    const storyId = get().story?.storyId
+    if (!storyId) return
+    try {
+      const data = await getVoiceLocks(storyId)
+      set({
+        voiceLocks: data?.voiceLocks ?? [],
+        allLocked: Boolean(data?.allLocked),
+        nextStepEnabled: Boolean(data?.nextStepEnabled),
+      })
+    } catch {
+      // 일시 오류는 다음 호출/폴링에서 복구
+    }
+  },
+
   // ── 선택/상태 ──────────────────────────────────
   setSelectedTarget: (selectedTarget) => set({ selectedTarget }),
   setSelectedVoiceId: (selectedVoiceId) => set({ selectedVoiceId }),
@@ -83,6 +114,9 @@ const useVoiceStore = create((set) => ({
       loading: false,
       error: null,
       message: null,
+      voiceLocks: [],
+      allLocked: false,
+      nextStepEnabled: false,
     }),
 }))
 

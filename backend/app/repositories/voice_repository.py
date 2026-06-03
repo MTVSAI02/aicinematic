@@ -1,6 +1,9 @@
+from ..core.config import VOICE_STORAGE_DIR, storage_url
+
 # 기본 나레이션 보이스 preset 4개 (서버 시작 시 seed).
 # 고정 voiceId를 쓴다 → 재시작/생성 순서와 무관하게 같은 ID로 참조 가능.
-# 실제 클로닝/샘플 음성(sampleAudioUrl)은 AI/TTS 파트가 채운다(현재 null).
+# 미리듣기 샘플은 고정 자산: storage/voices/{voiceId}/sample.wav 파일이 있으면 그 URL을 sampleAudioUrl로 노출,
+# 없으면 None("샘플 없음"). 파일은 도연님이 준 wav를 해당 폴더에 넣어두면 재시작 시 자동으로 잡힌다.
 DEFAULT_NARRATOR_VOICE_PRESETS: list[dict] = [
     {
         "voiceId": "voice_preset_narrator_calm_001",
@@ -44,12 +47,25 @@ class VoiceRepository:
         self._counter: int = 0
         self.seed_default_narrator_voices()
 
+    @staticmethod
+    def _preset_sample_url(voice_id: str) -> str | None:
+        """preset 미리듣기 샘플 URL. storage/voices/{voiceId}/sample.wav 가 있으면 그 URL, 없으면 None."""
+        if (VOICE_STORAGE_DIR / voice_id / "sample.wav").exists():
+            return storage_url("voices", voice_id, "sample.wav")
+        return None
+
     def seed_default_narrator_voices(self) -> None:
-        """기본 나레이션 보이스 preset을 메모리에 넣는다. (이미 있으면 건너뜀)"""
+        """기본 나레이션 보이스 preset을 메모리에 넣는다.
+
+        이미 있으면 메타는 두고 sampleAudioUrl만 파일 존재 여부로 다시 평가한다.
+        (샘플 wav를 나중에 폴더에 넣고 재시작해도 바로 잡히도록.)
+        """
         for preset in DEFAULT_NARRATOR_VOICE_PRESETS:
             voice_id = preset["voiceId"]
+            sample_url = self._preset_sample_url(voice_id)
             if voice_id in self._voices:
-                continue  # 중복 seed 방지 (idempotent)
+                self._voices[voice_id]["sampleAudioUrl"] = sample_url  # 파일 들어오면 갱신
+                continue
             self._voices[voice_id] = {
                 "voiceId": voice_id,
                 "name": preset["name"],
@@ -57,9 +73,9 @@ class VoiceRepository:
                 "voicePrompt": preset["voicePrompt"],
                 "voiceType": "narrator",
                 "isPreset": True,
-                # preset은 선택 가능한 상태로 노출. 단 미리듣기 샘플은 아직 없음(AI가 채움).
                 "status": "ready",
-                "sampleAudioUrl": None,
+                # 고정 샘플 파일이 있으면 URL, 없으면 None("샘플 없음")
+                "sampleAudioUrl": sample_url,
                 # provider/model은 AI 내부 메타. 응답엔 노출 안 하지만 내부엔 자리 보관.
                 "provider": None,
                 "model": None,

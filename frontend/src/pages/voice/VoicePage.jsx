@@ -1,53 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useVoiceStore from '@/store/useVoiceStore'
 import useStoryStore from '@/store/useStoryStore'
 import { getVoices } from '@/api/voices'
-import { getStories } from '@/api/stories'
+import { getStories, getVoiceLocks } from '@/api/stories'
 import { getCharacters } from '@/api/characters'
-import { getVoiceComfyHealth } from '@/api/ai'
 import { getApiErrorMessage } from '@/utils/apiError'
-import AiConnectionCheck from '@/components/AiConnectionCheck'
 import VoiceTargetPanel from '@/components/voices/VoiceTargetPanel'
 import VoiceLibrary from '@/components/voices/VoiceLibrary'
-import SceneTtsPanel from '@/components/voices/SceneTtsPanel'
 import styles from './VoicePage.module.css'
 
-function getCharacterId(character) {
-  return character.characterId ?? character.id
-}
-
-function getSceneId(scene) {
-  return scene.sceneId ?? scene.id
-}
-
-function toTtsScene(scene, audioMeta) {
-  const segments = scene.items ?? scene.segments ?? []
-  const items = segments.map((segment, index) => ({
-    itemIndex: segment.itemIndex ?? index,
-    type: segment.type ?? 'narration',
-    speaker: segment.speaker ?? null,
-    text: segment.text ?? segment.line ?? '',
-    emotion: segment.emotion ?? null,
-    emotionLabel: segment.emotionLabel ?? null,
-  }))
-
-  return {
-    id: getSceneId(scene),
-    order: scene.order,
-    items,
-    durationSec: scene.duration ?? scene.durationSec ?? 3,
-    audioPath: audioMeta?.audioPath ?? scene.audioUrl ?? scene.audio_url,
-    audioDurationSec:
-      audioMeta?.audioDurationSec ??
-      scene.audioDurationSec ??
-      scene.audio_duration_sec,
-    audioItems: audioMeta?.audioItems ?? scene.audioItems ?? [],
-  }
-}
-
-// 나레이션(story.narratorVoiceId)과 등장 캐릭터(character.voiceId)에 보이스를 연결하는 페이지.
-// /voice 안에서 voiceId 연결과 씬별 TTS 생성/출력을 함께 처리한다.
+// 나레이션/캐릭터에 보이스를 연결하고 대상별로 잠그는 페이지.
+// 모든 필수 대상이 잠겨야 [배경 →] 이 활성화된다(잠금 시 그 대상 TTS가 백그라운드 생성).
+// 씬별 TTS 듣기·타이밍 조정은 /timeline 으로 이동했다(여기서는 연결+잠금만).
 export default function VoicePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -57,15 +22,17 @@ export default function VoicePage() {
 
   const setVoices = useVoiceStore((s) => s.setVoices)
   const setStory = useVoiceStore((s) => s.setStory)
-  const characters = useVoiceStore((s) => s.characters)
   const setCharacters = useVoiceStore((s) => s.setCharacters)
   const setSelectedTarget = useVoiceStore((s) => s.setSelectedTarget)
+  const setVoiceLocks = useVoiceStore((s) => s.setVoiceLocks)
+  const refreshVoiceLocks = useVoiceStore((s) => s.refreshVoiceLocks)
+  const voiceLocks = useVoiceStore((s) => s.voiceLocks)
+  const nextStepEnabled = useVoiceStore((s) => s.nextStepEnabled)
   const message = useVoiceStore((s) => s.message)
   const error = useVoiceStore((s) => s.error)
 
   const [stories, setStories] = useState([])
   const [storyId, setStoryId] = useState(queryStoryId || currentStoryId || '')
-  const [sceneAudioById, setSceneAudioById] = useState({})
   const [loadError, setLoadError] = useState('')
 
   // 진입 시 보이스/스토리 목록/캐릭터 로드
@@ -97,33 +64,27 @@ export default function VoicePage() {
     setSelectedTarget(null)
   }, [storyId, stories, setStory, setSelectedTarget])
 
-  const selectedStory = stories.find((s) => s.storyId === storyId) ?? null
-  const ttsScenes = useMemo(
-    () =>
-      (selectedStory?.scenes ?? []).map((scene) =>
-        toTtsScene(scene, sceneAudioById[getSceneId(scene)]),
-      ),
-    [selectedStory, sceneAudioById],
-  )
-  const characterNameById = useMemo(
-    () =>
-      characters.reduce((result, character) => {
-        result[getCharacterId(character)] = character.name
-        return result
-      }, {}),
-    [characters],
-  )
+  // storyId 별 대상별 잠금 상태 로드 (없으면 비움)
+  useEffect(() => {
+    if (!storyId) {
+      setVoiceLocks({ voiceLocks: [], allLocked: false, nextStepEnabled: false })
+      return
+    }
+    getVoiceLocks(storyId)
+      .then(setVoiceLocks)
+      .catch(() => {})
+  }, [storyId, setVoiceLocks])
+
+  // 생성 중인 대상이 있으면 폴링 (ready/failed 되면 자동 중단)
+  const anyGenerating = voiceLocks.some((l) => l.ttsStatus === 'generating')
+  useEffect(() => {
+    if (!storyId || !anyGenerating) return undefined
+    const timer = setInterval(() => refreshVoiceLocks(), 3000)
+    return () => clearInterval(timer)
+  }, [storyId, anyGenerating, refreshVoiceLocks])
 
   function handleStoryChange(nextStoryId) {
     setStoryId(nextStoryId)
-    setSceneAudioById({})
-  }
-
-  function updateSceneAudio(sceneId, audio) {
-    setSceneAudioById((current) => ({
-      ...current,
-      [sceneId]: audio,
-    }))
   }
 
   return (
@@ -139,14 +100,6 @@ export default function VoicePage() {
         <span>2. 오른쪽 보이스 라이브러리에서 사용할 <b>목소리</b>를 고릅니다.</span>
         <span>3. 연결 버튼을 누르면 그 대상에 목소리가 적용됩니다. (ready 상태만 연결 가능)</span>
       </div>
-
-      {/* 임시: 보이스 전용 경로(프론트→백→AI 보이스 모듈→ComfyUI 읽기전용) 연결 확인.
-          실제 연동 시 삭제 — TEMP_AI_CONNECTION_TEST.md */}
-      <AiConnectionCheck
-        check={getVoiceComfyHealth}
-        label="보이스 AI 서버 연결 확인"
-        okText="보이스 AI 서버 연결됨 ✅"
-      />
 
       <div className={styles.storyBar}>
         <label className={styles.label}>
@@ -186,13 +139,16 @@ export default function VoicePage() {
             </section>
           </div>
 
-          {selectedStory && (
-            <SceneTtsPanel
-              storyId={storyId}
-              scenes={ttsScenes}
-              characterNameById={characterNameById}
-              onSceneAudioGenerated={updateSceneAudio}
-            />
+          {voiceLocks.some((l) => l.ttsStatus === 'failed') ? (
+            <p className={styles.error} style={{ marginTop: 16 }}>
+              음성 생성에 실패한 대상이 있습니다. 다시 시도하거나 잠금을 해제한 뒤 다시 설정해주세요.
+            </p>
+          ) : (
+            <p className={styles.hint} style={{ marginTop: 16 }}>
+              {nextStepEnabled
+                ? '모든 목소리가 잠겼어요. 음성은 백그라운드에서 준비됩니다 — 배경 단계로 넘어가도 돼요.'
+                : '나레이션과 모든 캐릭터의 목소리를 연결하고 잠가야 다음 단계로 이동할 수 있어요.'}
+            </p>
           )}
         </>
       ) : (
@@ -205,7 +161,12 @@ export default function VoicePage() {
         <button className={styles.btnSecondary} onClick={() => navigate('/character')}>
           ← 캐릭터
         </button>
-        <button className={styles.btn} onClick={() => navigate('/background')}>
+        <button
+          className={styles.btn}
+          onClick={() => navigate('/background')}
+          disabled={!storyId || !nextStepEnabled}
+          title={!nextStepEnabled ? '모든 목소리를 잠가야 이동할 수 있어요' : undefined}
+        >
           배경 →
         </button>
       </div>

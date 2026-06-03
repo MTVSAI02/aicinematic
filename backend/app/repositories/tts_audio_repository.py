@@ -28,6 +28,9 @@ class InMemoryTTSAudioRepository:
             if a.get("storyId") == story_id and a.get("sceneId") == scene_id
         ]
 
+    def list_by_story(self, story_id: str) -> list[dict]:
+        return [a for a in self._audios.values() if a.get("storyId") == story_id]
+
     def get(self, audio_id: str) -> dict | None:
         return self._audios.get(audio_id)
 
@@ -58,6 +61,7 @@ class InMemoryTTSAudioRepository:
         for audio_id in targets:
             del self._audios[audio_id]
         return len(targets)
+
 
 
 tts_audio_repository = InMemoryTTSAudioRepository()

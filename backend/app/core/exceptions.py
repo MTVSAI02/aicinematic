@@ -120,6 +120,20 @@ class VoiceNotReadyError(AppException):
     detail = "이 보이스는 아직 사용할 수 없습니다 (클로닝 완료(ready) 후 연결 가능)."
 
 
+class VoiceNotConnectedError(AppException):
+    """대상(나레이션/캐릭터)에 보이스가 아직 연결되지 않아 잠글 수 없음."""
+
+    status_code = 400
+    detail = "먼저 목소리를 연결해주세요."
+
+
+class VoiceLockTargetNotFoundError(AppException):
+    """잠금/해제 대상(targetType/targetId)이 유효하지 않음 (예: 없는 캐릭터)."""
+
+    status_code = 404
+    detail = "잠금 대상을 찾을 수 없습니다."
+
+
 class AIServerError(AppException):
     """우리 AI FastAPI 서버 호출 실패 (연결/설정/응답).
 

@@ -109,3 +109,42 @@ class NarratorVoiceResponse(BaseModel):
             "example": {"storyId": "story_mock_001", "narratorVoiceId": "voice_mock_002"}
         }
     )
+
+
+class VoiceLockItem(BaseModel):
+    """대상(나레이션/캐릭터) 하나의 연결·잠금 상태."""
+
+    targetType: str = Field(description="narration 또는 character")
+    targetId: str = Field(description='"narration" 또는 characterId (미매칭 speaker면 speaker명)')
+    displayName: str = Field(description="나레이션 또는 캐릭터/화자 이름")
+    imageUrl: str | None = Field(default=None, description="캐릭터 썸네일 (나레이션/미매칭이면 null)")
+    matched: bool = Field(description="등장 speaker가 저장된 캐릭터와 매칭됐는지 (false면 잠금 불가)")
+    voiceId: str | None = Field(default=None, description="연결된 보이스 ID (없으면 null)")
+    voiceName: str | None = Field(default=None, description="연결된 보이스 이름")
+    lockStatus: str = Field(description="unlocked / locked")
+    ttsStatus: str = Field(description="idle / generating / ready / failed / stale")
+    reason: str | None = Field(default=None, description="잠금 불가 사유(예: character_not_found)")
+
+
+class VoiceLocksResponse(BaseModel):
+    """GET /voice-locks — 대상별 잠금 상태 + 다음 단계 이동 가능 여부."""
+
+    storyId: str
+    allLocked: bool = Field(description="모든 필수 대상이 locked 인지")
+    nextStepEnabled: bool = Field(
+        description="다음 단계 이동 가능 (= 모든 대상 locked + 실패 대상 없음). generating 은 허용, failed 는 차단"
+    )
+    hasFailed: bool = Field(default=False, description="음성 생성 실패(ttsStatus=failed) 대상이 하나라도 있는지")
+    voiceLocks: list[VoiceLockItem] = Field(default_factory=list)
+
+
+class VoiceLockActionResponse(BaseModel):
+    """POST /voice-locks/{targetType}/{targetId}/lock · /unlock — 해당 대상 상태 + 전체 게이팅."""
+
+    storyId: str
+    targetType: str
+    targetId: str
+    lockStatus: str = Field(description="unlocked / locked")
+    ttsStatus: str = Field(description="idle / generating / ready / failed / stale")
+    allLocked: bool
+    nextStepEnabled: bool
