@@ -2,14 +2,12 @@
 
 흐름: 검증 → voice record(pending) 생성 → reference 오디오 저장
      → voice_clone Job(async): processing → AI 클론 요청(multipart) → sample.wav 저장 → ready / 실패 시 failed.
-- voice.status 는 Job status 와 별개로 직접 관리한다(processing/ready/failed + error).
-- 백그라운드 완료분은 dev_persist 스냅샷에 직접 반영(재시작 후 유지).
+- voice.status 는 Job status 와 별개로 직접 관리한다(processing/ready/failed + error). 결과는 PostgreSQL 영속.
 - ⚠️ 캐릭터/나레이션 연결은 여기서 하지 않는다 — /voice 페이지의 명시적 연결 API(ready voice만)만 담당.
   (characterId 는 "어떤 캐릭터용으로 만들었나" 메타로만 저장하고, 실제 연결은 안 함)
 - 내부 절대경로는 AI/백엔드 사이에서만 — 응답/저장 노출은 /storage URL 만.
 """
 
-import os
 from datetime import datetime, timezone
 
 from ..core.config import VOICE_STORAGE_DIR, storage_url
@@ -35,18 +33,6 @@ _MAX_AUDIO_BYTES = 20 * 1024 * 1024  # 20MB — 20초 음성 MVP엔 충분(과�
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _persist_dev_snapshot() -> None:
-    """클론 Job 은 HTTP 요청 밖(백그라운드 스레드)에서 끝나 dev_persist 미들웨어가 안 잡는다.
-    SEED_DEV 면 직접 스냅샷 저장 → 재시작 후에도 클론 voice 유지."""
-    if os.getenv("SEED_DEV") == "1":
-        try:
-            from ..core.dev_persist import save_snapshot
-
-            save_snapshot()
-        except Exception:  # noqa: BLE001
-            pass
 
 
 def _ext_of(filename: str | None) -> str | None:
@@ -120,7 +106,6 @@ def create_voice_clone_job(
     # ── voice_clone Job (비동기) ──
     def build_result() -> dict:
         voice_repository.apply_clone_update(voice_id, {"status": "processing", "updatedAt": _now()})
-        _persist_dev_snapshot()
         try:
             res = ai_clone_voice(
                 voice_id=voice_id,
@@ -144,13 +129,11 @@ def create_voice_clone_job(
                     "updatedAt": _now(),
                 },
             )
-            _persist_dev_snapshot()
             return {"voiceId": voice_id, "status": "ready", "sampleAudioUrl": sample_url}
         except Exception as e:  # noqa: BLE001  (voice.status=failed 로 남기고 Job 도 실패시킴)
             voice_repository.apply_clone_update(
                 voice_id, {"status": "failed", "error": str(e), "updatedAt": _now()}
             )
-            _persist_dev_snapshot()
             raise
 
     resp = job_manager.run_async(

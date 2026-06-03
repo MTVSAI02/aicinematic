@@ -85,30 +85,6 @@ from .repositories.voice_repository import voice_repository as _voice_repo  # no
 
 _voice_repo.seed_default_narrator_voices()
 
-# ── ⚠️ 임시 개발 시드 (SEED_DEV=1) ──────────────────────────────────────────────
-# 모든 도메인이 PostgreSQL 로 이전됨 → 더 이상 JSON 스냅샷을 쓰지 않는다(DB 가 영속 저장소).
-# startup 에서 dev_state.json(있으면)을 DB 로 1회 부트스트랩(idempotent)하고, 비어있으면 최소 시드한다.
-# 실제 생성 흐름이 안정화되면 이 블록 + core/dev_seed.py + core/dev_persist.py 를 제거한다.
-if os.getenv("SEED_DEV") == "1":
-    from .core.dev_persist import (
-        migrate_devstate_backgrounds_to_db,
-        migrate_devstate_characters_to_db,
-        migrate_devstate_stories_to_db,
-        migrate_devstate_tts_to_db,
-    )
-    from .core.dev_seed import seed_dev_cloned_voices, seed_dev_data
-
-    # 기존 dev_state.json 레코드를 같은 ID로 DB 에 이관(idempotent — 이미 있으면 건너뜀).
-    # FK 순서: 캐릭터/배경 → 스토리(+씬) → tts(씬/스토리 참조).
-    migrate_devstate_characters_to_db()
-    migrate_devstate_backgrounds_to_db()
-    migrate_devstate_stories_to_db()
-    migrate_devstate_tts_to_db()
-    # DB 가 비어있으면(=dev_state 도 없던 fresh) 최소 기본 시드(내부에 비어있을 때만 가드).
-    seed_dev_data()
-    # 임시 클로닝 보이스("내가 만든 보이스") 보장 + 캐릭터 연동.
-    seed_dev_cloned_voices()
-
 
 @app.on_event("startup")
 def _resume_unfinished_tts_jobs():

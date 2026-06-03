@@ -31,16 +31,6 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _persist_dev_snapshot() -> None:
-    if os.getenv("SEED_DEV") != "1":
-        return
-    try:
-        from ..core.dev_persist import save_snapshot
-
-        save_snapshot()
-    except Exception:  # noqa: BLE001 - dev persistence must not break sample generation.
-        pass
-
 
 def _base_ai_tts_url() -> str:
     base_url = (os.getenv("AI_TTS_URL") or "").strip()
@@ -264,7 +254,6 @@ class VoiceSampleService:
                 "updatedAt": _now(),
             },
         )
-        _persist_dev_snapshot()
         return updated
 
     def generate_preset_samples(self) -> list[dict]:
