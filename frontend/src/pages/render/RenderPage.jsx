@@ -7,7 +7,7 @@ import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
 import styles from './RenderPage.module.css'
 
-// /render — 최종 영상 생성·확인 페이지. (무음 mp4 — 오디오/TTS는 후속 단계)
+// /render — 최종 영상 생성·확인 페이지. (타임라인 자막 + 잠근 보이스 TTS 음성을 합성한 mp4)
 // 상태: loading | idle(생성 전) | rendering(생성 중) | done(완료) | error(실패).
 // 기능 로직(POST/GET render, polling, lastRender 복원, 다운로드)은 그대로. UI 구성만 정리.
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -151,12 +151,12 @@ export default function RenderPage() {
           {storyTitle && <span className={styles.storyTitle}>{storyTitle}</span>}
         </div>
         <p className={styles.lead}>
-          타임라인에서 설정한 씬 순서, 배경, 캐릭터, 자막 타이밍을 기준으로 무음 MP4 영상을 생성합니다. 음성/TTS는 후속 단계에서 추가됩니다.
+          타임라인에서 설정한 씬 순서, 배경, 캐릭터, 자막 타이밍에 잠근 보이스의 TTS 음성까지 합성해 MP4 영상을 생성합니다.
         </p>
         <div className={styles.badges}>
           {summary && <span className={styles.badge}>총 {summary.sceneCount}개 씬</span>}
           {summary && <span className={styles.badge}>총 {summary.totalDuration.toFixed(1)}초</span>}
-          <span className={styles.badge}>무음 영상</span>
+          <span className={styles.badge}>음성 포함</span>
           <span className={styles.badge}>MP4</span>
         </div>
       </header>
@@ -173,9 +173,9 @@ export default function RenderPage() {
           <div className={styles.emptyIcon}>🎬</div>
           <h2 className={styles.cardTitle}>아직 생성된 영상이 없습니다</h2>
           <p className={styles.cardDesc}>
-            현재 타임라인 설정을 기반으로 무음 미리보기 영상을 생성합니다. 음성/TTS는 후속 단계에서 추가됩니다.
+            현재 타임라인 설정과 잠근 보이스의 TTS 음성을 합성해 영상을 생성합니다.
           </p>
-          <button className={styles.btnPrimary} onClick={handleRender}>▶ 영상 생성</button>
+          <button className={styles.btnPrimary} onClick={handleRender}>▶ 음성 포함 영상 생성</button>
         </div>
       )}
 
@@ -184,7 +184,7 @@ export default function RenderPage() {
           <div className={styles.spinner} aria-hidden="true" />
           <h2 className={styles.cardTitle}>영상 생성 중</h2>
           <p className={styles.cardDesc}>
-            현재 타임라인을 영상으로 합성하고 있습니다. 배경·캐릭터·자막을 MP4로 변환 중입니다.
+            현재 타임라인을 영상으로 합성하고 있습니다. 배경·캐릭터·자막·음성을 MP4로 변환 중입니다.
           </p>
           <ul className={styles.steps}>
             {RENDER_STEPS.map((s, i) => (
@@ -210,11 +210,11 @@ export default function RenderPage() {
             <video className={styles.video} controls src={`${BASE_URL}${video.videoUrl}`} />
           </div>
           <div className={styles.metaRow}>
-            <span className={styles.badge}>무음 영상</span>
+            <span className={styles.badge}>음성 포함</span>
             <span className={styles.meta}>길이 {Number(video.duration).toFixed(1)}초</span>
             {video.createdAt && <span className={styles.meta}>생성일 {fmtDate(video.createdAt)}</span>}
           </div>
-          <p className={styles.note}>무음 영상입니다. 음성/TTS는 후속 단계에서 추가됩니다.</p>
+          <p className={styles.note}>타임라인에 잠근 보이스의 TTS 음성이 합성된 MP4입니다.</p>
           <div className={styles.actions}>
             <button className={styles.btnPrimary} onClick={handleDownload}>다운로드</button>
             <button className={styles.btnOutline} onClick={handleRender}>다시 생성</button>

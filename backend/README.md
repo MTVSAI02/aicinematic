@@ -443,7 +443,8 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - `totalDuration`은 scene duration 합. `textPreview`는 첫 narration(없으면 dialogue) 80자.
 - scene의 `duration`·`cueTimings`(및 파싱 시 고정된 `order`)은 dev_persist(`SEED_DEV`)로 **재시작 후에도 유지**된다.
 - **render plan**(`build_render_plan` + `GET /api/stories/{storyId}/render-plan`)은 **2차 ffmpeg 렌더가 그대로 쓸 데이터**(duration/배경 imageUrl/캐릭터 layout/자막/`cueTimings`)를 모으는 구조다.
-  - ⚠️ **Voice/TTS는 이번 범위 제외.** ffmpeg 렌더링은 **제외가 아니라 2차(무음 mp4 MVP)** 로 분리 — 1차는 데이터/플랜까지만, mp4 생성 안 함.
+  - ffmpeg 렌더링은 **`POST /api/stories/{storyId}/render`** 로 구현됨: Pillow 프레임 합성(배경·캐릭터·자막) → ffmpeg 단일 패스 인코딩. **타임라인 cue.items[].audioUrl 의 TTS 음성을 adelay+amix 로 mux** → 음성 포함 mp4(`storage/renders/{renderId}.mp4`).
+    - 렌더 전 검증: 모든 필수 보이스 locked + 실패 없음(nextStepEnabled) + cue item audioUrl 존재 → 아니면 400. 오디오>영상이면 `-shortest`(타임라인 "음성 길이에 맞추기"로 맞추는 게 원칙).
 
 ## 비동기 Job / 저장 구조
 
