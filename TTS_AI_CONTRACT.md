@@ -1,8 +1,8 @@
 # TTS 백엔드 ↔ AI/TTS 파트 요청·응답 계약
 
-백엔드가 AI/TTS 파트에 **① 보이스 클로닝**과 **② 음성 합성**을 요청할 때의 계약이다.
-대상 모델은 **Qwen3-TTS 0.6B-Base**이며, 클로닝 요청은 **multipart 업로드**, 합성 요청은 **JSON**이다.
-(클로닝 요청/저장·합성 payload 구성은 백엔드에 구현돼 있고, 실제 AI 서버 주소(`AI_VOICE_CLONE_URL`/`AI_TTS_URL`)만 연결하면 동작한다.)
+백엔드가 AI/TTS 파트에 **① 보이스 클로닝**과 **② 음성 합성**을 요청할 때의 **JSON 계약**이다.
+(현재 백엔드는 `AI_TTS_URL`이 설정되어 있으면 이 계약으로 실제 AI/TTS 서버에 요청한다.
+`AI_TTS_URL`이 없고 로컬 Qwen 설정도 없으면 합성 파일 없이 `audioUrl=null` 상태로 동작한다.)
 
 > 역할 분리
 > - **Story Parse**: 감정(emotion) 결정
@@ -262,18 +262,42 @@ AI 파트가 자유롭게 선택한다.
 
 ## 참고: 현재 백엔드 상태
 
-> **한 줄 요약:** AI 서버가 받을 수 있는 형태로 **데이터 포장(payload 구성)·결과 저장 구조까지는 끝났다.** 이제 실제 목소리를 만드는 것은 **AI 서버 연결 후** 가능하다.
+- **보이스 라이브러리**: `POST/GET/PATCH/DELETE /api/voices` 구현됨(mock). voiceId 발급·메타 저장만 하고 클로닝 결과(provider/model/sampleAudioUrl/status)는 비워둔다.
+- **캐릭터 연결**: `PATCH /api/characters/{id}/voice`로 캐릭터에 voiceId 연결(보이스 삭제 시 참조 캐릭터 voiceId는 null 캐스케이드).
+- **TTS**: `POST /api/tts/scene`은 audio target을 만들고 `AI_TTS_URL`이 있으면 `{AI_TTS_URL}/tts`로 요청한다. dialogue speaker→캐릭터(name 매칭)→characterId/voiceId 복사는 **이미 동작**한다(목소리 참조까지 흐름, 합성은 AI/TTS 서버).
+- `AI_TTS_URL`이 없고 `QWEN_TTS_ENABLED=1`이면 로컬 Qwen fallback을 사용한다. 둘 다 없으면 합성 파일 없이 `audioUrl=null`로 남는다.
 
-- **보이스 라이브러리**: `POST/GET/PATCH/DELETE /api/voices` + **`POST /api/voices/clone`(multipart, §1.0)** 구현됨. 클론 요청 시 reference 오디오를 `storage/voices/{voiceId}/reference.*`에 저장하고 AI에 전달, 응답(sample)을 `sample.wav`로 저장하며 `status`/`sampleAudioUrl`/`provider`/`model`을 갱신한다. (voice 삭제 시 `storage/voices/{voiceId}/` 폴더째 정리)
-- **캐릭터/나레이션 연결**: `PATCH /api/characters/{id}/voice`(캐릭터), `PATCH /api/stories/{id}/narrator-voice`(나레이션). 연결 조건은 `status=ready`만(voiceType 제한 없음). 보이스 삭제 시 참조는 null 캐스케이드.
-- **TTS 합성** (`POST /api/tts/scene`, `tts_service.py`):
-  - **`AI_TTS_URL` 미설정** → mock 동작(`audioUrl=null`). 실제 음성 없음.
-  - **`AI_TTS_URL` 설정** → AI 서버(`{AI_TTS_URL}/tts`)로 §2 payload 전송. (`QWEN_TTS_ENABLED=1`이면 로컬 Qwen 어댑터)
-  - 백엔드는 **AI payload 구성(reference/emotion/character prompt 포함)과 응답 저장 구조까지 준비됨** — AI 응답의 `audioId→audioUrl`을 `TTSAudio`에 반영(부분 실패 허용).
-  - dialogue speaker→캐릭터(name 매칭)→characterId/voiceId 복사는 이미 동작.
+> **한 줄 요약:** AI 서버가 받을 수 있는 형태로 **데이터 포장(payload 구성)·결과 저장 구조까지는 끝났다.** 이제 실제 목소리를 만드는 것은 **AI 서버 연결 후** 가능하다.
 - 백엔드 TTS/Voice 구조·필드 상세는 `backend/README.md`의 "TTS(음성 생성) API" / "보이스(Voice) 라이브러리" 참고.
 
 ---
+
+## Remote ComfyUI TTS adapter URL rule
+
+When the AI/TTS process runs on a different PC from the backend, `audioUrl`
+must be playable from the teammate's browser. Prefer returning an absolute URL:
+
+```json
+{
+  "audioId": "audio_mock_001",
+  "audioUrl": "http://192.168.0.23:8100/view?filename=tts_xxx.wav&type=output",
+  "durationSec": 3.2,
+  "error": null
+}
+```
+
+The bundled `ai.voice.tts_server` is a ComfyUI adapter for this contract. It
+receives `POST /tts`, queues the configured ComfyUI voice workflow, then returns
+an adapter-hosted URL such as `/view?...` or `/tts-output/tts_xxx.wav`.
+
+Keep the backend unchanged: the remote TTS adapter should return an absolute
+`audioUrl` by using `AI_TTS_PUBLIC_BASE_URL` or the incoming request base URL.
+Do not rely on the backend to rewrite a relative URL.
+
+For ComfyUI workflows that need engine-specific voice inputs, the adapter can
+translate backend `voiceId` into values like `speaker`, `refAudio`, or `refText`
+through `COMFYUI_TTS_VOICE_MAP_PATH`. The backend still sends the stable
+contract fields; only the shared PC adapter owns this ComfyUI-specific mapping.
 
 ## 6. 통합 테스트 체크리스트 (AI 서버 연결 후)
 
@@ -290,3 +314,4 @@ AI 파트가 자유롭게 선택한다.
 
 ### 6.3 preset 나레이터(4개) 확인
 - preset voiceId는 `referenceAudioUrl/referenceText`가 **null**일 수 있다 → AI 서버가 그 preset voiceId의 기본 speaker/prompt를 **자체 보유**해야 정상 합성된다(§0).
+

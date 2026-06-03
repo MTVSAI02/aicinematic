@@ -1,0 +1,34 @@
+{
+  "text": {
+    "nodeId": "REPLACE_TEXT_NODE_ID",
+    "path": ["inputs", "text"]
+  },
+  "voicePrompt": {
+    "nodeId": "REPLACE_VOICE_PROMPT_NODE_ID",
+    "path": ["inputs", "text"]
+  },
+  "emotion": {
+    "nodeId": "REPLACE_EMOTION_NODE_ID",
+    "path": ["inputs", "text"]
+  },
+  "speaker": {
+    "nodeId": "REPLACE_SPEAKER_NODE_ID",
+    "path": ["inputs", "speaker"]
+  },
+  "refAudio": {
+    "nodeId": "REPLACE_REFERENCE_AUDIO_NODE_ID",
+    "path": ["inputs", "audio"]
+  },
+  "refText": {
+    "nodeId": "REPLACE_REFERENCE_TEXT_NODE_ID",
+    "path": ["inputs", "text"]
+  },
+  "sceneSpeaker": {
+    "nodeId": "REPLACE_SCENE_SPEAKER_NODE_ID",
+    "path": ["inputs", "text"]
+  },
+  "seed": {
+    "nodeId": "REPLACE_SEED_NODE_ID",
+    "path": ["inputs", "seed"]
+  }
+}

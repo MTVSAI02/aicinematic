@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin
 
 from ai.voice.qwen3_runtime import DEFAULT_OUTPUT_DIR
 from ai.voice.tts import generate_tts
@@ -15,11 +16,14 @@ QWEN_SPEAKER_BY_VOICE_ID = {
 }
 
 
-def _storage_url_for(path: str) -> str:
+def _storage_url_for(path: str, public_base_url: str | None = None) -> str:
     storage_root = DEFAULT_OUTPUT_DIR.parent.resolve()
     audio_path = Path(path).resolve()
     relative_path = audio_path.relative_to(storage_root)
-    return f"/storage/{relative_path.as_posix()}"
+    storage_url = f"/storage/{relative_path.as_posix()}"
+    if public_base_url:
+        return urljoin(f"{public_base_url.rstrip('/')}/", storage_url)
+    return storage_url
 
 
 def _instruction_for(item: dict[str, Any]) -> str | None:
@@ -47,7 +51,11 @@ def _speaker_for(item: dict[str, Any]) -> str:
     return QWEN_SPEAKER_BY_VOICE_ID.get(voice_id, "sohee")
 
 
-def synthesize_scene_tts(payload: dict[str, Any]) -> dict[str, Any]:
+def synthesize_scene_tts(
+    payload: dict[str, Any],
+    *,
+    public_base_url: str | None = None,
+) -> dict[str, Any]:
     """AI/TTS-side implementation of TTS_AI_CONTRACT.md.
 
     Input:
@@ -85,7 +93,10 @@ def synthesize_scene_tts(payload: dict[str, Any]) -> dict[str, Any]:
             audios.append(
                 {
                     "audioId": audio_id,
-                    "audioUrl": _storage_url_for(result["audio_path"]),
+                    "audioUrl": _storage_url_for(
+                        result["audio_path"],
+                        public_base_url,
+                    ),
                     "durationSec": result.get("duration_sec"),
                     "error": None,
                 }
