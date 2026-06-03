@@ -1,5 +1,6 @@
 from ..core.exceptions import TTSGenerationFailedError
-from ..schemas.job import JobType
+from ..repositories.job_repo import job_repository
+from ..schemas.job import JobStatus, JobType
 from .job_manager import job_manager
 
 
@@ -23,7 +24,24 @@ def create_tts_generation_job(
 
 
 def create_tts_story_generation_job(story_id: str, build_result) -> dict:
-    """Run story-wide TTS generation in the background."""
+    """Run story-wide TTS generation in the background.
+
+    동일 storyId + pending/running 상태의 tts_story_generate job이 이미 있으면
+    새 job을 만들지 않고 기존 job을 반환한다(중복 생성 방지).
+    """
+    existing = [
+        j for j in job_repository.list_unfinished(JobType.tts_story_generate.value)
+        if j.get("storyId") == story_id
+        or (j.get("payload") or {}).get("storyId") == story_id
+    ]
+    if existing:
+        job = existing[-1]  # 가장 최근 pending/running job
+        return {
+            "jobId": job["jobId"],
+            "status": job["status"],
+            "message": "이미 TTS 생성 중인 job이 있습니다.",
+        }
+
     return job_manager.run_async(
         JobType.tts_story_generate.value,
         build_result,
