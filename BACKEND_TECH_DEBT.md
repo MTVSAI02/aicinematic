@@ -74,18 +74,12 @@
 
 ## 2. 이미 관리됨 / 팀 결정 — 추가 조치 안 함
 
-### 2.1 임시 `routers/ai_health.py` (`GET /api/ai/comfy-health`)
-- 제거 시점·체크리스트는 [`TEMP_AI_CONNECTION_TEST.md`](TEMP_AI_CONNECTION_TEST.md)로 추적 중.
-- **의존성 연결고리**: 이 임시 라우터가 `ai.comfy_client` → `httpx`를 끌어와 backend 런타임에 httpx 의존이 생겼다.
-  그래서 `backend/requirements.txt`에 httpx를 넣었다.
-  → **ai_health 제거 시 httpx가 여전히 필요한지 재검토**한다. (backend 본체는 httpx를 직접 쓰지 않음)
-
-### 2.2 `backend/docs/` 가 Git ignored
+### 2.1 `backend/docs/` 가 Git ignored
 - 루트 `.gitignore`의 `docs/` 규칙으로 `backend/docs/`가 무시됨 — **팀이 의도한 결정**(docs는 GitHub에 안 올림).
 - 따라서 커밋되는 기준 문서는 **`backend/README.md`**(코드 변경 시 계속 갱신).
 - 스펙/프롬프트 md는 로컬 작업 문서로만 유지.
 
-### 2.3 `__pycache__/`, `.DS_Store`
+### 2.2 `__pycache__/`, `.DS_Store`
 - `.gitignore`로 차단됨. 무해. 별도 정리 불필요(원하면 로컬에서 삭제 가능).
 
 ---

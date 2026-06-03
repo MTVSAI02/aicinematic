@@ -754,7 +754,7 @@ WAV 또는 MP3 음성 샘플을 업로드해주세요.
 > - 관련 파일: `src/api/characters.js`, `src/utils/apiError.js`, `src/store/useCharacterStore.js`
 > - 카드의 수정/삭제 버튼은 디자인 확정 전 **임시 UI**이며, 기존 CSS 톤(`var(--*)`)을 따른다.
 > - 생성 폼은 입력이 비면 버튼 비활성화 + 그 이유를 안내하는 visible validation 메시지를 보여준다.
-> - ⚠️ 캐릭터/배경의 "AI 서버 연결 확인" 임시 버튼은 외부 AI 서버 연동 완료로 **제거됐다.** 연결 확인 컴포넌트(`components/AiConnectionCheck.jsx`, `src/api/ai.js`, `.aiCheck`)는 현재 **보이스(VoicePage)에서만** 임시로 사용 중이며, TTS 실연동 후 제거 예정 — 제거 체크리스트: 루트 [`TEMP_AI_CONNECTION_TEST.md`](../TEMP_AI_CONNECTION_TEST.md)
+> - ⚠️ "AI 서버 연결 확인" 임시 버튼/컴포넌트(`AiConnectionCheck`, `src/api/ai.js`)는 연결 검증 완료로 **전부 제거됐다.**
 > - 아래 본문(목소리/보이스 클로닝 등)은 이후 단계 설계이며 이번 작업 범위가 아니다.
 
 캐릭터 화면은 단순히 캐릭터 이미지만 다루는 화면이 아닙니다.

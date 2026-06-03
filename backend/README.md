@@ -433,10 +433,13 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
   - `duration`: 기본 3.0, 범위 **1.0~30.0**(위반 422). 누락/초과/중복 scene 목록 → 400, 없는 sceneId → 404.
 - **자막 cue 그룹 타이밍** — 타이밍 단위는 **개별 textOverlay 가 아니라 cue 그룹(`cueOrder`)** 이다. 같은 cueOrder 자막은 한 시간 구간을 공유한다.
   - 타임라인은 **시간만** 소유한다: cue별 `startSec`/`durationSec` 만 편집. 텍스트/위치(layout)/cueOrder/sourceItemIndex 는 scene-editor 소유 — **여기서 변경 안 함**.
-  - 응답 `scene.cueTimings = [{cueOrder, startSec, durationSec, audioUrl, audioDurationSec}]`. 저장값이 없는 cue 는 **씬 duration 균등 분할**로 파생(예: 6초/3 cue → 각 2초, start 0/2/4). cueOrder 는 그 씬 자막(textOverlays)에 실제 존재하는 것만 대상.
-  - 저장 시 검증: `startSec≥0`·`durationSec>0`(Field 422), `startSec+durationSec ≤ scene.duration`·cueOrder 가 씬에 존재·cueOrder 당 1개(중복 금지) 위반 시 **400**.
-  - `audioUrl`/`audioDurationSec` 는 **TTS 확장용 예약 필드(현재 null)**. 확장 규칙 예정: `finalDurationSec = max(userDurationSec, audioDurationSec + 0.4)`. TTS 생성은 이번 범위 아님.
-- `readyStatus`는 백엔드 계산: `hasBackground`(backgroundId 유무) / `hasCharacters`(연결 수>0) / `hasText`(item text 유무). `hasAudio`는 이번 범위 아님.
+  - 응답 `scene.cueTimings = [{cueId, cueOrder, startSec, durationSec, items:[...]}]`. cue 엔 시간(startSec/durationSec)만, 텍스트/화자/음성은 **`items[]`(줄별)**.
+    - `items[] = [{sourceItemIndex, type, speaker, displayName, characterId, characterImageUrl, voiceId, voiceName, audioId, audioUrl, audioDurationSec, ttsStatus, text}]`
+    - 매칭: `cueOrder → textOverlay.sourceItemIndex → tts_audio(storyId, sceneId, itemIndex)`. 1 cue 에 여러 item(=여러 audio) 가능.
+    - 저장값 없는 cue 는 **씬 duration 균등 분할**로 파생(예: 6초/3 cue → 각 2초, start 0/2/4).
+  - 저장 시 검증: `startSec≥0`·`durationSec>0`(Field 422), `startSec+durationSec ≤ scene.duration`·cueOrder 가 씬에 존재·cueOrder 당 1개(중복 금지) 위반 시 **400**. (PATCH body 는 `{cueOrder, startSec, durationSec}` 만 — items 는 응답 전용)
+  - `item.audioUrl` 은 생성된 TTS(`/storage/audio/*.wav`), **`audioDurationSec` 는 백엔드가 wav 파일에서 실측**(AI `/tts` durationSec 미반환 대비). `ttsStatus`: ready/generating/failed/stale/none.
+- `readyStatus`는 백엔드 계산: `hasBackground` / `hasCharacters` / `hasText` + **`hasAudio`(씬의 모든 줄이 ready 인지)** + **`audioStatus`(ready/generating/failed/none)**.
 - `totalDuration`은 scene duration 합. `textPreview`는 첫 narration(없으면 dialogue) 80자.
 - scene의 `duration`·`cueTimings`(및 파싱 시 고정된 `order`)은 dev_persist(`SEED_DEV`)로 **재시작 후에도 유지**된다.
 - **render plan**(`build_render_plan` + `GET /api/stories/{storyId}/render-plan`)은 **2차 ffmpeg 렌더가 그대로 쓸 데이터**(duration/배경 imageUrl/캐릭터 layout/자막/`cueTimings`)를 모으는 구조다.
@@ -494,10 +497,8 @@ Backend  → base64 decode → core/config 경로로 파일 저장 → /storage 
 
 ## ⚠️ 임시 코드 (실제 연동 시 삭제)
 
-- 캐릭터/배경이 외부 AI FastAPI 서버 방식으로 전환되어, ComfyUI 직접 연결 확인 엔드포인트
-  (`/api/ai/comfy-health`, `/api/ai/background-comfy-health`)는 **제거했다.**
-- `GET /api/ai/voice-comfy-health` (`app/routers/ai_health.py`) — **보이스(TTS) 전용**으로만 남겨둔 임시 연결 확인 엔드포인트. TTS 실제 연동 테스트가 끝나면 제거한다.
-- 제거 체크리스트: 루트 [`TEMP_AI_CONNECTION_TEST.md`](../TEMP_AI_CONNECTION_TEST.md)
+- AI 연결 확인용 임시 엔드포인트(`/api/ai/*-comfy-health`, `app/routers/ai_health.py`)는
+  캐릭터/배경/보이스 연결 검증이 끝나 **모두 제거했다.** (프론트 `AiConnectionCheck`/`api/ai.js`도 제거)
 
 ## 추후 구현 예정
 

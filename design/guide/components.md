@@ -24,10 +24,6 @@
 - 전체 페이지 상단 고정
 - 현재 경로 활성화 스타일 자동 적용
 
-### AiConnectionCheck
-- 위치: `frontend/src/components/AiConnectionCheck.jsx`
-- AI 서버 연결 상태 확인 배너
-
 ---
 
 ## 캐릭터 컴포넌트
