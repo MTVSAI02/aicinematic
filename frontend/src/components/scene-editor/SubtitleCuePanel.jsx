@@ -9,15 +9,12 @@ const ALIGNS = [
   ['center', '가운데'],
   ['right', '오른쪽'],
 ]
-// 배경 위 가독성 위해 진하고 대비 강한 색 위주.
+// 배경 위 가독성 좋은 진한 대비색 5종(밝은 파스텔 제외).
 const PALETTE = [
   ['흰색', '#FFFFFF'],
   ['검정', '#111111'],
   ['남색', '#1E3A8A'],
-  ['파랑', '#1D4ED8'],
   ['자주', '#BE123C'],
-  ['보라', '#6D28D9'],
-  ['초록', '#166534'],
   ['갈색', '#92400E'],
 ]
 const DEFAULT_COLOR = '#111111'
@@ -58,31 +55,34 @@ export default function SubtitleCuePanel({
         <b>cue 그룹</b>·<b>정렬</b>을 정하세요. <b>글자색은 씬 전체에 한 번</b> 적용됩니다.
       </span>
 
-      {/* 씬 단위 글자색 (한 번만) */}
+      {/* 씬 단위 글자색 (패널 상단 1회) */}
       {overlays.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', margin: '10px 0' }}>
-          <span className={styles.muted}>씬 자막 색상</span>
-          {PALETTE.map(([label, hex]) => {
-            const sel = curSceneColor === hex.toUpperCase()
-            return (
-              <button
-                key={hex}
-                type="button"
-                title={label}
-                aria-label={label}
-                onClick={() => onSetSceneColor(hex)}
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  background: hex,
-                  border: sel ? '2px solid var(--accent)' : '1px solid var(--border)',
-                  boxShadow: sel ? '0 0 0 2px var(--accent-bg)' : 'none',
-                }}
-              />
-            )
-          })}
+        <div style={{ margin: '10px 0 4px' }}>
+          <div className={styles.subtitleLabel}>씬 자막 색상</div>
+          <div className={styles.muted} style={{ margin: '2px 0 6px' }}>이 씬의 모든 자막에 적용됩니다.</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            {PALETTE.map(([label, hex]) => {
+              const sel = curSceneColor === hex.toUpperCase()
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  title={label}
+                  aria-label={label}
+                  onClick={() => onSetSceneColor(hex)}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    background: hex,
+                    border: sel ? '2px solid var(--accent)' : '1px solid var(--border)',
+                    boxShadow: sel ? '0 0 0 2px var(--accent-bg)' : 'none',
+                  }}
+                />
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -141,7 +141,16 @@ export default function SubtitleCuePanel({
                         onSelectOverlay(o.textOverlayId)
                       }}
                     >
-                      <span className={styles.muted}>
+                      <span
+                        className={styles.muted}
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textAlign: 'left',
+                        }}
+                      >
                         {circled(j)} {o.speaker ? `${o.speaker} · ` : ''}
                         {o.text}
                         {isSel ? ' (선택됨)' : ''}
