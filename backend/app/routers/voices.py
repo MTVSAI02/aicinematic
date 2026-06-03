@@ -1,14 +1,50 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, File, Form, UploadFile
 
 from ..schemas.voice import (
+    VoiceCloneJobResponse,
     VoiceCreateRequest,
     VoiceDeleteResponse,
     VoiceResponse,
     VoiceUpdateRequest,
 )
+from ..services.voice_clone_service import create_voice_clone_job
 from ..services.voice_service import voice_service
 
 router = APIRouter(prefix="/api/voices", tags=["voices"])
+
+
+@router.post("/clone", response_model=VoiceCloneJobResponse, summary="보이스 클로닝 시작(업로드 음성)")
+async def clone_voice(
+    # 텍스트 필드는 Form(None) 으로 받고 빈값/누락 검증은 서비스에서 400 으로 처리(일관성).
+    # audioFile 만 FastAPI 레벨 필수(누락 시 422).
+    name: str | None = Form(None),
+    voiceType: str | None = Form(None, description="narrator | character"),
+    referenceText: str | None = Form(None),
+    voicePrompt: str | None = Form(None),
+    characterId: str | None = Form(None),
+    speakerLabel: str | None = Form(None, description="누가 녹음했는지(엄마/아이/아빠 등). voiceType과 독립"),
+    audioFile: UploadFile = File(...),
+):
+    """업로드한 reference 음성으로 보이스 클로닝 Job 을 시작한다(비동기).
+
+    - multipart/form-data: name, voiceType, referenceText, voicePrompt?, characterId?, audioFile.
+    - voiceId 발급 + reference 저장(storage/voices/{voiceId}/) 후 jobId 반환 → GET /api/jobs/{jobId} 폴링.
+    - voiceType=character + characterId 있으면 그 캐릭터에 voiceId 연결(없는 캐릭터면 404).
+    - 완료 시 sample.wav 저장 + voice.status=ready. 실패 시 status=failed + error. (AI 미설정/실패 → Job failed)
+    - 기존 /api/tts/scene 흐름은 변경 없음.
+    """
+    audio_bytes = await audioFile.read()
+    return create_voice_clone_job(
+        name=name,
+        voice_type=voiceType,
+        reference_text=referenceText,
+        voice_prompt=voicePrompt,
+        character_id=characterId,
+        speaker_label=speakerLabel,
+        audio_bytes=audio_bytes,
+        audio_filename=audioFile.filename,
+        content_type=audioFile.content_type,
+    )
 
 
 @router.post("", response_model=VoiceResponse, summary="보이스 자산 생성")

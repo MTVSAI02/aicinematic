@@ -65,9 +65,15 @@ export default function VoicePage() {
     <div className={styles.page}>
       <h1>보이스</h1>
       <p className={styles.help}>
-        나레이션과 등장 캐릭터에 목소리(보이스)를 연결합니다. 왼쪽에서 대상을 고르고, 오른쪽에서 보이스를 선택해 연결하세요.
-        나레이션엔 나레이션용 보이스만, 캐릭터엔 캐릭터용 보이스만 연결됩니다. 실제 음성·미리듣기 샘플은 AI 단계에서 채워집니다.
+        보이스 라이브러리에 저장된 목소리를 스토리의 <b>나레이션</b>이나 <b>캐릭터</b>에 연결하는 화면이에요.
+        새 목소리를 만들고 싶다면 먼저 음성 입력 페이지에서 목소리를 생성해 주세요.
       </p>
+
+      <div className={styles.infoBox}>
+        <span>1. 왼쪽에서 목소리를 적용할 <b>대상</b>(나레이션·캐릭터)을 선택합니다.</span>
+        <span>2. 오른쪽 보이스 라이브러리에서 사용할 <b>목소리</b>를 고릅니다.</span>
+        <span>3. 연결 버튼을 누르면 그 대상에 목소리가 적용됩니다. (ready 상태만 연결 가능)</span>
+      </div>
 
       {/* 임시: 보이스 전용 경로(프론트→백→AI 보이스 모듈→ComfyUI 읽기전용) 연결 확인.
           실제 연동 시 삭제 — TEMP_AI_CONNECTION_TEST.md */}
@@ -93,6 +99,9 @@ export default function VoicePage() {
             ))}
           </select>
         </label>
+        <p className={styles.hint} style={{ marginTop: 6 }}>
+          나레이션 연결은 이 스토리에만 적용돼요. 캐릭터 목소리는 캐릭터에 저장되어 다른 스토리에서도 같이 쓰입니다.
+        </p>
       </div>
 
       {loadError && <p className={styles.error}>{loadError}</p>}
@@ -102,11 +111,11 @@ export default function VoicePage() {
       {storyId ? (
         <div className={styles.layout}>
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>연결 대상</h2>
+            <h2 className={styles.panelTitle}>목소리를 적용할 대상</h2>
             <VoiceTargetPanel />
           </section>
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>보이스 라이브러리</h2>
+            <h2 className={styles.panelTitle}>연결할 목소리 선택</h2>
             <VoiceLibrary />
           </section>
         </div>

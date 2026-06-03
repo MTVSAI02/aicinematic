@@ -1,3 +1,5 @@
+from __future__ import annotations  # list() 메서드가 빌트인 list를 가려 어노테이션 평가가 깨지는 것 방지
+
 import threading
 
 
@@ -11,6 +13,7 @@ class CharacterRepository:
     def __init__(self):
         self._characters: dict = {}
         self._counter: int = 0
+        self._pose_counter: int = 0
         self._lock = threading.Lock()
 
     def reserve_id(self) -> str:
@@ -32,6 +35,10 @@ class CharacterRepository:
             "description": character_data.get("description"),  # 저장/표시용 메타(ComfyUI prompt 미사용)
             "imageUrl": character_data.get("imageUrl"),
             "voiceId": character_data.get("voiceId"),  # 보이스 라이브러리 참조 (없으면 None)
+            # AI 서버 원본 경로(포즈 생성 reference용, 내부 전용). CharacterResponse엔 노출 안 함. 없으면 None.
+            "aiImagePath": character_data.get("aiImagePath"),
+            # 캐릭터별 생성된 포즈 목록(1:N). 포즈 생성 Job 완료 시 append. (별도 repo 대신 레코드에 둠 → dev_persist로 유지)
+            "poses": character_data.get("poses") or [],
         }
         with self._lock:
             self._characters[character_id] = saved
@@ -90,6 +97,30 @@ class CharacterRepository:
                 del self._characters[character_id]
                 return True
             return False
+
+    # ── 포즈 (캐릭터 1:N) ─────────────────────────────────────
+    def reserve_pose_id(self) -> str:
+        """poseId만 발급한다(저장 X). 생성 성공 후 add_pose로 저장."""
+        with self._lock:
+            self._pose_counter += 1
+            return f"pose_mock_{self._pose_counter:03d}"
+
+    def add_pose(self, character_id: str, pose: dict) -> dict | None:
+        """캐릭터의 poses 목록에 포즈를 추가한다. 캐릭터 없으면 None."""
+        with self._lock:
+            character = self._characters.get(character_id)
+            if not character:
+                return None
+            character.setdefault("poses", []).append(pose)
+            return pose
+
+    def list_poses(self, character_id: str) -> list | None:
+        """캐릭터의 포즈 목록. 캐릭터 없으면 None(빈 목록과 구분)."""
+        with self._lock:
+            character = self._characters.get(character_id)
+            if character is None:
+                return None
+            return list(character.get("poses") or [])
 
 
 character_repository = CharacterRepository()

@@ -62,6 +62,14 @@ class VoiceResponse(BaseModel):
     status: str
     # 미리듣기 샘플 URL. AI/TTS 파트가 채우며 현재는 null일 수 있음.
     sampleAudioUrl: str | None = None
+    # 클로닝 보이스용 필드(없으면 null). referenceAudioPath(절대경로)는 절대 노출하지 않는다.
+    speakerLabel: str | None = None  # 누가 녹음했는지(엄마/아이/아빠 등). voiceType과 독립.
+    characterId: str | None = None
+    referenceAudioUrl: str | None = None
+    referenceText: str | None = None
+    error: str | None = None
+    createdAt: str | None = None
+    updatedAt: str | None = None
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -82,3 +90,23 @@ class VoiceResponse(BaseModel):
 class VoiceDeleteResponse(BaseModel):
     deleted: bool
     voiceId: str
+
+
+class VoiceCloneJobResponse(BaseModel):
+    """보이스 클로닝 시작(POST /api/voices/clone) 즉시 응답. 상세는 GET /api/jobs/{jobId} 폴링."""
+
+    jobId: str
+    voiceId: str
+    status: str = Field(description="생성 직후 보통 pending")
+    message: str
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "jobId": "job_mock_001",
+                "voiceId": "voice_mock_001",
+                "status": "pending",
+                "message": "Voice cloning job started.",
+            }
+        }
+    )

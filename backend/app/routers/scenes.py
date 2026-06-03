@@ -1,7 +1,11 @@
 from fastapi import APIRouter
 
 from ..schemas.background import SceneBackgroundResponse, SceneBackgroundUpdateRequest
-from ..schemas.character import SceneCharactersResponse, SceneCharacterUpdateRequest
+from ..schemas.character import (
+    SceneCharacterPoseUpdateRequest,
+    SceneCharactersResponse,
+    SceneCharacterUpdateRequest,
+)
 from ..schemas.text_overlay import (
     SceneSubtitleSettingsRequest,
     SceneTextOverlaysResponse,
@@ -71,6 +75,26 @@ def disconnect_scene_character(scene_id: str, character_id: str, storyId: str):
     - 반환: 남은 캐릭터 목록.
     """
     return character_service.disconnect_scene_character(storyId, scene_id, character_id)
+
+
+@router.patch(
+    "/{scene_id}/characters/{character_id}/pose",
+    response_model=SceneCharactersResponse,
+    summary="씬 캐릭터에 포즈 적용/해제 (씬 단위)",
+)
+def set_scene_character_pose(
+    scene_id: str, character_id: str, request: SceneCharacterPoseUpdateRequest
+):
+    """
+    현재 씬의 캐릭터가 쓸 포즈를 지정/해제한다. (전역 원본 이미지는 바꾸지 않음 — 씬 단위 override)
+
+    - body: `{"storyId": "...", "poseId": "pose_mock_001"}` — `poseId=null`이면 기본(원본) 이미지로.
+    - story/scene 없음 → 404, 씬에 연결 안 된 캐릭터 → 404, 그 캐릭터의 포즈가 아니면 → 404.
+    - 반환: 그 씬의 캐릭터 목록(각 항목에 poseId 포함).
+    """
+    return character_service.set_scene_character_pose(
+        request.storyId, scene_id, character_id, request.poseId
+    )
 
 
 @router.patch(

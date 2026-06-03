@@ -1,21 +1,35 @@
 from ..core.exceptions import (
-    InvalidNarratorVoiceError,
     StoryNotFoundError,
     VoiceNotFoundError,
+    VoiceNotReadyError,
 )
+from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
+from .image_resolve import resolve_character_display_image
 from .story_parser import parse_script_to_scenes
 from .text_overlay_service import build_text_overlays
 
 
 def _serialize_story(story: dict) -> dict:
-    """응답용으로 각 scene에 파생 자막(textOverlays)을 끼워 넣는다.
+    """응답용 직렬화: 각 scene에 파생 자막(textOverlays)과, 씬 캐릭터의 표시 imageUrl을 끼워 넣는다.
 
-    자막은 items+subtitleSettings에서 백엔드가 단일 소스로 조립한다(프론트는 받아 렌더만).
-    저장 dict는 건드리지 않도록 얕은 복사본을 만든다(파생값을 저장소에 남기지 않음).
+    - 자막: items+subtitleSettings로 백엔드가 단일 소스 조립(프론트는 렌더만).
+    - 캐릭터 표시 이미지: poseId 적용 시 포즈 이미지로 해석해 내려준다(프론트가 poses 전체를 들 필요 없음).
+    저장 dict는 건드리지 않도록 얕은 복사본만 만든다(파생값을 저장소에 남기지 않음).
     """
-    scenes = [{**sc, "textOverlays": build_text_overlays(sc)} for sc in story.get("scenes", [])]
+    scenes = []
+    for sc in story.get("scenes", []):
+        chars = [
+            {
+                **ch,
+                "imageUrl": resolve_character_display_image(
+                    character_repository.get(ch.get("characterId")), ch.get("poseId")
+                ),
+            }
+            for ch in sc.get("characters", [])
+        ]
+        scenes.append({**sc, "characters": chars, "textOverlays": build_text_overlays(sc)})
     return {**story, "scenes": scenes}
 
 
@@ -46,9 +60,9 @@ class StoryService:
     def update_narrator_voice(self, story_id: str, voice_id: str | None) -> dict:
         """나레이션 보이스를 연결/해제한다.
 
-        voiceId가 있으면 그 보이스 존재(없으면 VoiceNotFoundError)와
-        voiceType=="narrator"(아니면 InvalidNarratorVoiceError)를 검증한다.
-        null이면 검증 없이 해제한다. (캐릭터용 character 타입 보이스는 나레이터로 못 붙임)
+        voiceId가 있으면 보이스 존재(없으면 VoiceNotFoundError)와 status=="ready"만 검증한다.
+        voiceType 은 연결을 제한하지 않는다(추천 태그일 뿐) — character 타입도 나레이션에 연결 가능.
+        null이면 검증 없이 해제한다.
         """
         if self._story_repo.get(story_id) is None:
             raise StoryNotFoundError()
@@ -56,8 +70,8 @@ class StoryService:
             voice = self._voice_repo.get(voice_id)
             if voice is None:
                 raise VoiceNotFoundError()
-            if voice.get("voiceType") != "narrator":
-                raise InvalidNarratorVoiceError()
+            if voice.get("status") != "ready":
+                raise VoiceNotReadyError()
         updated = self._story_repo.set_narrator_voice(story_id, voice_id)
         return {
             "storyId": updated["storyId"],

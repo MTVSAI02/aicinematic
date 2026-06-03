@@ -1,0 +1,89 @@
+/* 캐릭터 포즈 패널 전용 스타일 (페이지 CSS에 의존하지 않도록 분리). 디자인 토큰 사용. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 13px;
+  width: 100%;
+  resize: vertical;
+  min-height: 48px;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.textarea::placeholder { color: var(--text); }
+.textarea:focus { outline: none; border-color: var(--accent); }
+
+.btn {
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.status { font-size: 13px; color: var(--accent); margin: 4px 0 0; }
+.error { font-size: 13px; color: var(--danger); margin: 4px 0 0; }
+
+/* 패널 박스 (씬 편집 캐릭터 패널에서 인라인) */
+.posePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 4px;
+  padding: 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+}
+.poseTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+/* 포즈/기본 카드 그리드 (클릭=이 씬에 적용) */
+.poseGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.poseCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 120px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 2px;
+}
+.poseCardActive { border-color: var(--accent); }
+.poseImg {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.posePrompt {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

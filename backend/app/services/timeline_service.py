@@ -6,6 +6,7 @@
 """
 
 from ..core.exceptions import (
+    CueTimingValidationError,
     SceneNotFoundError,
     StoryNotFoundError,
     TimelineValidationError,
@@ -13,6 +14,7 @@ from ..core.exceptions import (
 from ..repositories.background_repository import background_repository
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
+from .image_resolve import resolve_character_display_image
 from .text_overlay_service import build_text_overlays
 
 DEFAULT_DURATION = 3.0
@@ -75,9 +77,31 @@ class TimelineService:
                 {
                     "characterId": char.get("characterId"),
                     "name": char.get("name"),
-                    "imageUrl": char.get("imageUrl"),
+                    "imageUrl": resolve_character_display_image(char, ch.get("poseId")),  # 포즈 적용 시 포즈 이미지
                     "layout": ch.get("layout"),  # 합성 미리보기용 배치(씬-캐릭터 항목에 저장됨)
                 }
+            )
+        return result
+
+    def _cue_timings(self, scene: dict) -> list[dict]:
+        """cue 그룹별 타이밍. 저장값 있으면 사용, 없는 cue는 씬 duration 균등 분할 기본값으로 파생.
+
+        cueOrder 는 그 씬 자막(textOverlays)에 실제 존재하는 것만 대상. audioUrl/audioDurationSec 은 TTS 확장용(현재 null).
+        """
+        cue_orders = sorted({o["cueOrder"] for o in build_text_overlays(scene)})
+        stored = {ct.get("cueOrder"): ct for ct in scene.get("cueTimings") or []}
+        dur = _duration_of(scene)
+        n = len(cue_orders)
+        result = []
+        for i, co in enumerate(cue_orders):
+            s = stored.get(co)
+            if s:
+                start, length = float(s.get("startSec", 0.0)), float(s.get("durationSec", 0.0))
+            else:
+                length = round(dur / n, 3) if n else dur
+                start = round(i * length, 3)
+            result.append(
+                {"cueOrder": co, "startSec": start, "durationSec": length, "audioUrl": None, "audioDurationSec": None}
             )
         return result
 
@@ -90,6 +114,7 @@ class TimelineService:
             "background": self._background_summary(scene),
             "characters": self._character_summaries(scene),
             "textOverlays": build_text_overlays(scene),
+            "cueTimings": self._cue_timings(scene),
             "readyStatus": _ready_status(scene),
         }
 
@@ -102,11 +127,13 @@ class TimelineService:
 
     # ── 저장 ──────────────────────────────────────────────
     def update_timeline(self, story_id: str, scene_updates: list) -> dict:
-        """전체 scene 목록을 받아 각 scene 의 재생 길이(duration)를 저장한다.
+        """전체 scene 목록을 받아 각 scene 의 재생 길이(duration)와 cue 타이밍을 저장한다.
 
         - 순서(order)는 스토리 원본 그대로 유지한다(타임라인은 재배치하지 않음).
         - 요청은 story 의 모든 scene 을 정확히 한 번씩 포함해야 한다(누락/초과/중복 → 400).
-        - 존재하지 않는 sceneId → 404. duration 범위는 Pydantic Field(422)에서 막힘.
+        - 존재하지 않는 sceneId → 404. duration/cue 범위는 Pydantic Field(422)에서 막힘.
+        - **원자적(atomic)**: 모든 scene 을 먼저 검증한 뒤 한 번에 반영한다.
+          한 scene 이라도 실패하면 아무 scene 도 바뀌지 않는다(부분 반영 방지).
         """
         story = self._get_story_or_404(story_id)
         story_scenes = {s.get("sceneId"): s for s in story.get("scenes", [])}
@@ -120,11 +147,58 @@ class TimelineService:
         if len(req_ids) != len(set(req_ids)) or set(req_ids) != set(story_scenes.keys()):
             raise TimelineValidationError()
 
-        # duration 만 저장 (in-memory dict 직접 갱신 → dev_persist 로 유지). order 는 건드리지 않음.
+        # 1) 검증 + 적용값 계산만 (아직 scene 에 쓰지 않음). 실패하면 여기서 raise → 반영 0건.
+        planned = []  # (scene, new_duration, new_cue_timings | None)
         for su in scene_updates:
-            story_scenes[su.sceneId]["duration"] = float(su.duration)
+            scene = story_scenes[su.sceneId]
+            new_duration = float(su.duration)
+            if su.cueTimings is not None:
+                new_cues = self._validate_cue_timings(scene, new_duration, su.cueTimings)
+            else:
+                # cueTimings 미전송: 기존 저장값을 새 duration 안으로 클램프(초과분 정리 → render-plan 일관성)
+                new_cues = self._clamp_stored_cue_timings(scene, new_duration)
+            planned.append((scene, new_duration, new_cues))
+
+        # 2) 검증 통과 후 한 번에 반영. order/텍스트/배치는 안 건드림. dev_persist 로 유지.
+        for scene, new_duration, new_cues in planned:
+            scene["duration"] = new_duration
+            if new_cues is not None:
+                scene["cueTimings"] = new_cues
 
         return self.get_timeline(story_id)
+
+    def _validate_cue_timings(self, scene: dict, duration: float, cue_timings: list) -> list[dict]:
+        """cue 타이밍 검증 후 저장할 list 를 반환(검증 실패 시 400). startSec/durationSec 범위는 Field(422)에서."""
+        valid_cues = {o["cueOrder"] for o in build_text_overlays(scene)}
+        seen = set()
+        for ct in cue_timings:
+            if ct.cueOrder not in valid_cues:  # 그 씬에 없는 cue
+                raise CueTimingValidationError()
+            if ct.cueOrder in seen:  # cueTiming 은 cueOrder 당 1개
+                raise CueTimingValidationError()
+            seen.add(ct.cueOrder)
+            if ct.startSec + ct.durationSec > duration + 1e-6:  # 씬 duration 초과 금지
+                raise CueTimingValidationError()
+        return [
+            {"cueOrder": ct.cueOrder, "startSec": ct.startSec, "durationSec": ct.durationSec}
+            for ct in cue_timings
+        ]
+
+    def _clamp_stored_cue_timings(self, scene: dict, duration: float) -> list[dict] | None:
+        """duration 변경 등으로 cueTimings 미전송 시, 저장된 cue 를 새 duration 안으로 클램프.
+
+        저장값이 없으면 None(그대로 두면 _cue_timings 가 균등분할 기본값을 파생).
+        """
+        stored = scene.get("cueTimings")
+        if not stored:
+            return None
+        clamped = []
+        for ct in stored:
+            start = min(max(float(ct.get("startSec", 0.0)), 0.0), duration)
+            dur = round(min(float(ct.get("durationSec", 0.0)), duration - start), 3)
+            if dur > 0:
+                clamped.append({"cueOrder": ct.get("cueOrder"), "startSec": round(start, 3), "durationSec": dur})
+        return clamped
 
     # ── render plan (2차 ffmpeg 입력용 데이터 — 실제 렌더/파일생성 안 함) ──
     def build_render_plan(self, story_id: str) -> dict:
@@ -141,7 +215,8 @@ class TimelineService:
                     {
                         "characterId": char.get("characterId"),
                         "name": char.get("name"),
-                        "imageUrl": char.get("imageUrl"),
+                        "imageUrl": resolve_character_display_image(char, ch.get("poseId")),  # 포즈 적용 시 포즈 이미지
+                        "poseId": ch.get("poseId"),
                         "layout": ch.get("layout"),  # x/y/scale/rotation/zIndex/flipX (없으면 None)
                     }
                 )
@@ -165,6 +240,7 @@ class TimelineService:
                     "characters": characters,
                     "subtitles": subtitles,
                     "textOverlays": build_text_overlays(scene),
+                    "cueTimings": self._cue_timings(scene),
                 }
             )
         total = round(sum(s["duration"] for s in scenes), 3)

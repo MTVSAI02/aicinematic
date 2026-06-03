@@ -76,15 +76,42 @@ class VoiceRepository:
             # 사용자 생성 보이스 기본값: character 용도, preset 아님
             "voiceType": voice_data.get("voiceType") or "character",
             "isPreset": False,
+            # 녹음한 사람 표시용(엄마/아이/아빠 등). voiceType(용도)과 독립 — 누가 녹음했는지만 나타냄.
+            "speakerLabel": voice_data.get("speakerLabel"),
+            # 클로닝 연결/입력 (메타 생성 시엔 None)
+            "characterId": voice_data.get("characterId"),
+            "referenceAudioUrl": voice_data.get("referenceAudioUrl"),
+            "referenceText": voice_data.get("referenceText"),
             "sampleAudioUrl": voice_data.get("sampleAudioUrl"),
             # provider/model/sampleAudioUrl은 AI/TTS 파트가 클로닝 후 채운다 (생성 시 None).
             "provider": voice_data.get("provider"),
             "model": voice_data.get("model"),
             # 생성 직후엔 "pending"(AI 클로닝 대기). 실제 클로닝되면 AI 파트가 "ready"로 갱신.
             "status": voice_data.get("status") or "pending",
+            "error": voice_data.get("error"),
+            "createdAt": voice_data.get("createdAt"),
+            "updatedAt": voice_data.get("updatedAt"),
         }
         self._voices[voice_id] = saved
         return saved
+
+    # 클로닝 진행/결과 반영 허용 필드(allowlist). 도메인 밖 임의 키가 voice 레코드에 섞이지 않게 막는다.
+    _CLONE_UPDATE_FIELDS = frozenset(
+        {"status", "sampleAudioUrl", "provider", "model", "error", "referenceAudioUrl", "referenceText", "updatedAt"}
+    )
+
+    def apply_clone_update(self, voice_id: str, data: dict) -> dict | None:
+        """클로닝 진행/결과 필드만 반영한다(allowlist 외 키는 무시).
+
+        update()는 사용자 메타(name/description/voicePrompt)만 허용하므로, AI 결과 반영용으로 별도 메서드를 둔다.
+        """
+        voice = self._voices.get(voice_id)
+        if not voice:
+            return None
+        for key, value in data.items():
+            if key in self._CLONE_UPDATE_FIELDS:
+                voice[key] = value
+        return voice
 
     def list(self) -> list[dict]:
         return list(self._voices.values())

@@ -23,10 +23,12 @@ export default function VoiceCard({ voice }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(voice.name)
 
-  // 대상이 선택돼 있고, 대상이 받는 타입(accept)과 보이스 타입이 일치해야 연결 가능
+  // 연결 가능 조건은 voiceType 이 아니라 status 로 판단한다(추천 태그일 뿐).
+  // 대상이 선택돼 있고 + 보이스가 ready 면 narrator/character 어디든 연결 가능.
+  const isReady = voice.status === 'ready'
   const canConnect =
     selectedTarget &&
-    selectedTarget.accept === voice.voiceType &&
+    isReady &&
     (selectedTarget.type === 'narrator' || Boolean(selectedTarget.characterId))
 
   // 이 보이스가 현재 선택 대상에 이미 연결돼 있는지
@@ -38,6 +40,18 @@ export default function VoiceCard({ voice }) {
         voice.voiceId)
 
   const hasSample = Boolean(voice.sampleAudioUrl)
+  const isFailed = voice.status === 'failed'
+
+  const recommendTag = voice.voiceType === 'narrator' ? '나레이션 추천' : '캐릭터 추천'
+  const statusLabel = isReady ? 'ready (연결 가능)' : isFailed ? '생성 실패' : '생성 중'
+  const targetName = selectedTarget?.type === 'narrator' ? '나레이션' : selectedTarget?.name
+  const connectLabel = connectedHere
+    ? '연결됨'
+    : !isReady
+      ? isFailed ? '연결 불가' : '생성 중'
+      : selectedTarget
+        ? `${targetName}에 연결`
+        : '연결'
 
   async function handleConnect() {
     setError(null)
@@ -87,55 +101,61 @@ export default function VoiceCard({ voice }) {
       <div className={styles.voiceHead}>
         <span className={styles.voiceName}>{voice.name}</span>
         {voice.isPreset && <span className={styles.badge}>기본</span>}
-        <span className={styles.badgeType}>{voice.voiceType}</span>
+        <span className={styles.badgeType}>{recommendTag}</span>
       </div>
 
       {voice.description && <span className={styles.voiceDesc}>{voice.description}</span>}
-      <span className={styles.voiceMeta}>상태: {voice.status}</span>
+      {voice.speakerLabel && <span className={styles.voiceMeta}>녹음: {voice.speakerLabel}</span>}
+      <span className={styles.voiceMeta}>상태: {statusLabel}</span>
 
-      {/* 미리듣기: sampleAudioUrl 있으면 재생, 없으면 "샘플 준비 중"(비활성) */}
-      {hasSample ? (
-        <audio className={styles.audio} controls src={voice.sampleAudioUrl} />
-      ) : (
-        <button className={styles.cardBtn} disabled>
-          샘플 준비 중
-        </button>
-      )}
-
-      {editing ? (
-        <div className={styles.editForm}>
-          <input
-            className={styles.input}
-            value={editName}
-            placeholder="보이스 이름"
-            onChange={(e) => setEditName(e.target.value)}
-          />
-          <div className={styles.cardActions}>
-            <button className={styles.cardBtn} onClick={handleSaveEdit} disabled={!editName.trim()}>
-              저장
-            </button>
-            <button className={styles.cardBtn} onClick={() => setEditing(false)}>
-              취소
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className={styles.cardActions}>
-          <button className={styles.cardBtn} onClick={handleConnect} disabled={!canConnect || connectedHere}>
-            {connectedHere ? '연결됨' : '연결'}
-          </button>
-          {/* preset(isPreset=true)은 수정/삭제 불가 → 버튼 숨김 */}
+      {isFailed ? (
+        /* 실패: 미리듣기/연결/수정 없음 — 안내 + 삭제만 */
+        <>
+          <p className={styles.failNote}>생성 실패 · AI 보이스 서버 연결 후 다시 생성해 주세요.</p>
           {!voice.isPreset && (
-            <>
-              <button className={styles.cardBtn} onClick={() => setEditing(true)}>
-                수정
-              </button>
-              <button className={styles.cardBtn} onClick={handleDelete}>
-                삭제
-              </button>
-            </>
+            <div className={styles.cardActions}>
+              <button className={styles.cardBtn} onClick={handleDelete}>삭제</button>
+            </div>
           )}
-        </div>
+        </>
+      ) : (
+        <>
+          {/* 미리듣기: sampleAudioUrl 있으면 재생, 없으면 "샘플 준비 중"(비활성) */}
+          {hasSample ? (
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <audio className={styles.audio} controls src={voice.sampleAudioUrl} />
+          ) : (
+            <button className={styles.cardBtn} disabled>샘플 준비 중</button>
+          )}
+
+          {editing ? (
+            <div className={styles.editForm}>
+              <input
+                className={styles.input}
+                value={editName}
+                placeholder="보이스 이름"
+                onChange={(e) => setEditName(e.target.value)}
+              />
+              <div className={styles.cardActions}>
+                <button className={styles.cardBtn} onClick={handleSaveEdit} disabled={!editName.trim()}>저장</button>
+                <button className={styles.cardBtn} onClick={() => setEditing(false)}>취소</button>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.cardActions}>
+              <button className={styles.cardBtn} onClick={handleConnect} disabled={!canConnect || connectedHere}>
+                {connectLabel}
+              </button>
+              {/* preset(isPreset=true)은 수정/삭제 불가 → 버튼 숨김 */}
+              {!voice.isPreset && (
+                <>
+                  <button className={styles.cardBtn} onClick={() => setEditing(true)}>수정</button>
+                  <button className={styles.cardBtn} onClick={handleDelete}>삭제</button>
+                </>
+              )}
+            </div>
+          )}
+        </>
       )}
     </li>
   )

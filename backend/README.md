@@ -133,7 +133,9 @@ backend/
 | GET | `/api/stories/{story_id}` | 저장된 스토리 단건 조회 |
 | PATCH | `/api/stories/{story_id}/narrator-voice` | 나레이션 보이스 연결/해제 (body: voiceId, null이면 해제) |
 | POST | `/api/characters/generate` | 캐릭터 생성 Job 요청 (**비동기** → `pending` 반환, 폴링) |
-| GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / background_generate / tts_generate) |
+| GET | `/api/jobs/{job_id}` | Job 상태 조회 (character_generate / character_pose_generate / background_generate / tts_generate) |
+| POST | `/api/characters/{character_id}/poses/generate` | 캐릭터 포즈 생성 Job (body: posePrompt; aiImagePath 없으면 400) |
+| GET | `/api/characters/{character_id}/poses` | 캐릭터 포즈 목록 (1:N) |
 | GET | `/api/characters` | 캐릭터 목록 조회 |
 | POST | `/api/characters` | 캐릭터 결과 직접 저장 |
 | GET | `/api/characters/{character_id}` | 캐릭터 단건 조회 |
@@ -152,9 +154,10 @@ backend/
 | PATCH | `/api/scenes/{scene_id}/character` | 씬에 캐릭터 추가/수정 (**씬당 다중**; body: storyId, characterId, sceneAppearancePrompt?) |
 | DELETE | `/api/scenes/{scene_id}/character/{character_id}` | 씬에서 캐릭터 1명 제거 (query: storyId) |
 | PATCH | `/api/scenes/{scene_id}/subtitles` | 씬 자막 설정 저장 (자막은 items에서 자동 생성; body: storyId, overlays:[{itemIndex, cueOrder, layout}]) |
+| PATCH | `/api/scenes/{scene_id}/characters/{character_id}/pose` | 씬 캐릭터에 포즈 적용/해제 (body: storyId, poseId\|null; 씬 단위) |
 
 | GET | `/api/stories/{story_id}/timeline` | 타임라인 조회 (order 정렬, duration, totalDuration, readyStatus, textPreview, background/character summary) |
-| PATCH | `/api/stories/{story_id}/timeline` | 타임라인 저장 (**전체 scene 목록**; body `scenes:[{sceneId,duration}]`. 순서는 스토리 원본 고정 — duration만 저장) |
+| PATCH | `/api/stories/{story_id}/timeline` | 타임라인 저장 (**전체 scene 목록**; body `scenes:[{sceneId,duration,cueTimings?:[{cueOrder,startSec,durationSec}]}]`. 순서는 스토리 원본 고정 — duration + cue 그룹 타이밍만 저장) |
 | GET | `/api/stories/{story_id}/render-plan` | 렌더 플랜(2차 ffmpeg 렌더용 데이터: duration/배경/캐릭터 layout/자막). 실제 렌더 X |
 
 | GET | `/api/tts?storyId=&sceneId=` | 씬별 TTS 결과 목록 조회 |
@@ -231,8 +234,9 @@ Voice 라이브러리 → voiceId 발급
   - 생성 직후 `status="pending"`(AI 클로닝 대기). 실제 클로닝 결과(provider/model/sampleAudioUrl/status)는 **AI 통합 단계에서 AI 파트가 채운다** — 현재 백엔드엔 그 통로가 없다(TTS `audioUrl`을 백엔드가 채우지 않는 것과 동일).
   - **수정(`PATCH /api/voices/{id}`)은 사용자 메타(`name`/`description`/`voicePrompt`)만** 바꾼다.
   - **삭제(`DELETE /api/voices/{id}`)**: 보이스 제거 + 참조 캐릭터 `voiceId`·스토리 `narratorVoiceId` null 캐스케이드(AI 무관).
-- **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404) + **`voiceType="character"` 검증**(아니면 400, narrator preset을 캐릭터에 못 붙임).
-- **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_preset_narrator_calm_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404. **`voiceType="narrator"`인 보이스만 연결 가능**(character 타입이면 400 Invalid narrator voice) — 즉 현재는 preset 4개만 narrator로 붙는다. (narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠)
+- **연결 제한 기준 = `status=ready`** (voiceType 아님). `voiceType`(narrator/character)은 **추천 태그일 뿐 연결을 제한하지 않는다** — narrator 추천 보이스도 캐릭터에, character 추천 보이스도 나레이션에 연결 가능. ready 아닌(pending/processing/failed) 보이스는 연결 불가(400 Voice not ready).
+- **캐릭터 연결**: `PATCH /api/characters/{id}/voice` body `{"voiceId": "voice_mock_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404) + **`status=="ready"` 검증**(아니면 400). voiceType은 제한하지 않음.
+- **나레이터 연결**: `PATCH /api/stories/{storyId}/narrator-voice` body `{"voiceId": "voice_preset_narrator_calm_001"}` (null이면 해제). 연결 시 보이스 존재 검증(없으면 404), 없는 스토리면 404, **`status=="ready"` 검증**(아니면 400). voiceType 제한 없음(narration은 화자가 없어 캐릭터로 못 붙이므로 story 단위로 둠).
 - **삭제 캐스케이드**: 보이스 삭제 시 그 `voiceId`를 참조하던 **모든 캐릭터의 `voiceId`**와 **스토리의 `narratorVoiceId`**를 null로 만든다(배경 삭제와 동일 정책).
 - **TTS 반영(dialogue)**: dialogue의 `speaker`로 저장된 캐릭터(name 매칭)를 찾아 그 `characterId`/`voiceId`를 audio에 복사. 매칭 캐릭터가 없으면 null. (목소리=character.voiceId 고정, 감정=item.emotion 문장별)
 - **TTS 반영(narration)**: narration은 audio의 voiceId로 **story.`narratorVoiceId`**를 복사한다. 미설정이면 null.
@@ -425,12 +429,17 @@ global handler → main.py에 등록된 app_exception_handler가 AppException을
 - **스토리보드 기반**이다 — 프리미어식 멀티트랙 편집기가 아니다(자유 배치/오디오 파형 편집 X, **순서 재정렬 X**, duration 조절 O).
   - 순서 재정렬을 뺀 이유: 각 씬의 텍스트·보이스·감정이 스토리 순서에 묶여 있어, 재배치하면 서사 흐름이 깨진다. 타임라인의 역할은 재생 길이 조절 + 준비 상태 확인.
 - 조회 `GET /api/stories/{storyId}/timeline`, 저장 `PATCH /api/stories/{storyId}/timeline`.
-  - 저장은 **전체 scene 목록**을 받는다(부분 업데이트 X). body는 `scenes:[{sceneId,duration}]`. `order`는 받지 않으며 **원본 그대로 유지**된다.
+  - 저장은 **전체 scene 목록**을 받는다(부분 업데이트 X). body는 `scenes:[{sceneId,duration,cueTimings?}]`. `order`는 받지 않으며 **원본 그대로 유지**된다.
   - `duration`: 기본 3.0, 범위 **1.0~30.0**(위반 422). 누락/초과/중복 scene 목록 → 400, 없는 sceneId → 404.
+- **자막 cue 그룹 타이밍** — 타이밍 단위는 **개별 textOverlay 가 아니라 cue 그룹(`cueOrder`)** 이다. 같은 cueOrder 자막은 한 시간 구간을 공유한다.
+  - 타임라인은 **시간만** 소유한다: cue별 `startSec`/`durationSec` 만 편집. 텍스트/위치(layout)/cueOrder/sourceItemIndex 는 scene-editor 소유 — **여기서 변경 안 함**.
+  - 응답 `scene.cueTimings = [{cueOrder, startSec, durationSec, audioUrl, audioDurationSec}]`. 저장값이 없는 cue 는 **씬 duration 균등 분할**로 파생(예: 6초/3 cue → 각 2초, start 0/2/4). cueOrder 는 그 씬 자막(textOverlays)에 실제 존재하는 것만 대상.
+  - 저장 시 검증: `startSec≥0`·`durationSec>0`(Field 422), `startSec+durationSec ≤ scene.duration`·cueOrder 가 씬에 존재·cueOrder 당 1개(중복 금지) 위반 시 **400**.
+  - `audioUrl`/`audioDurationSec` 는 **TTS 확장용 예약 필드(현재 null)**. 확장 규칙 예정: `finalDurationSec = max(userDurationSec, audioDurationSec + 0.4)`. TTS 생성은 이번 범위 아님.
 - `readyStatus`는 백엔드 계산: `hasBackground`(backgroundId 유무) / `hasCharacters`(연결 수>0) / `hasText`(item text 유무). `hasAudio`는 이번 범위 아님.
 - `totalDuration`은 scene duration 합. `textPreview`는 첫 narration(없으면 dialogue) 80자.
-- scene의 `duration`(및 파싱 시 고정된 `order`)은 dev_persist(`SEED_DEV`)로 **재시작 후에도 유지**된다.
-- **render plan**(`build_render_plan` + `GET /api/stories/{storyId}/render-plan`)은 **2차 ffmpeg 렌더가 그대로 쓸 데이터**(duration/배경 imageUrl/캐릭터 layout/자막)를 모으는 구조다.
+- scene의 `duration`·`cueTimings`(및 파싱 시 고정된 `order`)은 dev_persist(`SEED_DEV`)로 **재시작 후에도 유지**된다.
+- **render plan**(`build_render_plan` + `GET /api/stories/{storyId}/render-plan`)은 **2차 ffmpeg 렌더가 그대로 쓸 데이터**(duration/배경 imageUrl/캐릭터 layout/자막/`cueTimings`)를 모으는 구조다.
   - ⚠️ **Voice/TTS는 이번 범위 제외.** ffmpeg 렌더링은 **제외가 아니라 2차(무음 mp4 MVP)** 로 분리 — 1차는 데이터/플랜까지만, mp4 생성 안 함.
 
 ## 비동기 Job / 저장 구조

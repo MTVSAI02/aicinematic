@@ -73,6 +73,10 @@ export default function VoiceTargetCard({ target }) {
         <span className={styles.badge}>{isNarrator ? '나레이션' : '캐릭터'}</span>
       </div>
 
+      <span className={styles.voiceDesc}>
+        {isNarrator ? '이야기를 읽어주는 목소리' : '등장인물 대사 목소리'}
+      </span>
+
       {!isNarrator &&
         (target.matched ? (
           <span className={styles.voiceMeta}>{target.characterId}</span>

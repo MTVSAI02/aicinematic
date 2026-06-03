@@ -66,6 +66,13 @@ class TimelineValidationError(AppException):
     detail = "Timeline request must include exactly all scenes of the story (once each)."
 
 
+class CueTimingValidationError(AppException):
+    """자막 cue 타이밍이 잘못됐을 때 (씬에 없는 cueOrder / cueOrder 중복 / 씬 duration 초과)."""
+
+    status_code = 400
+    detail = "Invalid cue timing: cueOrder must exist in the scene, be unique, and fit within the scene duration."
+
+
 class TTSGenerationFailedError(AppException):
     status_code = 500
     detail = "TTS generation failed"
@@ -106,6 +113,13 @@ class InvalidCharacterVoiceError(AppException):
     detail = 'Character voice must have voiceType="character".'
 
 
+class VoiceNotReadyError(AppException):
+    """연결하려는 보이스가 아직 ready 가 아님 (pending/processing/failed). voiceType 은 제한하지 않음."""
+
+    status_code = 400
+    detail = "이 보이스는 아직 사용할 수 없습니다 (클로닝 완료(ready) 후 연결 가능)."
+
+
 class AIServerError(AppException):
     """우리 AI FastAPI 서버 호출 실패 (연결/설정/응답).
 
@@ -115,3 +129,68 @@ class AIServerError(AppException):
 
     status_code = 502
     detail = "AI server request failed"
+
+
+class CharacterPoseSourceMissingError(AppException):
+    """포즈 생성용 원본 경로(aiImagePath)가 없는 캐릭터 (예: 기능 추가 전 생성된 캐릭터)."""
+
+    status_code = 400
+    detail = "이 캐릭터는 포즈 생성용 원본 경로가 없어 다시 생성이 필요합니다."
+
+
+class PoseGenerationFailedError(AppException):
+    status_code = 502
+    detail = "Character pose generation failed"
+
+
+class CharacterPoseNotFoundError(AppException):
+    status_code = 404
+    detail = "Character pose not found"
+
+
+class RenderPlanInvalidError(AppException):
+    """렌더 플랜이 비어 있거나 렌더링 불가(예: scene 0개)."""
+
+    status_code = 400
+    detail = "Render plan is empty or invalid."
+
+
+class FFmpegNotInstalledError(AppException):
+    """ffmpeg 실행 파일을 찾지 못함(env/PATH/번들 모두 없음).
+
+    detail 은 프론트(job.error)에 그대로 노출되므로 사용자용 한국어 문구로 둔다.
+    """
+
+    status_code = 500
+    detail = "ffmpeg가 설치되어 있지 않아 렌더링할 수 없습니다."
+
+
+class FFmpegRenderFailedError(AppException):
+    status_code = 500
+    detail = "Video render (ffmpeg) failed"
+
+
+class VoiceCloneValidationError(AppException):
+    """보이스 클로닝 입력이 잘못됨 (referenceText 비었음, voiceType 잘못 등)."""
+
+    status_code = 400
+    detail = "Invalid voice clone request."
+
+
+class InvalidAudioFileError(AppException):
+    """업로드한 오디오 파일이 없거나 허용 확장자(webm/wav/mp3/m4a)가 아님."""
+
+    status_code = 400
+    detail = "Invalid audio file (allowed: webm/wav/mp3/m4a)."
+
+
+class VoiceCloneFailedError(AppException):
+    status_code = 500
+    detail = "Voice clone failed"
+
+
+class AiVoiceServerError(AppException):
+    """AI 보이스 클로닝 서버 호출 실패 (미설정/연결/응답). detail 이 job.error 로 노출된다."""
+
+    status_code = 502
+    detail = "AI voice clone server request failed"
