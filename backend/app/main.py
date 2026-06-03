@@ -78,8 +78,15 @@ def root():
     return {"service": "Mongsil Bookstore", "status": "running", "docs": "/docs"}
 
 
+# ── 보이스 preset 보장 (DB) ───────────────────────────────────────────────────
+# voices 는 PostgreSQL 로 이전됨. preset 4개는 Alembic 0002 가 시드하지만, startup 에서도
+# idempotent 보장 + sample.wav 존재 여부로 sampleAudioUrl 갱신.
+from .repositories.voice_repository import voice_repository as _voice_repo  # noqa: E402
+
+_voice_repo.seed_default_narrator_voices()
+
 # ── ⚠️ 임시 개발 시드/스냅샷 (SEED_DEV=1) ───────────────────────────────────────
-# ComfyUI/AI 서버 없이 scene-editor를 테스트하기 위한 임시 데이터.
+# ComfyUI/AI 서버 없이 scene-editor를 테스트하기 위한 임시 데이터(아직 in-memory 도메인).
 # storage/dev_state.json 으로 백엔드 재시작에도 유지된다(변경마다 저장).
 # 실제 생성/영구저장이 안정화되면 이 블록 + core/dev_seed.py + core/dev_persist.py 를 제거한다.
 if os.getenv("SEED_DEV") == "1":
