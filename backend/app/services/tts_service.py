@@ -74,6 +74,12 @@ EMOTION_PROMPT = {
     "friendly": "Speak in a warm and friendly tone.",
     "serious": "Speak in a serious and focused tone.",
     "curious": "Speak in a curious and gentle tone.",
+    "worried": "Speak in a worried and careful tone.",
+    "playful": "Speak in a playful and lively tone.",
+    "curt": "Speak in a blunt and slightly cold tone.",
+    "shy": "Speak in a shy and hesitant tone.",
+    "mysterious": "Speak in a mysterious and quiet tone.",
+    "disappointed": "Speak in a disappointed and subdued tone.",
 }
 DEFAULT_EMOTION_PROMPT = EMOTION_PROMPT["neutral"]  # 알 수 없는 emotion → neutral fallback
 

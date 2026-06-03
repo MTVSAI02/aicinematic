@@ -259,6 +259,8 @@ export default function SceneEditorPage() {
     try {
       const res = await updateSceneSubtitles(sceneId, {
         storyId,
+        // 색은 씬 단위(sceneTextColor) — 모든 자막 동일. 정렬은 cue 단위(layout.align).
+        sceneTextColor: nextOverlays.find((o) => o.style?.color)?.style?.color ?? null,
         overlays: nextOverlays.map((o) => ({
           itemIndex: o.sourceItemIndex,
           cueOrder: o.cueOrder,
@@ -290,6 +292,20 @@ export default function SceneEditorPage() {
     persistOverlays(next)
     enterSubtitleCue(cueOrder) // 옮긴 cue 로 따라가서 그 그룹을 편집 중으로
     setSelected({ kind: 'text', id: overlayId })
+  }
+
+  // cue 단위 정렬 변경 → 그 cue 의 모든 item layout.align 통일
+  function handleSetCueAlign(cueOrder, align) {
+    const next = sceneTextOverlays.map((o) =>
+      o.cueOrder === cueOrder ? { ...o, layout: { ...o.layout, align } } : o,
+    )
+    persistOverlays(next)
+  }
+
+  // 씬 단위 글자색 변경 → 그 씬의 모든 자막 style.color 통일(팔레트 hex)
+  function handleSetSceneColor(color) {
+    const next = sceneTextOverlays.map((o) => ({ ...o, style: { ...(o.style || {}), color } }))
+    persistOverlays(next)
   }
 
   // 포즈 적용/해제(씬 단위). poseId=null이면 기본 이미지로. 표시 imageUrl은 story 응답이 해석해 주므로 stories만 갱신.
@@ -476,6 +492,9 @@ export default function SceneEditorPage() {
                   onEnterCue={enterSubtitleCue}
                   onSelectOverlay={(id) => setSelected({ kind: 'text', id })}
                   onSetCueGroup={handleSetCueGroup}
+                  onSetCueAlign={handleSetCueAlign}
+                  sceneTextColor={sceneTextOverlays.find((o) => o.style?.color)?.style?.color ?? null}
+                  onSetSceneColor={handleSetSceneColor}
                 />
               </div>
               {message && <p className={styles.message}>{message}</p>}

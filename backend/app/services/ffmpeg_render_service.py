@@ -17,6 +17,7 @@ from ..core.config import (
     RENDER_STORAGE_DIR,
     RENDER_TMP_DIR,
     RENDER_WIDTH,
+    SUBTITLE_FONT_PATH,
     resolve_ffmpeg_bin,
     storage_path,
     storage_url,
@@ -36,8 +37,9 @@ _SHADOW_ON_DARK = (0, 0, 0, 110)                  # 흰 글자용 약한 검정 
 _SHADOW_ON_LIGHT = (255, 255, 255, 120)           # 검은 글자용 약한 흰 그림자
 _PLACEHOLDER_BG = (28, 28, 38, 255)               # 배경 이미지 없을 때
 
-# 한글 가능한 기본 폰트 후보 (서버에 설치된 것을 찾아 사용 — 사용자에게 폰트 공유 안 함)
+# 자막 폰트 후보: 1순위 = 레포 번들 '학교안심 둥근미소'(디자인 지정), 없으면 시스템 한글 폰트.
 _FONT_CANDIDATES = [
+    str(SUBTITLE_FONT_PATH),                               # 디자인 지정 자막 폰트(OTF)
     "/System/Library/Fonts/AppleSDGothicNeo.ttc",          # macOS
     "/System/Library/Fonts/Supplemental/AppleGothic.ttf",  # macOS
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",       # Linux Noto
@@ -197,19 +199,18 @@ def _draw_subtitle(canvas, ov, w, h):
     cx, cy = float(layout.get("x", 0.5)) * w, float(layout.get("y", 0.85)) * h
     left, top = int(cx - tile_w / 2), int(cy - tile_h / 2)
 
-    # 글자색 자동: style.color 명시되면 그대로, 없으면 자막 영역 배경 밝기로 흰/검 선택.
+    # 글자색: style.color(팔레트 선택) 명시되면 그대로, 없으면 자막 영역 배경 밝기로 흰/검 자동.
     override = _parse_color(style.get("color"))
     if override is not None:
-        text_color, shadow_color = override, _SHADOW_ON_DARK
+        text_color = override
     elif _region_luma(canvas, left, top, left + tile_w, top + tile_h) < _SUBTITLE_LUMA_THRESHOLD:
-        text_color, shadow_color = _TEXT_ON_DARK, _SHADOW_ON_DARK    # 어두운 배경 → 흰 글자
+        text_color = _TEXT_ON_DARK    # 어두운 배경 → 흰 글자
     else:
-        text_color, shadow_color = _TEXT_ON_LIGHT, _SHADOW_ON_LIGHT  # 밝은 배경 → 검은 글자
+        text_color = _TEXT_ON_LIGHT   # 밝은 배경 → 검은 글자
 
-    # 배경 박스 없음(투명 타일). 가독성은 아주 약한 그림자만으로 보완(외곽선 X).
+    # 배경 박스/그림자/외곽선 없음(투명 타일). 글자색만 — 미리보기와 동일.
     tile = Image.new("RGBA", (tile_w, tile_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(tile)
-    sh = max(1, font_px // 22)  # 은은한 그림자 오프셋
     y = pad_y
     for line in lines:
         lw = font.getlength(line)
@@ -219,8 +220,7 @@ def _draw_subtitle(canvas, ov, w, h):
             x = tile_w - pad_x - lw
         else:
             x = (tile_w - lw) / 2
-        draw.text((x + sh, y + sh), line, font=font, fill=shadow_color)  # 약한 그림자
-        draw.text((x, y), line, font=font, fill=text_color)              # 본문
+        draw.text((x, y), line, font=font, fill=text_color)  # 본문(그림자 없음)
         y += line_h + line_gap
 
     rotation = float(layout.get("rotation") or 0) % 360
