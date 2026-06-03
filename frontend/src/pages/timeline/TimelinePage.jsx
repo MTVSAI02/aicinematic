@@ -134,6 +134,8 @@ export default function TimelinePage() {
   // 언마운트 시 보류 중인 저장 타이머 정리
   useEffect(() => () => saveTimer.current && clearTimeout(saveTimer.current), [])
 
+  // TTS job polling: /voice에서 시작된 story TTS job 상태를 추적한다.
+  // completed 되면 TTS audio를 다시 fetch해 씬에 반영한다.
   useEffect(() => {
     if (!storyId) return undefined
     const storedJob = loadTtsStoryJob(storyId)
@@ -333,6 +335,9 @@ export default function TimelinePage() {
     })
   }
 
+  // TTS audio durationSec 기반 cue 자동 싱크.
+  // 해당 씬의 모든 ttsAudioItems에 durationSec가 있을 때만 의미 있는 싱크가 가능하다.
+  // durationSec가 하나라도 없으면 audioCueTimings()가 그 item을 건너뛰어 불완전한 싱크가 된다.
   function handleSyncCuesToAudio(sceneId) {
     setScenes((cur) => {
       const next = cur.map((s) => {
@@ -349,6 +354,34 @@ export default function TimelinePage() {
       persist(next)
       return next
     })
+  }
+
+  // 음성 길이에 맞추기: 각 cue durationSec = audioDurationSec(없으면 기존 유지), startSec 누적, 씬 duration = 합계.
+  // 합계가 30초(씬 최대)를 넘으면 적용/저장하지 않고 안내만(무리한 축소 방지).
+  function handleFitToAudio(sceneId) {
+    setError('')
+    const scene = latestScenes.current.find((s) => s.sceneId === sceneId)
+    const cues = [...(scene?.cueTimings ?? [])].sort((a, b) => a.cueOrder - b.cueOrder)
+    if (cues.length === 0) return
+    // cue 길이 = 그 cue items 음성 합계(없으면 기존 자막 길이 유지)
+    const lengths = cues.map((c) => {
+      const sum = (c.items ?? []).reduce((a, it) => a + (it.audioDurationSec || 0), 0)
+      return sum > 0 ? round3(sum) : c.durationSec
+    })
+    const total = round3(lengths.reduce((a, b) => a + b, 0))
+    if (total > 30) {
+      setError('음성 길이 합계가 씬 최대 길이 30초를 초과합니다. 자막을 줄이거나 씬을 나눠주세요.')
+      return
+    }
+    let acc = 0
+    const newCues = cues.map((t, i) => {
+      const startSec = round3(acc)
+      acc += lengths[i]
+      return { ...t, startSec, durationSec: round3(lengths[i]) }
+    })
+    const newDuration = clampDuration(total)
+    setScenes((cur) => cur.map((s) => (s.sceneId === sceneId ? { ...s, duration: newDuration, cueTimings: newCues } : s)))
+    persist()
   }
 
   if (!storyId) {
@@ -419,12 +452,14 @@ export default function TimelinePage() {
 
           <TimelineSceneDetail
             scene={selectedScene}
+            allScenes={scenes}
             saveStatus={saveStatus}
             playback={playback}
             onDurationChange={handleDurationChange}
             onCueTimingChange={handleCueTimingChange}
             onAutoSplitCues={handleAutoSplitCues}
             onSyncCuesToAudio={handleSyncCuesToAudio}
+            onFitToAudio={handleFitToAudio}
           />
         </>
       )}

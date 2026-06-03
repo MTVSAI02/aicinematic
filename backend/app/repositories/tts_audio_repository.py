@@ -36,6 +36,9 @@ class InMemoryTTSAudioRepository:
             if a.get("storyId") == story_id and a.get("sceneId") == scene_id
         ]
 
+    def list_by_story(self, story_id: str) -> list[dict]:
+        return [a for a in self._audios.values() if a.get("storyId") == story_id]
+
     def get(self, audio_id: str) -> dict | None:
         return self._audios.get(audio_id)
 
@@ -225,6 +228,14 @@ class SQLiteTTSAudioRepository:
                 if current is None or (audio.get("audioUrl") and not current.get("audioUrl")):
                     by_item[item_index] = audio
             return [by_item[key] for key in sorted(by_item)]
+
+    def list_by_story(self, story_id: str) -> list[dict]:
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM tts_audios WHERE story_id = ? ORDER BY scene_id, item_index ASC",
+                (story_id,),
+            ).fetchall()
+            return [self._row_to_audio(row) for row in rows if row]
 
     def get(self, audio_id: str) -> dict | None:
         with self._lock:

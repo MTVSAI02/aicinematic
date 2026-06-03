@@ -54,10 +54,11 @@ workflow 구조가 바뀌어도 **코드 수정 없이 mapping JSON의 nodeId만
 
 ## 연결 확인(health-check) 정리 안내
 
-배경/캐릭터가 외부 AI FastAPI 서버 방식으로 전환되면서, ComfyUI를 직접 찔러보던
-임시 연결 확인 코드(`test_comfy_connection.py` / `test_background_connection.py` /
-`check_background_comfy_connection()` / `GET /api/ai/background-comfy-health`)는 **제거했다.**
-보이스(TTS)는 아직 실제 연동 테스트 전이라 `voice-comfy-health` 경로만 남겨둔다.
+배경/캐릭터/보이스가 외부 AI FastAPI 서버 방식으로 전환되고 연결 검증이 끝나면서,
+ComfyUI를 직접 찔러보던 임시 연결 확인 코드(`test_comfy_connection.py` /
+`test_background_connection.py` / `check_*_comfy_connection()` /
+`GET /api/ai/*-comfy-health` 라우터)는 **모두 제거했다.**
+(`ai/voice/voice.py`의 `check_voice_comfy_connection()`은 AI 모듈에 남아 있지만 백엔드에서 호출하지 않는다.)
 
 ## 아직 구현하지 않은 것
 - 실제 배경 이미지 생성(`POST /prompt` 실행 / workflow 실행), 결과 이미지 수집/저장

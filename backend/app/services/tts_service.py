@@ -1,3 +1,8 @@
+import logging
+
+import httpx
+
+from ..core.config import AUDIO_STORAGE_DIR, storage_url
 from ..core.exceptions import (
     EmptySceneItemsError,
     SceneNotFoundError,
@@ -14,6 +19,36 @@ from ..schemas.job import JobType
 from .job_manager import job_manager
 from .tts_ai_client import tts_ai_client
 from .tts_job_runner import create_tts_generation_job, create_tts_story_generation_job
+
+logger = logging.getLogger(__name__)
+
+# AI 어댑터(ngrok 등)에서 audio 다운로드 시 ngrok 무료 경고 페이지를 우회하는 헤더.
+_AUDIO_DOWNLOAD_HEADERS = {"ngrok-skip-browser-warning": "1"}
+
+
+def _rehost_audio_to_storage(audio: dict) -> dict:
+    """AI가 준 외부 audioUrl(ngrok/ComfyUI)을 백엔드 /storage 로 복사해 브라우저가 바로 재생하게 한다.
+
+    - 브라우저 <audio> 는 ngrok 'skip-browser-warning' 헤더를 못 붙여 경고 HTML 을 받게 됨 → 재생 불가.
+      백엔드가 받아 /storage/audio/{audioId}.wav 로 저장하고 그 URL 로 바꿔 내려준다.
+    - 실패(다운로드 오류/오디오 아님)하면 원본 audioUrl 을 그대로 둔다(부분 실패 허용).
+    """
+    url = audio.get("audioUrl")
+    audio_id = audio.get("audioId")
+    if not url or not audio_id:
+        return audio
+    try:
+        resp = httpx.get(url, headers=_AUDIO_DOWNLOAD_HEADERS, timeout=120, follow_redirects=True)
+        resp.raise_for_status()
+        if not resp.headers.get("content-type", "").startswith("audio/"):
+            logger.warning("TTS audio 재호스팅 건너뜀(오디오 아님): %s", url)
+            return audio  # ngrok 경고 HTML 등 → 원본 유지(깨진 파일 저장 안 함)
+        AUDIO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        (AUDIO_STORAGE_DIR / f"{audio_id}.wav").write_bytes(resp.content)
+        return {**audio, "audioUrl": storage_url("audio", f"{audio_id}.wav")}
+    except Exception as exc:  # noqa: BLE001 - 실패 시 원본 URL 유지
+        logger.warning("TTS audio 재호스팅 실패(%s): %s", audio_id, exc)
+        return audio
 
 # voiceType 매핑: narration → narrator, dialogue → character
 VOICE_TYPE = {
@@ -68,8 +103,150 @@ class TTSService:
         self._character_repo = character_repo
         self._voice_repo = voice_repo
 
+    def _scene_context(self, story_id: str):
+        """씬 합성용 컨텍스트: (narrator_voice_id, name→character 매핑)."""
+        story = self._story_repo.get(story_id)
+        narrator_voice_id = story.get("narratorVoiceId") if story else None
+        chars_by_name = {
+            c.get("name"): c for c in self._character_repo.list() if c.get("name")
+        }
+        return narrator_voice_id, chars_by_name
+
+    def _build_item_target(
+        self, story_id, scene_id, index, item, narrator_voice_id, chars_by_name
+    ) -> dict | None:
+        """단일 item → AI 합성용 target dict. text 빈 item 은 None 반환(원본 itemIndex 유지).
+
+        narration은 story.narratorVoiceId, dialogue는 speaker로 매칭된 캐릭터의 voiceId를 참조.
+        연결된 voice가 없거나 ready가 아니면 voiceId=None → AI가 voiceType 기본 목소리로 fallback.
+        """
+        text = (item.get("text") or "").strip()
+        if not text:
+            return None
+
+        item_type = item.get("type")
+        default_emotion, default_label = DEFAULT_EMOTION.get(item_type, ("neutral", "기본"))
+
+        character_id = None
+        voice_id = None
+        voice = None
+        matched = None
+        if item_type == "dialogue":
+            matched = chars_by_name.get(item.get("speaker"))
+            if matched:
+                character_id = matched.get("characterId")
+                voice_id = matched.get("voiceId")
+        elif item_type == "narration":
+            voice_id = narrator_voice_id
+        if voice_id:
+            voice = self._voice_repo.get(voice_id)
+            if not voice or voice.get("status") != "ready":
+                voice_id = None
+                voice = None
+
+        emotion_value = item.get("emotion") or default_emotion
+        return {
+            "storyId": story_id,
+            "sceneId": scene_id,
+            "itemIndex": index,  # 원본 scene.items의 index 유지
+            "type": item_type,
+            "speaker": item.get("speaker"),
+            "text": item.get("text"),
+            "emotion": emotion_value,
+            "emotionLabel": item.get("emotionLabel") or default_label,
+            # emotion 키 → Qwen 합성용 instruction (unknown 은 neutral fallback)
+            "emotionPrompt": EMOTION_PROMPT.get(emotion_value, DEFAULT_EMOTION_PROMPT),
+            "voiceType": VOICE_TYPE.get(item_type, "narrator"),
+            "characterId": character_id,
+            # dialogue 매칭 캐릭터 이름/말투 prompt (narration·미매칭이면 None)
+            "characterName": matched.get("name") if matched else None,
+            "characterPrompt": _character_prompt(matched),
+            "voiceId": voice_id,  # 실제 합성/클로닝은 AI 파트, 여기선 참조만
+            "voiceName": voice.get("name") if voice else None,
+            "voicePrompt": voice.get("voicePrompt") if voice else None,
+            # Qwen3-TTS 0.6B ref 기반 — AI cache miss 대비(프론트 응답엔 미노출).
+            "referenceAudioUrl": voice.get("referenceAudioUrl") if voice else None,
+            "referenceText": voice.get("referenceText") if voice else None,
+            "audioUrl": None,
+            "durationSec": None,
+            "error": None,
+        }
+
+    def _scene_audio_targets(self, story_id: str, scene: dict) -> list[dict]:
+        """scene.items 전체 → AI 합성용 target 목록."""
+        narrator_voice_id, chars_by_name = self._scene_context(story_id)
+        scene_id = scene.get("sceneId")
+        targets = []
+        for index, item in enumerate(scene.get("items", [])):
+            target = self._build_item_target(
+                story_id, scene_id, index, item, narrator_voice_id, chars_by_name
+            )
+            if target:
+                targets.append(target)
+        return targets
+
+    def _call_ai_and_rehost(self, story_id, scene_id, saved_audios) -> list[dict]:
+        """저장된 audios(audioId 포함)로 AI 합성 → 외부 audioUrl을 /storage로 재호스팅 → 반영.
+
+        해당 audioId 레코드들의 최신 상태를 반환한다. (다른 audio는 건드리지 않음)
+        """
+        if not saved_audios:
+            return []
+        ai_payload = {"storyId": story_id, "sceneId": scene_id, "items": saved_audios}
+        ai_result = tts_ai_client.synthesize_scene(ai_payload)
+        if ai_result and isinstance(ai_result.get("audios"), list):
+            rehosted = [_rehost_audio_to_storage(a) for a in ai_result["audios"]]
+            self._tts_audio_repo.apply_ai_result(rehosted)
+        return [self._tts_audio_repo.get(a["audioId"]) for a in saved_audios]
+
+    def _synthesize_targets(
+        self, story_id: str, scene_id: str, audio_targets: list[dict]
+    ) -> list[dict]:
+        """씬 전체 재생성용(씬 단건 TTS 엔드포인트 전용): 씬 audio 전체 삭제 후 새로 저장+합성."""
+        self._tts_audio_repo.delete_by_scene(story_id, scene_id)
+        saved = self._tts_audio_repo.create_many(audio_targets)
+        self._call_ai_and_rehost(story_id, scene_id, saved)
+        return self._tts_audio_repo.list_by_scene(story_id, scene_id)
+
+    def _synthesize_targets_incremental(
+        self, story_id: str, scene_id: str, audio_targets: list[dict]
+    ) -> list[dict]:
+        """재개용: 이미 audioUrl 있는 item은 스킵하고 없는 것만 생성한다.
+
+        서버 재시작 후 pending/running job 복구 시 호출. 중복 audio row는 audioUrl 있는 것 우선.
+        """
+        existing_by_item = {}
+        for audio in self._tts_audio_repo.list_by_scene(story_id, scene_id):
+            item_index = audio.get("itemIndex")
+            current = existing_by_item.get(item_index)
+            if current is None or (audio.get("audioUrl") and not current.get("audioUrl")):
+                existing_by_item[item_index] = audio
+
+        saved_audios = []
+        pending_audios = []
+        for target in audio_targets:
+            existing = existing_by_item.get(target["itemIndex"])
+            if existing and existing.get("audioUrl"):
+                saved_audios.append(existing)
+                continue
+            saved = self._tts_audio_repo.upsert_target(
+                target,
+                audio_id=existing.get("audioId") if existing else None,
+            )
+            saved_audios.append(saved)
+            pending_audios.append(saved)
+
+        if pending_audios:
+            self._call_ai_and_rehost(story_id, scene_id, pending_audios)
+        return self._tts_audio_repo.list_by_scene(story_id, scene_id)
+
     def generate_scene_tts(self, story_id: str, scene_id: str) -> dict:
-        saved_audios = self._generate_scene_tts_now(story_id, scene_id)
+        scene = self._find_scene(story_id, scene_id)
+        audio_targets = self._scene_audio_targets(story_id, scene)
+        if not audio_targets:
+            raise EmptySceneItemsError()
+        saved_audios = self._synthesize_targets(story_id, scene_id, audio_targets)
+        # tts_generate Job 생성 (즉시 completed)
         return create_tts_generation_job(story_id, scene_id, saved_audios)
 
     def generate_story_tts(self, story_id: str) -> dict:
@@ -103,11 +280,13 @@ class TTSService:
             if not scene_id:
                 continue
             try:
-                audios = self._generate_scene_tts_now(
-                    story_id,
-                    scene_id,
-                    replace_existing=replace_existing,
-                )
+                audio_targets = self._scene_audio_targets(story_id, scene)
+                if not audio_targets:
+                    audios = []
+                elif replace_existing:
+                    audios = self._synthesize_targets(story_id, scene_id, audio_targets)
+                else:
+                    audios = self._synthesize_targets_incremental(story_id, scene_id, audio_targets)
             except EmptySceneItemsError:
                 audios = []
             scene_results.append({"sceneId": scene_id, "audios": audios})
@@ -124,135 +303,77 @@ class TTSService:
             "audios": all_audios,
         }
 
-    def _generate_scene_tts_now(
-        self,
-        story_id: str,
-        scene_id: str,
-        *,
-        replace_existing: bool = True,
-    ) -> list[dict]:
-        audio_targets = self._build_scene_audio_targets(story_id, scene_id)
-        if not audio_targets:
-            raise EmptySceneItemsError()
+    @staticmethod
+    def _item_matches_target(item: dict, target_type: str, character_name: str | None) -> bool:
+        if target_type == "narration":
+            return item.get("type") == "narration"
+        return item.get("type") == "dialogue" and item.get("speaker") == character_name
 
-        if replace_existing:
-            # 재생성 정책: 같은 story+scene 기존 audio 삭제 후 새로 저장 (누적 방지)
-            self._tts_audio_repo.delete_by_scene(story_id, scene_id)
-            saved_audios = self._tts_audio_repo.create_many(audio_targets)
-            pending_audios = saved_audios
-        else:
-            existing_by_item = {}
-            for audio in self._tts_audio_repo.list_by_scene(story_id, scene_id):
-                item_index = audio.get("itemIndex")
-                current = existing_by_item.get(item_index)
-                if current is None or (audio.get("audioUrl") and not current.get("audioUrl")):
-                    existing_by_item[item_index] = audio
-            saved_audios = []
-            pending_audios = []
-            for target in audio_targets:
-                existing = existing_by_item.get(target["itemIndex"])
-                if existing and existing.get("audioUrl"):
-                    saved_audios.append(existing)
-                    continue
-                saved = self._tts_audio_repo.upsert_target(
-                    target,
-                    audio_id=existing.get("audioId") if existing else None,
-                )
-                saved_audios.append(saved)
-                pending_audios.append(saved)
+    def generate_target_audios(
+        self, story_id: str, target_type: str, character_name: str | None = None
+    ) -> dict:
+        """대상별 TTS 생성(보이스 잠금 시 백그라운드 job에서 호출).
 
-        if not pending_audios:
-            return saved_audios
-
-        ai_payload = {
-            "storyId": story_id,
-            "sceneId": scene_id,
-            "items": pending_audios,
-        }
-        ai_result = tts_ai_client.synthesize_scene(ai_payload)
-        if ai_result and isinstance(ai_result.get("audios"), list):
-            self._tts_audio_repo.apply_ai_result(ai_result["audios"])
-            saved_audios = self._tts_audio_repo.list_by_scene(story_id, scene_id)
-        return saved_audios
-
-    def _build_scene_audio_targets(self, story_id: str, scene_id: str) -> list[dict]:
-        scene = self._find_scene(story_id, scene_id)
-
-        # narration용 나레이터 보이스 (story 단위, 없으면 None)
+        그 대상 item만 다룬다 — 다른 대상(다른 캐릭터/나레이션) audio는 유지.
+        **원자성**: 기존 audio를 먼저 지우지 않고 새로 생성한다.
+          - 성공(하나라도 ready): 기존 audio 삭제 후 교체(success-after-replace)
+          - 실패(예외 또는 전부 audioUrl 없음): 새로 만든 것 제거, 기존 ready audio 보존
+        narration: type==narration 전체.  character: speaker==character_name 인 dialogue.
+        """
         story = self._story_repo.get(story_id)
-        narrator_voice_id = story.get("narratorVoiceId") if story else None
+        if story is None:
+            raise StoryNotFoundError()
+        narrator_voice_id, chars_by_name = self._scene_context(story_id)
 
-        # dialogue speaker → 저장된 캐릭터(name) → characterId/voiceId 매핑 준비
-        chars_by_name = {
-            c.get("name"): c for c in self._character_repo.list() if c.get("name")
-        }
+        # 교체 전 기존 대상 audioId (성공 시에만 삭제)
+        old_ids = [
+            a["audioId"]
+            for a in self._tts_audio_repo.list_by_story(story_id)
+            if self._item_matches_target(a, target_type, character_name)
+        ]
+        new_ids: list[str] = []
+        audio_count = 0
+        ready_count = 0
+        try:
+            for scene in story.get("scenes", []):
+                scene_id = scene.get("sceneId")
+                targets = []
+                for index, item in enumerate(scene.get("items", [])):
+                    if not self._item_matches_target(item, target_type, character_name):
+                        continue
+                    target = self._build_item_target(
+                        story_id, scene_id, index, item, narrator_voice_id, chars_by_name
+                    )
+                    if target:
+                        targets.append(target)
+                if not targets:
+                    continue
+                saved = self._tts_audio_repo.create_many(targets)
+                new_ids.extend(a["audioId"] for a in saved)
+                for audio in self._call_ai_and_rehost(story_id, scene_id, saved):
+                    audio_count += 1
+                    if audio and audio.get("audioUrl") and not audio.get("error"):
+                        ready_count += 1
+        except Exception:  # noqa: BLE001 — 새로 만든 것만 정리하고 기존 audio 보존 후 재전파
+            for audio_id in new_ids:
+                self._tts_audio_repo.delete(audio_id)
+            raise
 
-        # scene.items → audio target 변환 (text 빈 item 제외, 원본 itemIndex 유지)
-        audio_targets = []
-        for index, item in enumerate(scene.get("items", [])):
-            text = (item.get("text") or "").strip()
-            if not text:
-                continue  # 방어적: 빈 text item 제외 (itemIndex는 재번호하지 않음)
+        if ready_count > 0:
+            # 성공: 기존 대상 audio 교체
+            for audio_id in old_ids:
+                self._tts_audio_repo.delete(audio_id)
+            return {
+                "audioCount": audio_count,
+                "readyCount": ready_count,
+                "failedCount": audio_count - ready_count,
+                "replaced": True,
+            }
 
-            item_type = item.get("type")
-            # 방어: emotion/emotionLabel이 비면 타입별 기본값으로 보강 (응답 검증 실패 방지)
-            default_emotion, default_label = DEFAULT_EMOTION.get(
-                item_type, ("neutral", "기본")
-            )
-
-            # dialogue: speaker로 캐릭터를 찾아 characterId/voiceId 반영 (매칭 없으면 None).
-            # narration: characterId는 없고, voiceId는 story.narratorVoiceId 사용 (없으면 None).
-            character_id = None
-            voice_id = None
-            voice = None
-            matched = None
-            if item_type == "dialogue":
-                matched = chars_by_name.get(item.get("speaker"))
-                if matched:
-                    character_id = matched.get("characterId")
-                    voice_id = matched.get("voiceId")  # 캐릭터에 연결된 보이스 (없으면 None)
-            elif item_type == "narration":
-                voice_id = narrator_voice_id  # 나레이터 보이스 (없으면 None)
-            if voice_id:
-                voice = self._voice_repo.get(voice_id)
-                # ready 가 아닌 voice(pending/processing/failed/삭제됨)는 합성에서 제외.
-                # → voiceId/voice 를 null 처리해 AI 가 voiceType 기본 목소리로 fallback.
-                if not voice or voice.get("status") != "ready":
-                    voice_id = None
-                    voice = None
-
-            emotion_value = item.get("emotion") or default_emotion
-
-            audio_targets.append(
-                {
-                    "storyId": story_id,
-                    "sceneId": scene_id,
-                    "itemIndex": index,  # 원본 scene.items의 index 유지
-                    "type": item_type,
-                    "speaker": item.get("speaker"),
-                    "text": item.get("text"),
-                    "emotion": emotion_value,
-                    "emotionLabel": item.get("emotionLabel") or default_label,
-                    # emotion 키 → Qwen 합성용 instruction (unknown 은 neutral fallback)
-                    "emotionPrompt": EMOTION_PROMPT.get(emotion_value, DEFAULT_EMOTION_PROMPT),
-                    "voiceType": VOICE_TYPE.get(item_type, "narrator"),
-                    "characterId": character_id,
-                    # dialogue 매칭 캐릭터 이름/말투 prompt (narration·미매칭이면 None)
-                    "characterName": matched.get("name") if matched else None,
-                    "characterPrompt": _character_prompt(matched),
-                    "voiceId": voice_id,  # 실제 합성/클로닝은 AI 파트, 여기선 참조만
-                    "voiceName": voice.get("name") if voice else None,
-                    "voicePrompt": voice.get("voicePrompt") if voice else None,
-                    # Qwen3-TTS 0.6B ref 기반 — AI cache miss 대비. preset/미연결이면 None.
-                    # AI payload 전용(프론트 응답엔 미노출 — TTSAudioResponse 에 필드 없음).
-                    "referenceAudioUrl": voice.get("referenceAudioUrl") if voice else None,
-                    "referenceText": voice.get("referenceText") if voice else None,
-                    "audioUrl": None,
-                    "durationSec": None,
-                    "error": None,
-                }
-            )
-        return audio_targets
+        # 전부 실패(예외 없이 audioUrl 0개): 새 것 제거, 기존 ready audio 보존
+        for audio_id in new_ids:
+            self._tts_audio_repo.delete(audio_id)
+        return {"audioCount": 0, "readyCount": 0, "failedCount": len(new_ids), "replaced": False}
 
     def list_scene_audios(self, story_id: str, scene_id: str) -> list[dict]:
         # 조회는 story/scene 존재 검증을 하지 않는다. 저장된 게 없으면 [] 반환.

@@ -5,11 +5,9 @@ import useStoryStore from '@/store/useStoryStore'
 import { getVoices } from '@/api/voices'
 import { getStories } from '@/api/stories'
 import { getCharacters } from '@/api/characters'
-import { getVoiceComfyHealth } from '@/api/ai'
 import { startStoryTts } from '@/api/tts'
 import { getApiErrorMessage } from '@/utils/apiError'
 import { loadTtsStoryJob, saveTtsStoryJob } from '@/utils/ttsStoryJobStorage'
-import AiConnectionCheck from '@/components/AiConnectionCheck'
 import VoiceTargetPanel from '@/components/voices/VoiceTargetPanel'
 import VoiceLibrary from '@/components/voices/VoiceLibrary'
 import styles from './VoicePage.module.css'
@@ -113,14 +111,6 @@ export default function VoicePage() {
         <span>3. 연결 버튼을 누르면 그 대상에 목소리가 적용됩니다. (ready 상태만 연결 가능)</span>
       </div>
 
-      {/* 임시: 보이스 전용 경로(프론트→백→AI 보이스 모듈→ComfyUI 읽기전용) 연결 확인.
-          실제 연동 시 삭제 — TEMP_AI_CONNECTION_TEST.md */}
-      <AiConnectionCheck
-        check={getVoiceComfyHealth}
-        label="보이스 AI 서버 연결 확인"
-        okText="보이스 AI 서버 연결됨 ✅"
-      />
-
       <div className={styles.storyBar}>
         <label className={styles.label}>
           스토리
@@ -184,7 +174,7 @@ export default function VoicePage() {
         </>
       ) : (
         <p className={styles.empty}>
-          스토리를 선택하면 나레이션·등장 캐릭터에 보이스를 연결할 수 있습니다. 저장된 스토리가 없다면 먼저 “스토리 입력”에서 대본을 등록하세요.
+          스토리를 선택하면 나레이션·등장 캐릭터에 보이스를 연결할 수 있습니다. 저장된 스토리가 없다면 먼저 "스토리 입력"에서 대본을 등록하세요.
         </p>
       )}
 

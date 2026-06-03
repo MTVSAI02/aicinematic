@@ -120,6 +120,20 @@ class VoiceNotReadyError(AppException):
     detail = "이 보이스는 아직 사용할 수 없습니다 (클로닝 완료(ready) 후 연결 가능)."
 
 
+class VoiceNotConnectedError(AppException):
+    """대상(나레이션/캐릭터)에 보이스가 아직 연결되지 않아 잠글 수 없음."""
+
+    status_code = 400
+    detail = "먼저 목소리를 연결해주세요."
+
+
+class VoiceLockTargetNotFoundError(AppException):
+    """잠금/해제 대상(targetType/targetId)이 유효하지 않음 (예: 없는 캐릭터)."""
+
+    status_code = 404
+    detail = "잠금 대상을 찾을 수 없습니다."
+
+
 class AIServerError(AppException):
     """우리 AI FastAPI 서버 호출 실패 (연결/설정/응답).
 
@@ -168,6 +182,13 @@ class FFmpegNotInstalledError(AppException):
 class FFmpegRenderFailedError(AppException):
     status_code = 500
     detail = "Video render (ffmpeg) failed"
+
+
+class RenderAudioNotReadyError(AppException):
+    """렌더 전 음성 검증 실패(미잠금/실패/누락/파일없음). detail 이 프론트에 그대로 노출된다."""
+
+    status_code = 400
+    detail = "생성되지 않은 음성이 있습니다. 타임라인 또는 보이스 페이지에서 음성을 다시 확인해 주세요."
 
 
 class VoiceCloneValidationError(AppException):

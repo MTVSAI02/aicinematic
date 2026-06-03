@@ -136,6 +136,23 @@
   overflow: hidden;
   min-height: 30px;
 }
+/* 카드 요약: 첫 cue label + 첫 item 텍스트, 2줄 말줄임 */
+.cardSummary {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 30px;
+  margin: 0;
+}
+.cardCueLabel {
+  color: var(--accent);
+  font-weight: 700;
+}
 .cardDuration {
   font-size: 13px;
   color: var(--text-h);
@@ -241,6 +258,11 @@
 }
 .playBtn:hover {
   border-color: var(--accent);
+}
+.playNote {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.85;
 }
 .playStatus {
   display: flex;
@@ -475,6 +497,104 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+.cueHeadBtns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── cue TTS 오디오/길이 ── */
+.cueAudio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.cueLen {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.cueLenWarn {
+  color: var(--danger);
+  font-weight: 700;
+}
+.cueAudioPlayer {
+  width: 100%;
+  height: 32px;
+}
+.cueAudioNote {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+/* ── cue 안 줄(item)별 음성 ── */
+.cueItems {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.cueItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.cueItemHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.cueItemIcon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.cueItemThumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cueItemName {
+  color: var(--text-h);
+  font-weight: 700;
+}
+.cueItemVoice {
+  color: var(--accent);
+}
+.cueItemLen {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.cueItemText {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
 .cueEmpty {
   font-size: 13px;
   color: var(--text);
