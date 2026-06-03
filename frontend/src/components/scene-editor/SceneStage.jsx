@@ -240,11 +240,11 @@ export default function SceneStage({
                 transform: `translate(${g.tx}px, ${g.ty}px) rotate(${g.layout.rotation || 0}deg)`,
                 fontSize: g.fontSize,
                 textAlign: g.layout.align,
-                color: st.color || '#ffffff',
-                background: st.backgroundColor || 'rgba(0,0,0,0.45)',
-                fontWeight: st.fontWeight || '600',
-                borderRadius: (st.borderRadius ?? 0.02) * stage.h,
-                padding: `${(st.padding ?? 0.02) * stage.h}px`,
+                color: st.color || '#111111',
+                background: 'transparent', // 자막 배경 박스 없음(렌더와 동일)
+                fontFamily: "'Hakgyoansim Dunggeunmiso', sans-serif", // 자막 전용 폰트(Regular)
+                fontWeight: 400, // Regular 만 사용(굵게 X)
+                padding: `${(st.padding ?? 0.02) * stage.h}px`, // 드래그 hit 영역 확보용(투명)
               }}
             >
               {o.text}

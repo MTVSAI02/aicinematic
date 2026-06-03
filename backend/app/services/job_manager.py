@@ -77,6 +77,7 @@ class InMemoryJobManager:
         build_result: Callable[[], dict],
         failed_detail: str,
         accepted_message: str,
+        payload: dict | None = None,
     ) -> dict:
         """비동기 실행. Job(pending)을 만들고 jobId를 즉시 반환한다.
 
@@ -85,7 +86,7 @@ class InMemoryJobManager:
 
         반환: {jobId, status="pending", message} (JobCreatedResponse 형태)
         """
-        job = self._job_repo.create(job_type)  # status=pending
+        job = self._job_repo.create(job_type, payload=payload)  # status=pending
         job_id = job["jobId"]
         self._executor.submit(self._run_job, job_id, build_result, failed_detail)
         return {
@@ -93,6 +94,15 @@ class InMemoryJobManager:
             "status": JobStatus.pending.value,
             "message": accepted_message,
         }
+
+    def resume_async(
+        self,
+        job_id: str,
+        build_result: Callable[[], dict],
+        failed_detail: str,
+    ) -> None:
+        """Resume an already persisted pending/running job with the same jobId."""
+        self._executor.submit(self._run_job, job_id, build_result, failed_detail)
 
     def _run_job(
         self, job_id: str, build_result: Callable[[], dict], failed_detail: str

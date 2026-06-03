@@ -184,6 +184,13 @@ class FFmpegRenderFailedError(AppException):
     detail = "Video render (ffmpeg) failed"
 
 
+class RenderAudioNotReadyError(AppException):
+    """렌더 전 음성 검증 실패(미잠금/실패/누락/파일없음). detail 이 프론트에 그대로 노출된다."""
+
+    status_code = 400
+    detail = "생성되지 않은 음성이 있습니다. 타임라인 또는 보이스 페이지에서 음성을 다시 확인해 주세요."
+
+
 class VoiceCloneValidationError(AppException):
     """보이스 클로닝 입력이 잘못됨 (referenceText 비었음, voiceType 잘못 등)."""
 

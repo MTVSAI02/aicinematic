@@ -7,14 +7,18 @@ from ..core.exceptions import (
     EmptySceneItemsError,
     SceneNotFoundError,
     StoryNotFoundError,
+    TTSGenerationFailedError,
     TTSAudioNotFoundError,
 )
 from ..repositories.character_repo import character_repository
+from ..repositories.job_repo import job_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.tts_audio_repository import tts_audio_repository
 from ..repositories.voice_repository import voice_repository
+from ..schemas.job import JobType
+from .job_manager import job_manager
 from .tts_ai_client import tts_ai_client
-from .tts_job_runner import create_tts_generation_job
+from .tts_job_runner import create_tts_generation_job, create_tts_story_generation_job
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +74,12 @@ EMOTION_PROMPT = {
     "friendly": "Speak in a warm and friendly tone.",
     "serious": "Speak in a serious and focused tone.",
     "curious": "Speak in a curious and gentle tone.",
+    "worried": "Speak in a worried and careful tone.",
+    "playful": "Speak in a playful and lively tone.",
+    "curt": "Speak in a blunt and slightly cold tone.",
+    "shy": "Speak in a shy and hesitant tone.",
+    "mysterious": "Speak in a mysterious and quiet tone.",
+    "disappointed": "Speak in a disappointed and subdued tone.",
 }
 DEFAULT_EMOTION_PROMPT = EMOTION_PROMPT["neutral"]  # 알 수 없는 emotion → neutral fallback
 
@@ -150,12 +160,14 @@ class TTSService:
             "text": item.get("text"),
             "emotion": emotion_value,
             "emotionLabel": item.get("emotionLabel") or default_label,
+            # emotion 키 → Qwen 합성용 instruction (unknown 은 neutral fallback)
             "emotionPrompt": EMOTION_PROMPT.get(emotion_value, DEFAULT_EMOTION_PROMPT),
             "voiceType": VOICE_TYPE.get(item_type, "narrator"),
             "characterId": character_id,
+            # dialogue 매칭 캐릭터 이름/말투 prompt (narration·미매칭이면 None)
             "characterName": matched.get("name") if matched else None,
             "characterPrompt": _character_prompt(matched),
-            "voiceId": voice_id,
+            "voiceId": voice_id,  # 실제 합성/클로닝은 AI 파트, 여기선 참조만
             "voiceName": voice.get("name") if voice else None,
             "voicePrompt": voice.get("voicePrompt") if voice else None,
             # Qwen3-TTS 0.6B ref 기반 — AI cache miss 대비(프론트 응답엔 미노출).
@@ -167,7 +179,7 @@ class TTSService:
         }
 
     def _scene_audio_targets(self, story_id: str, scene: dict) -> list[dict]:
-        """scene.items 전체 → AI 합성용 target 목록 (씬 단건 TTS 엔드포인트용)."""
+        """scene.items 전체 → AI 합성용 target 목록."""
         narrator_voice_id, chars_by_name = self._scene_context(story_id)
         scene_id = scene.get("sceneId")
         targets = []
@@ -202,6 +214,38 @@ class TTSService:
         self._call_ai_and_rehost(story_id, scene_id, saved)
         return self._tts_audio_repo.list_by_scene(story_id, scene_id)
 
+    def _synthesize_targets_incremental(
+        self, story_id: str, scene_id: str, audio_targets: list[dict]
+    ) -> list[dict]:
+        """재개용: 이미 audioUrl 있는 item은 스킵하고 없는 것만 생성한다.
+
+        서버 재시작 후 pending/running job 복구 시 호출. 중복 audio row는 audioUrl 있는 것 우선.
+        """
+        existing_by_item = {}
+        for audio in self._tts_audio_repo.list_by_scene(story_id, scene_id):
+            item_index = audio.get("itemIndex")
+            current = existing_by_item.get(item_index)
+            if current is None or (audio.get("audioUrl") and not current.get("audioUrl")):
+                existing_by_item[item_index] = audio
+
+        saved_audios = []
+        pending_audios = []
+        for target in audio_targets:
+            existing = existing_by_item.get(target["itemIndex"])
+            if existing and existing.get("audioUrl"):
+                saved_audios.append(existing)
+                continue
+            saved = self._tts_audio_repo.upsert_target(
+                target,
+                audio_id=existing.get("audioId") if existing else None,
+            )
+            saved_audios.append(saved)
+            pending_audios.append(saved)
+
+        if pending_audios:
+            self._call_ai_and_rehost(story_id, scene_id, pending_audios)
+        return self._tts_audio_repo.list_by_scene(story_id, scene_id)
+
     def generate_scene_tts(self, story_id: str, scene_id: str) -> dict:
         scene = self._find_scene(story_id, scene_id)
         audio_targets = self._scene_audio_targets(story_id, scene)
@@ -210,6 +254,60 @@ class TTSService:
         saved_audios = self._synthesize_targets(story_id, scene_id, audio_targets)
         # tts_generate Job 생성 (즉시 completed)
         return create_tts_generation_job(story_id, scene_id, saved_audios)
+
+    def generate_story_tts(self, story_id: str) -> dict:
+        story = self._story_repo.get(story_id)
+        if story is None:
+            raise StoryNotFoundError()
+
+        def build_result() -> dict:
+            return self._generate_story_tts_now(story_id, replace_existing=True)
+
+        return create_tts_story_generation_job(story_id, build_result)
+
+    def _generate_story_tts_now(
+        self,
+        story_id: str,
+        *,
+        replace_existing: bool,
+        job_id: str | None = None,
+    ) -> dict:
+        story = self._story_repo.get(story_id)
+        if story is None:
+            raise StoryNotFoundError()
+
+        scenes = list(story.get("scenes", []))
+        scene_results = []
+        all_audios = []
+        total = max(len(scenes), 1)
+
+        for index, scene in enumerate(scenes, start=1):
+            scene_id = scene.get("sceneId")
+            if not scene_id:
+                continue
+            try:
+                audio_targets = self._scene_audio_targets(story_id, scene)
+                if not audio_targets:
+                    audios = []
+                elif replace_existing:
+                    audios = self._synthesize_targets(story_id, scene_id, audio_targets)
+                else:
+                    audios = self._synthesize_targets_incremental(story_id, scene_id, audio_targets)
+            except EmptySceneItemsError:
+                audios = []
+            scene_results.append({"sceneId": scene_id, "audios": audios})
+            all_audios.extend(audios)
+            if job_id:
+                progress = min(95, 10 + int((index / total) * 85))
+                job_repository.update_status(job_id, "running", progress=progress)
+
+        return {
+            "storyId": story_id,
+            "sceneCount": len(scene_results),
+            "audioCount": len(all_audios),
+            "scenes": scene_results,
+            "audios": all_audios,
+        }
 
     @staticmethod
     def _item_matches_target(item: dict, target_type: str, character_name: str | None) -> bool:
@@ -286,6 +384,37 @@ class TTSService:
     def list_scene_audios(self, story_id: str, scene_id: str) -> list[dict]:
         # 조회는 story/scene 존재 검증을 하지 않는다. 저장된 게 없으면 [] 반환.
         return self._tts_audio_repo.list_by_scene(story_id, scene_id)
+
+    def resume_unfinished_story_tts_jobs(self) -> int:
+        resumed = 0
+        jobs = job_repository.list_unfinished(JobType.tts_story_generate.value)
+        for job in jobs:
+            job_id = job.get("jobId")
+            payload = job.get("payload") or {}
+            story_id = job.get("storyId") or payload.get("storyId")
+            if not job_id:
+                continue
+            if not story_id:
+                job_repository.fail(job_id, "Cannot resume TTS job: storyId is missing.")
+                continue
+            if self._story_repo.get(story_id) is None:
+                job_repository.fail(job_id, "Cannot resume TTS job: story not found.")
+                continue
+
+            def build_result(story_id=story_id, job_id=job_id) -> dict:
+                return self._generate_story_tts_now(
+                    story_id,
+                    replace_existing=False,
+                    job_id=job_id,
+                )
+
+            job_manager.resume_async(
+                job_id,
+                build_result,
+                TTSGenerationFailedError.detail,
+            )
+            resumed += 1
+        return resumed
 
     def delete_audio(self, audio_id: str) -> dict:
         if self._tts_audio_repo.get(audio_id) is None:

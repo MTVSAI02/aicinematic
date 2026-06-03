@@ -22,10 +22,17 @@ RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
 # 렌더 중 프레임 PNG 임시 폴더. 완료/실패 후 정리한다. (jobId가 아니라 renderId 기준)
 RENDER_TMP_DIR = STORAGE_ROOT / "tmp" / "renders"
 
-# 렌더 출력 규격 (무음 mp4 MVP). 16:9.
+# 렌더 출력 규격. 16:9.
 RENDER_FPS = 24
 RENDER_WIDTH = 1280
 RENDER_HEIGHT = 720
+
+# 자막 폰트: 레포의 design/assets/fonts (학교안심 둥근미소). 렌더(Pillow)가 이 OTF로 자막을 그린다.
+# core/config.py → parents[3] = 레포 루트.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+SUBTITLE_FONT_PATH = (
+    _REPO_ROOT / "design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF R.otf"
+)
 
 # 우리 AI FastAPI 서버 주소 (외부 ComfyUI는 이 AI 서버가 호출한다).
 # Backend는 ComfyUI를 직접 호출하지 않고 이 서버의 /generate-character·/generate-background 만 호출한다.
@@ -43,7 +50,9 @@ AI_REQUEST_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-    )
+    ),
+    # ngrok free tunnel의 브라우저 경고 페이지가 오디오/이미지 응답 대신 저장되는 것을 막는다.
+    "ngrok-skip-browser-warning": "true",
 }
 
 # 정적 서빙 URL prefix (main.py 의 app.mount 와 일치)

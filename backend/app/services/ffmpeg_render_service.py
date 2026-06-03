@@ -17,6 +17,7 @@ from ..core.config import (
     RENDER_STORAGE_DIR,
     RENDER_TMP_DIR,
     RENDER_WIDTH,
+    SUBTITLE_FONT_PATH,
     resolve_ffmpeg_bin,
     storage_path,
     storage_url,
@@ -36,8 +37,9 @@ _SHADOW_ON_DARK = (0, 0, 0, 110)                  # 흰 글자용 약한 검정 
 _SHADOW_ON_LIGHT = (255, 255, 255, 120)           # 검은 글자용 약한 흰 그림자
 _PLACEHOLDER_BG = (28, 28, 38, 255)               # 배경 이미지 없을 때
 
-# 한글 가능한 기본 폰트 후보 (서버에 설치된 것을 찾아 사용 — 사용자에게 폰트 공유 안 함)
+# 자막 폰트 후보: 1순위 = 레포 번들 '학교안심 둥근미소'(디자인 지정), 없으면 시스템 한글 폰트.
 _FONT_CANDIDATES = [
+    str(SUBTITLE_FONT_PATH),                               # 디자인 지정 자막 폰트(OTF)
     "/System/Library/Fonts/AppleSDGothicNeo.ttc",          # macOS
     "/System/Library/Fonts/Supplemental/AppleGothic.ttf",  # macOS
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",       # Linux Noto
@@ -197,19 +199,18 @@ def _draw_subtitle(canvas, ov, w, h):
     cx, cy = float(layout.get("x", 0.5)) * w, float(layout.get("y", 0.85)) * h
     left, top = int(cx - tile_w / 2), int(cy - tile_h / 2)
 
-    # 글자색 자동: style.color 명시되면 그대로, 없으면 자막 영역 배경 밝기로 흰/검 선택.
+    # 글자색: style.color(팔레트 선택) 명시되면 그대로, 없으면 자막 영역 배경 밝기로 흰/검 자동.
     override = _parse_color(style.get("color"))
     if override is not None:
-        text_color, shadow_color = override, _SHADOW_ON_DARK
+        text_color = override
     elif _region_luma(canvas, left, top, left + tile_w, top + tile_h) < _SUBTITLE_LUMA_THRESHOLD:
-        text_color, shadow_color = _TEXT_ON_DARK, _SHADOW_ON_DARK    # 어두운 배경 → 흰 글자
+        text_color = _TEXT_ON_DARK    # 어두운 배경 → 흰 글자
     else:
-        text_color, shadow_color = _TEXT_ON_LIGHT, _SHADOW_ON_LIGHT  # 밝은 배경 → 검은 글자
+        text_color = _TEXT_ON_LIGHT   # 밝은 배경 → 검은 글자
 
-    # 배경 박스 없음(투명 타일). 가독성은 아주 약한 그림자만으로 보완(외곽선 X).
+    # 배경 박스/그림자/외곽선 없음(투명 타일). 글자색만 — 미리보기와 동일.
     tile = Image.new("RGBA", (tile_w, tile_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(tile)
-    sh = max(1, font_px // 22)  # 은은한 그림자 오프셋
     y = pad_y
     for line in lines:
         lw = font.getlength(line)
@@ -219,8 +220,7 @@ def _draw_subtitle(canvas, ov, w, h):
             x = tile_w - pad_x - lw
         else:
             x = (tile_w - lw) / 2
-        draw.text((x + sh, y + sh), line, font=font, fill=shadow_color)  # 약한 그림자
-        draw.text((x, y), line, font=font, fill=text_color)              # 본문
+        draw.text((x, y), line, font=font, fill=text_color)  # 본문(그림자 없음)
         y += line_h + line_gap
 
     rotation = float(layout.get("rotation") or 0) % 360
@@ -253,6 +253,29 @@ def _scene_at(starts, durations, t):
         if t >= starts[i]:
             return i
     return 0
+
+
+def _collect_audio_inputs(scenes, starts):
+    """timeline 기준 (offsetSec, wav 절대경로) 목록.
+
+    배치: 씬 순서 → cue.startSec → cue.items(sourceItemIndex 순, 같은 cue 안은 순차).
+    absoluteStartSec = sceneStart + cue.startSec + (같은 cue 앞 item들의 audioDurationSec 합).
+    audioUrl 없거나 파일 없는 item 은 제외(앞 item 길이는 누적엔 반영).
+    """
+    inputs = []
+    for idx, scene in enumerate(scenes):
+        scene_start = starts[idx] if idx < len(starts) else 0.0
+        for cue in sorted(scene.get("cueTimings") or [], key=lambda c: c.get("cueOrder", 0)):
+            cue_start = float(cue.get("startSec", 0.0))
+            item_off = 0.0
+            for item in sorted(cue.get("items") or [], key=lambda x: x.get("sourceItemIndex", 0)):
+                url = item.get("audioUrl")
+                if url:
+                    p = storage_path(url)
+                    if p is not None and p.exists():
+                        inputs.append((round(scene_start + cue_start + item_off, 3), str(p)))
+                item_off += float(item.get("audioDurationSec") or 0.0)
+    return inputs
 
 
 def render_video(render_id: str, plan: dict) -> str:
@@ -300,15 +323,41 @@ def render_video(render_id: str, plan: dict) -> str:
 
         RENDER_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
         out_path = RENDER_STORAGE_DIR / f"{render_id}.mp4"
+
+        # 오디오: timeline cue.items[].audioUrl 을 absoluteStartSec 에 배치 → adelay → amix → mp4 mux.
+        audio_inputs = _collect_audio_inputs(scenes, starts)
         cmd = [
             ffmpeg_bin, "-y",
             "-framerate", str(fps),
             "-i", str(tmp_dir / "frame_%05d.png"),
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
-            str(out_path),
         ]
+        for _, path in audio_inputs:
+            cmd += ["-i", path]
+        if audio_inputs:
+            # 입력 0 = 프레임(video). 오디오 입력은 1번부터. 각자 offset 만큼 지연 후 합성.
+            delays = [
+                f"[{i}:a]adelay={int(round(off * 1000))}:all=1[a{i}]"
+                for i, (off, _) in enumerate(audio_inputs, start=1)
+            ]
+            mix_in = "".join(f"[a{i}]" for i in range(1, len(audio_inputs) + 1))
+            filter_complex = ";".join(delays) + f";{mix_in}amix=inputs={len(audio_inputs)}:normalize=0[aout]"
+            cmd += [
+                "-filter_complex", filter_complex,
+                "-map", "0:v:0", "-map", "[aout]",
+                "-c:v", "libx264", "-c:a", "aac",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                "-shortest",  # 오디오가 영상보다 길면 영상 길이에 맞춰 컷(타임라인에서 맞추는 게 원칙)
+                str(out_path),
+            ]
+        else:
+            # 음성이 하나도 없으면 기존 무음 인코딩(방어적 fallback)
+            cmd += [
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                str(out_path),
+            ]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0 or not out_path.exists():
             tail = (proc.stderr or "").strip().splitlines()
