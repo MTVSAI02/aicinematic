@@ -43,7 +43,9 @@ AI_REQUEST_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-    )
+    ),
+    # ngrok free tunnel의 브라우저 경고 페이지가 오디오/이미지 응답 대신 저장되는 것을 막는다.
+    "ngrok-skip-browser-warning": "true",
 }
 
 # 정적 서빙 URL prefix (main.py 의 app.mount 와 일치)

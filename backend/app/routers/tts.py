@@ -5,6 +5,7 @@ from ..schemas.tts import (
     TTSAudioResponse,
     TTSDeleteResponse,
     TTSSceneGenerateRequest,
+    TTSStoryGenerateRequest,
 )
 from ..services.tts_service import tts_service
 
@@ -29,6 +30,18 @@ def generate_scene_tts(request: TTSSceneGenerateRequest):
     - 결과(audios)는 GET /api/jobs/{jobId} 또는 GET /api/tts 로 조회한다.
     """
     return tts_service.generate_scene_tts(request.storyId, request.sceneId)
+
+
+@router.post("/story", response_model=JobCreatedResponse, summary="스토리 전체 TTS 생성 Job")
+def generate_story_tts(request: TTSStoryGenerateRequest):
+    """
+    현재 저장된 narratorVoiceId / character.voiceId 연결값을 기준으로 story 전체 scene TTS를 생성한다.
+
+    - 프론트 /voice 의 [이 보이스 설정으로 진행하기]에서 호출한다.
+    - Job은 background thread에서 실행되므로 사용자는 /background, /scene-editor로 이동해도 된다.
+    - 각 scene 결과는 기존과 동일하게 audioId 기준으로 저장되고 GET /api/tts 로 조회한다.
+    """
+    return tts_service.generate_story_tts(request.storyId)
 
 
 @router.get("", response_model=list[TTSAudioResponse], summary="씬별 TTS 결과 조회")

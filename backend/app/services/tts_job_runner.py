@@ -20,3 +20,14 @@ def create_tts_generation_job(
         TTSGenerationFailedError.detail,
         "TTS generation job completed.",
     )
+
+
+def create_tts_story_generation_job(story_id: str, build_result) -> dict:
+    """Run story-wide TTS generation in the background."""
+    return job_manager.run_async(
+        JobType.tts_story_generate.value,
+        build_result,
+        TTSGenerationFailedError.detail,
+        "Story TTS generation job accepted.",
+        payload={"storyId": story_id},
+    )

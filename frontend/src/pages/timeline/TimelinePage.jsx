@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useStoryStore from '@/store/useStoryStore'
 import { getTimeline, updateTimeline } from '@/api/timeline'
+import { getJob } from '@/api/jobs'
+import { listSceneTts } from '@/api/tts'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { loadTtsStoryJob, saveTtsStoryJob } from '@/utils/ttsStoryJobStorage'
 import TimelineSceneCard from '@/components/timeline/TimelineSceneCard'
 import TimelineSceneDetail from '@/components/timeline/TimelineSceneDetail'
 import { clampDuration } from '@/components/timeline/DurationControl'
@@ -15,6 +18,63 @@ import styles from '@/components/timeline/Timeline.module.css'
 const round3 = (v) => Math.round(v * 1000) / 1000
 const clampNum = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
+async function attachTtsAudios(storyId, scenes) {
+  const audioLists = await Promise.all(
+    scenes.map((scene) =>
+      listSceneTts({ storyId, sceneId: scene.sceneId }).catch(() => []),
+    ),
+  )
+
+  return scenes.map((scene, index) => ({
+    ...scene,
+    ttsAudioItems: audioLists[index] ?? [],
+  }))
+}
+
+function mergeTtsAudios(nextScenes, previousScenes) {
+  const audioByScene = new Map(
+    previousScenes.map((scene) => [scene.sceneId, scene.ttsAudioItems ?? []]),
+  )
+  return nextScenes.map((scene) => ({
+    ...scene,
+    ttsAudioItems: audioByScene.get(scene.sceneId) ?? scene.ttsAudioItems ?? [],
+  }))
+}
+
+function audioCueTimings(scene) {
+  const overlays = scene.textOverlays ?? []
+  const audios = scene.ttsAudioItems ?? []
+  const audioByItem = new Map(
+    audios
+      .filter((audio) => audio.audioUrl && typeof audio.durationSec === 'number' && audio.durationSec > 0)
+      .map((audio) => [audio.itemIndex, audio]),
+  )
+
+  const cueDurations = new Map()
+  for (const overlay of overlays) {
+    const audio = audioByItem.get(overlay.sourceItemIndex)
+    if (!audio) continue
+    cueDurations.set(
+      overlay.cueOrder,
+      (cueDurations.get(overlay.cueOrder) ?? 0) + audio.durationSec,
+    )
+  }
+
+  const cueOrders = [...cueDurations.keys()].sort((a, b) => a - b)
+  let startSec = 0
+  const cueTimings = cueOrders.map((cueOrder) => {
+    const durationSec = round3(cueDurations.get(cueOrder))
+    const timing = { cueOrder, startSec: round3(startSec), durationSec }
+    startSec += durationSec
+    return timing
+  })
+
+  return {
+    duration: round3(startSec),
+    cueTimings,
+  }
+}
+
 export default function TimelinePage() {
   const navigate = useNavigate()
   const storyId = useStoryStore((s) => s.storyId)
@@ -24,6 +84,7 @@ export default function TimelinePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | failed
+  const [ttsJob, setTtsJob] = useState(null)
 
   // ── 브라우저 미리보기 재생(렌더링 아님): React state + requestAnimationFrame ──
   const [playing, setPlaying] = useState(false)
@@ -41,26 +102,92 @@ export default function TimelinePage() {
   // 진입/스토리 변경 시 타임라인 조회. 스토리가 바뀌면 선택 씬도 첫 씬으로 리셋한다.
   useEffect(() => {
     if (!storyId) return
+    let cancelled = false
     if (saveTimer.current) clearTimeout(saveTimer.current) // 이전 스토리의 보류 저장 취소
     setLoading(true)
     setError('')
     setSaveStatus('idle')
+    setTtsJob(loadTtsStoryJob(storyId))
     setPlaying(false) // 스토리 바뀌면 재생 중지 + 처음으로
     timeRef.current = 0
     setPreviewTime(0)
     getTimeline(storyId)
-      .then((res) => {
+      .then(async (res) => {
         const list = res.scenes ?? []
-        setScenes(list)
-        lastSaved.current = list
+        const scenesWithAudio = await attachTtsAudios(storyId, list)
+        if (cancelled) return
+        setScenes(scenesWithAudio)
+        lastSaved.current = scenesWithAudio
         setSelectedId(list[0]?.sceneId ?? null)
       })
-      .catch((e) => setError(getApiErrorMessage(e)))
-      .finally(() => setLoading(false))
+      .catch((e) => {
+        if (!cancelled) setError(getApiErrorMessage(e))
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [storyId])
 
   // 언마운트 시 보류 중인 저장 타이머 정리
   useEffect(() => () => saveTimer.current && clearTimeout(saveTimer.current), [])
+
+  useEffect(() => {
+    if (!storyId) return undefined
+    const storedJob = loadTtsStoryJob(storyId)
+    if (!storedJob?.jobId || ['completed', 'failed'].includes(storedJob.status)) {
+      setTtsJob(storedJob)
+      return undefined
+    }
+
+    let cancelled = false
+    let refreshing = false
+    let timer = 0
+
+    async function pollTtsJob() {
+      try {
+        const job = await getJob(storedJob.jobId)
+        if (cancelled) return
+        const nextJob = {
+          ...storedJob,
+          status: job.status,
+          progress: job.progress,
+          error: job.error,
+        }
+        saveTtsStoryJob(nextJob)
+        setTtsJob(nextJob)
+
+        if (job.status === 'completed' && !refreshing) {
+          refreshing = true
+          const refreshed = await attachTtsAudios(storyId, latestScenes.current)
+          if (!cancelled) {
+            setScenes(refreshed)
+            lastSaved.current = refreshed
+          }
+        }
+        if (['completed', 'failed'].includes(job.status) && timer) {
+          window.clearInterval(timer)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setTtsJob({
+            ...storedJob,
+            status: 'failed',
+            error: getApiErrorMessage(e),
+          })
+        }
+      }
+    }
+
+    pollTtsJob()
+    timer = window.setInterval(pollTtsJob, 2000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [storyId])
 
   const { starts, total: totalDuration } = useMemo(() => sceneOffsets(scenes), [scenes])
   const selectedScene = scenes.find((s) => s.sceneId === selectedId) || null
@@ -128,13 +255,14 @@ export default function TimelinePage() {
 
   // 저장(debounce): 모든 씬의 duration + cueTimings 전송. cueTimings 은 씬 duration 안으로 클램프(서버 422 방지).
   // 늦게 도착한 이전 응답이 최신 값을 덮지 않도록 saveSeq 가드, 실패 시 lastSaved 로 rollback.
-  function persist() {
+  function persist(nextScenes = null) {
+    const scenesToSave = nextScenes ?? latestScenes.current
     setSaveStatus('saving')
     setError('')
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       const seq = ++saveSeq.current
-      const payload = latestScenes.current.map((s) => ({
+      const payload = scenesToSave.map((s) => ({
         sceneId: s.sceneId,
         duration: s.duration,
         cueTimings: (s.cueTimings ?? [])
@@ -148,7 +276,7 @@ export default function TimelinePage() {
       updateTimeline(storyId, payload)
         .then((res) => {
           if (seq !== saveSeq.current) return // 더 최신 요청 진행 중 → 버림
-          const saved = res.scenes ?? latestScenes.current
+          const saved = mergeTtsAudios(res.scenes ?? latestScenes.current, latestScenes.current)
           setScenes(saved)
           lastSaved.current = saved
           setSaveStatus('saved')
@@ -164,26 +292,32 @@ export default function TimelinePage() {
 
   function handleDurationChange(sceneId, dur) {
     const d = clampDuration(dur)
-    setScenes((cur) => cur.map((s) => (s.sceneId === sceneId ? { ...s, duration: d } : s)))
-    persist()
+    setScenes((cur) => {
+      const next = cur.map((s) => (s.sceneId === sceneId ? { ...s, duration: d } : s))
+      latestScenes.current = next
+      persist(next)
+      return next
+    })
   }
 
   // cue 타이밍 한 항목 변경(startSec/durationSec). 텍스트/위치/cueOrder는 안 건드림.
   function handleCueTimingChange(sceneId, cueOrder, patch) {
-    setScenes((cur) =>
-      cur.map((s) =>
+    setScenes((cur) => {
+      const next = cur.map((s) =>
         s.sceneId !== sceneId
           ? s
           : { ...s, cueTimings: (s.cueTimings ?? []).map((t) => (t.cueOrder === cueOrder ? { ...t, ...patch } : t)) },
-      ),
-    )
-    persist()
+      )
+      latestScenes.current = next
+      persist(next)
+      return next
+    })
   }
 
   // 씬 duration 을 cue 개수만큼 균등 분할
   function handleAutoSplitCues(sceneId) {
-    setScenes((cur) =>
-      cur.map((s) => {
+    setScenes((cur) => {
+      const next = cur.map((s) => {
         if (s.sceneId !== sceneId) return s
         const cues = [...(s.cueTimings ?? [])].sort((a, b) => a.cueOrder - b.cueOrder)
         if (cues.length === 0) return s
@@ -192,9 +326,29 @@ export default function TimelinePage() {
           ...s,
           cueTimings: cues.map((t, i) => ({ ...t, startSec: round3(i * each), durationSec: round3(each) })),
         }
-      }),
-    )
-    persist()
+      })
+      latestScenes.current = next
+      persist(next)
+      return next
+    })
+  }
+
+  function handleSyncCuesToAudio(sceneId) {
+    setScenes((cur) => {
+      const next = cur.map((s) => {
+        if (s.sceneId !== sceneId) return s
+        const sync = audioCueTimings(s)
+        if (!sync.duration || sync.cueTimings.length === 0) return s
+        return {
+          ...s,
+          duration: clampDuration(sync.duration),
+          cueTimings: sync.cueTimings,
+        }
+      })
+      latestScenes.current = next
+      persist(next)
+      return next
+    })
   }
 
   if (!storyId) {
@@ -233,6 +387,17 @@ export default function TimelinePage() {
       <p className={styles.guide}>
         씬 순서는 스토리 원본 그대로입니다. 카드를 <b>클릭</b>해 아래에서 <b>재생 길이</b>와 <b>자막 타이밍</b>을 조절하세요. (변경 시 자동 저장)
       </p>
+      {ttsJob && (
+        <p
+          className={`${styles.ttsJobStatus} ${
+            ttsJob.status === 'failed' ? styles.ttsJobFailed : ''
+          }`}
+        >
+          TTS 작업 {ttsJob.jobId}: {ttsJob.status}
+          {ttsJob.progress != null ? ` · ${ttsJob.progress}%` : ''}
+          {ttsJob.error ? ` · ${ttsJob.error}` : ''}
+        </p>
+      )}
 
       {loading && scenes.length === 0 ? (
         <p className={styles.empty}>불러오는 중…</p>
@@ -259,6 +424,7 @@ export default function TimelinePage() {
             onDurationChange={handleDurationChange}
             onCueTimingChange={handleCueTimingChange}
             onAutoSplitCues={handleAutoSplitCues}
+            onSyncCuesToAudio={handleSyncCuesToAudio}
           />
         </>
       )}

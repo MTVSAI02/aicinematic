@@ -46,6 +46,17 @@
   margin: 4px 0 16px;
 }
 
+.ttsJobStatus {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ttsJobFailed {
+  color: var(--danger);
+}
+
 /* ── 카드 트랙(가로 스크롤) ── */
 .track {
   display: flex;
@@ -272,6 +283,69 @@
   line-height: 1.5;
   margin: 0;
 }
+
+.audioHint {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.audioSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.audioList {
+  display: grid;
+  gap: 8px;
+}
+
+.audioItem {
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.audioMeta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.audioMeta span {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.audioText {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.audioError {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.audioPlayer {
+  width: 100%;
+  height: 32px;
+}
 .detailChars {
   display: flex;
   gap: 8px;
@@ -397,6 +471,10 @@
   cursor: pointer;
 }
 .cueAutoBtn:hover { border-color: var(--accent); }
+.cueAutoBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .cueEmpty {
   font-size: 13px;
   color: var(--text);

@@ -91,6 +91,47 @@ def _mock_tts_response(payload: dict[str, Any], public_base_url: str) -> dict[st
     }
 
 
+def _voice_sample_tts_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    voice_id = payload.get("voiceId") or "voice_sample"
+    sample_text = payload.get("sampleText") or payload.get("text") or "안녕하세요. 저는 이 목소리로 동화를 들려드릴게요."
+    audio_id = f"sample_{voice_id}"
+    return {
+        "storyId": "voice_sample",
+        "sceneId": f"voice_sample_{voice_id}",
+        "items": [
+            {
+                "audioId": audio_id,
+                "itemIndex": 0,
+                "type": "narration",
+                "speaker": None,
+                "text": sample_text,
+                "emotion": "calm",
+                "emotionLabel": "샘플",
+                "voiceType": payload.get("voiceType") or "narrator",
+                "voiceId": voice_id,
+                "voiceName": payload.get("voiceName"),
+                "voicePrompt": payload.get("voicePrompt"),
+                "emotionPrompt": payload.get("emotionPrompt") or "Speak in a clear, natural narrator sample voice.",
+                "characterPrompt": payload.get("characterPrompt"),
+                "referenceAudioUrl": payload.get("referenceAudioUrl"),
+                "referenceText": payload.get("referenceText"),
+            }
+        ],
+    }
+
+
+def _voice_sample_response(result: dict[str, Any]) -> dict[str, Any]:
+    audios = result.get("audios") or []
+    audio = audios[0] if audios else {}
+    return {
+        "audioUrl": audio.get("audioUrl"),
+        "durationSec": audio.get("durationSec"),
+        "error": audio.get("error"),
+        "provider": "comfyui",
+        "model": "qwen3-tts-adapter",
+    }
+
+
 def _mock_wav_bytes(audio_id: str) -> bytes:
     sample_rate = 16000
     duration_seconds = 0.8
@@ -118,6 +159,7 @@ def root() -> dict[str, Any]:
         "status": "running",
         "health": "/health",
         "tts": "/tts",
+        "voiceSample": "/voice-sample",
     }
 
 
@@ -147,6 +189,19 @@ async def tts(request: Request) -> dict[str, Any]:
         payload,
         public_base_url=_public_base_url(request),
     )
+
+
+@app.post("/voice-sample")
+async def voice_sample(request: Request) -> dict[str, Any]:
+    payload = _voice_sample_tts_payload(await request.json())
+    if _mock_enabled():
+        result = _mock_tts_response(payload, _public_base_url(request))
+    else:
+        result = synthesize_scene_tts_via_comfy(
+            payload,
+            public_base_url=_public_base_url(request),
+        )
+    return _voice_sample_response(result)
 
 
 @app.get("/view")

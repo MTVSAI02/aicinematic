@@ -47,12 +47,36 @@
   .layout {
     grid-template-columns: 1fr;
   }
+
+  .proceedPanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .panel {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 16px;
+}
+
+.proceedPanel {
+  margin-top: 18px;
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 16px;
+  background: var(--accent-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.jobStatus {
+  margin: 8px 0 0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .panelTitle {
@@ -164,164 +188,29 @@
   opacity: 0.7;
 }
 
+.samplePending {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--code-bg);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.sampleError {
+  font-size: 12px;
+  color: var(--danger);
+  line-height: 1.45;
+  margin: 2px 0 0;
+}
+
 .audio {
   width: 100%;
   height: 32px;
-}
-
-/* ── 씬별 TTS 생성/출력 ───────────────────── */
-.ttsPanel {
-  margin-top: 24px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-}
-
-.ttsHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.ttsDescription {
-  max-width: 440px;
-  margin: 0;
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.ttsSceneList {
-  display: grid;
-  gap: 14px;
-}
-
-.ttsSceneCard {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px;
-  background: var(--bg);
-}
-
-.ttsSceneTop,
-.sceneMeta,
-.sceneTiming,
-.ttsActions,
-.ttsItemAudio {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.ttsSceneTop {
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.sceneOrder {
-  color: var(--text-h);
-  font-weight: 700;
-}
-
-.statusBadge {
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.status_idle {
-  color: var(--text);
-  background: var(--code-bg);
-}
-
-.status_loading {
-  color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.status_done {
-  color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.status_error {
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 12%, var(--bg));
-}
-
-.ttsItemList {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.ttsItem {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  background: color-mix(in srgb, var(--bg) 96%, var(--accent) 4%);
-}
-
-.sceneMeta span,
-.sceneTiming span {
-  padding: 4px 8px;
-  border-radius: 4px;
-  color: var(--text-h);
-  background: var(--code-bg);
-  font-size: 12px;
-}
-
-.sceneLine {
-  margin: 10px 0;
-  color: var(--text-h);
-  font-size: 15px;
-  line-height: 1.55;
-  font-weight: 600;
-}
-
-.ttsItemAudio {
-  color: var(--text);
-  font-size: 13px;
-}
-
-.audioPlayer {
-  flex: 1 1 260px;
-  min-width: 220px;
-  height: 32px;
-}
-
-.ttsItemError {
-  margin: 10px 0 0;
-  color: var(--danger);
-  font-size: 13px;
-  font-weight: 700;
-  white-space: pre-wrap;
-}
-
-.sceneTiming {
-  margin-bottom: 12px;
-}
-
-@media (max-width: 760px) {
-  .ttsHeader {
-    flex-direction: column;
-  }
-
-  .audioPlayer {
-    min-width: 100%;
-  }
 }
 
 /* ── 뱃지 ──────────────────────────────────── */

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useVoiceStore from '@/store/useVoiceStore'
 import useStoryStore from '@/store/useStoryStore'
@@ -6,48 +6,16 @@ import { getVoices } from '@/api/voices'
 import { getStories } from '@/api/stories'
 import { getCharacters } from '@/api/characters'
 import { getVoiceComfyHealth } from '@/api/ai'
+import { startStoryTts } from '@/api/tts'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { loadTtsStoryJob, saveTtsStoryJob } from '@/utils/ttsStoryJobStorage'
 import AiConnectionCheck from '@/components/AiConnectionCheck'
 import VoiceTargetPanel from '@/components/voices/VoiceTargetPanel'
 import VoiceLibrary from '@/components/voices/VoiceLibrary'
-import SceneTtsPanel from '@/components/voices/SceneTtsPanel'
 import styles from './VoicePage.module.css'
 
-function getCharacterId(character) {
-  return character.characterId ?? character.id
-}
-
-function getSceneId(scene) {
-  return scene.sceneId ?? scene.id
-}
-
-function toTtsScene(scene, audioMeta) {
-  const segments = scene.items ?? scene.segments ?? []
-  const items = segments.map((segment, index) => ({
-    itemIndex: segment.itemIndex ?? index,
-    type: segment.type ?? 'narration',
-    speaker: segment.speaker ?? null,
-    text: segment.text ?? segment.line ?? '',
-    emotion: segment.emotion ?? null,
-    emotionLabel: segment.emotionLabel ?? null,
-  }))
-
-  return {
-    id: getSceneId(scene),
-    order: scene.order,
-    items,
-    durationSec: scene.duration ?? scene.durationSec ?? 3,
-    audioPath: audioMeta?.audioPath ?? scene.audioUrl ?? scene.audio_url,
-    audioDurationSec:
-      audioMeta?.audioDurationSec ??
-      scene.audioDurationSec ??
-      scene.audio_duration_sec,
-    audioItems: audioMeta?.audioItems ?? scene.audioItems ?? [],
-  }
-}
-
 // 나레이션(story.narratorVoiceId)과 등장 캐릭터(character.voiceId)에 보이스를 연결하는 페이지.
-// /voice 안에서 voiceId 연결과 씬별 TTS 생성/출력을 함께 처리한다.
+// /voice 에서는 보이스 연결을 확정하고 story 전체 TTS 백그라운드 생성을 시작한다.
 export default function VoicePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -57,7 +25,6 @@ export default function VoicePage() {
 
   const setVoices = useVoiceStore((s) => s.setVoices)
   const setStory = useVoiceStore((s) => s.setStory)
-  const characters = useVoiceStore((s) => s.characters)
   const setCharacters = useVoiceStore((s) => s.setCharacters)
   const setSelectedTarget = useVoiceStore((s) => s.setSelectedTarget)
   const message = useVoiceStore((s) => s.message)
@@ -65,7 +32,8 @@ export default function VoicePage() {
 
   const [stories, setStories] = useState([])
   const [storyId, setStoryId] = useState(queryStoryId || currentStoryId || '')
-  const [sceneAudioById, setSceneAudioById] = useState({})
+  const [ttsJob, setTtsJob] = useState(null)
+  const [startingStoryTts, setStartingStoryTts] = useState(false)
   const [loadError, setLoadError] = useState('')
 
   // 진입 시 보이스/스토리 목록/캐릭터 로드
@@ -97,33 +65,38 @@ export default function VoicePage() {
     setSelectedTarget(null)
   }, [storyId, stories, setStory, setSelectedTarget])
 
+  useEffect(() => {
+    setTtsJob(storyId ? loadTtsStoryJob(storyId) : null)
+  }, [storyId])
+
   const selectedStory = stories.find((s) => s.storyId === storyId) ?? null
-  const ttsScenes = useMemo(
-    () =>
-      (selectedStory?.scenes ?? []).map((scene) =>
-        toTtsScene(scene, sceneAudioById[getSceneId(scene)]),
-      ),
-    [selectedStory, sceneAudioById],
-  )
-  const characterNameById = useMemo(
-    () =>
-      characters.reduce((result, character) => {
-        result[getCharacterId(character)] = character.name
-        return result
-      }, {}),
-    [characters],
-  )
 
   function handleStoryChange(nextStoryId) {
     setStoryId(nextStoryId)
-    setSceneAudioById({})
   }
 
-  function updateSceneAudio(sceneId, audio) {
-    setSceneAudioById((current) => ({
-      ...current,
-      [sceneId]: audio,
-    }))
+  async function handleProceedWithVoiceSettings() {
+    if (!selectedStory || startingStoryTts) return
+
+    setLoadError('')
+    setStartingStoryTts(true)
+    try {
+      const job = await startStoryTts({ storyId })
+      const savedJob = {
+        storyId,
+        jobId: job.jobId,
+        status: job.status,
+        message: job.message,
+        lockedAt: new Date().toISOString(),
+      }
+      saveTtsStoryJob(savedJob)
+      setTtsJob(savedJob)
+      navigate('/background')
+    } catch (err) {
+      setLoadError(getApiErrorMessage(err))
+    } finally {
+      setStartingStoryTts(false)
+    }
   }
 
   return (
@@ -186,14 +159,28 @@ export default function VoicePage() {
             </section>
           </div>
 
-          {selectedStory && (
-            <SceneTtsPanel
-              storyId={storyId}
-              scenes={ttsScenes}
-              characterNameById={characterNameById}
-              onSceneAudioGenerated={updateSceneAudio}
-            />
-          )}
+          <section className={styles.proceedPanel}>
+            <div>
+              <h2 className={styles.panelTitle}>보이스 설정 잠금</h2>
+              <p className={styles.hint}>
+                연결을 마치면 현재 나레이션/캐릭터 보이스 설정으로 스토리 전체 TTS 생성을 시작합니다.
+                생성은 백그라운드에서 계속 진행되고, 완성된 음성은 타임라인에서 확인합니다.
+              </p>
+              {ttsJob && (
+                <p className={styles.jobStatus}>
+                  최근 TTS 작업: {ttsJob.jobId} · {ttsJob.status}
+                </p>
+              )}
+            </div>
+            <button
+              className={styles.btn}
+              type="button"
+              disabled={!selectedStory || startingStoryTts}
+              onClick={handleProceedWithVoiceSettings}
+            >
+              {startingStoryTts ? 'TTS 생성 시작 중...' : '이 보이스 설정으로 진행하기'}
+            </button>
+          </section>
         </>
       ) : (
         <p className={styles.empty}>
@@ -205,8 +192,12 @@ export default function VoicePage() {
         <button className={styles.btnSecondary} onClick={() => navigate('/character')}>
           ← 캐릭터
         </button>
-        <button className={styles.btn} onClick={() => navigate('/background')}>
-          배경 →
+        <button
+          className={styles.btn}
+          disabled={!selectedStory || startingStoryTts}
+          onClick={handleProceedWithVoiceSettings}
+        >
+          {startingStoryTts ? 'TTS 생성 시작 중...' : '이 보이스 설정으로 진행하기'}
         </button>
       </div>
     </div>

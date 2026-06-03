@@ -1,3 +1,5 @@
+from ..core.config import VOICE_STORAGE_DIR, storage_url
+
 # 기본 나레이션 보이스 preset 4개 (서버 시작 시 seed).
 # 고정 voiceId를 쓴다 → 재시작/생성 순서와 무관하게 같은 ID로 참조 가능.
 # 실제 클로닝/샘플 음성(sampleAudioUrl)은 AI/TTS 파트가 채운다(현재 null).
@@ -29,6 +31,26 @@ DEFAULT_NARRATOR_VOICE_PRESETS: list[dict] = [
 ]
 
 
+def _stored_preset_sample_url(voice_id: str) -> str | None:
+    sample_path = VOICE_STORAGE_DIR / voice_id / "sample.wav"
+    if sample_path.is_file() and _looks_like_audio_file(sample_path):
+        return storage_url("voices", voice_id, "sample.wav")
+    return None
+
+
+def _looks_like_audio_file(path) -> bool:
+    try:
+        header = path.read_bytes()[:16]
+    except OSError:
+        return False
+    return (
+        header.startswith(b"RIFF") and header[8:12] == b"WAVE"
+        or header.startswith(b"ID3")
+        or header.startswith(b"OggS")
+        or header.startswith(b"fLaC")
+    )
+
+
 class VoiceRepository:
     """보이스 자산을 저장하는 메모리 Mock Repository.
 
@@ -48,7 +70,11 @@ class VoiceRepository:
         """기본 나레이션 보이스 preset을 메모리에 넣는다. (이미 있으면 건너뜀)"""
         for preset in DEFAULT_NARRATOR_VOICE_PRESETS:
             voice_id = preset["voiceId"]
+            sample_url = _stored_preset_sample_url(voice_id)
             if voice_id in self._voices:
+                # 재시작/스냅샷 복원 시 외부 임시 URL 대신 백엔드 storage 파일 기준으로 정규화한다.
+                self._voices[voice_id]["sampleAudioUrl"] = sample_url
+                self._voices[voice_id].setdefault("durationSec", None)
                 continue  # 중복 seed 방지 (idempotent)
             self._voices[voice_id] = {
                 "voiceId": voice_id,
@@ -57,12 +83,13 @@ class VoiceRepository:
                 "voicePrompt": preset["voicePrompt"],
                 "voiceType": "narrator",
                 "isPreset": True,
-                # preset은 선택 가능한 상태로 노출. 단 미리듣기 샘플은 아직 없음(AI가 채움).
+                # preset은 선택 가능한 상태로 노출. 저장된 sample.wav가 있으면 미리듣기도 즉시 가능.
                 "status": "ready",
-                "sampleAudioUrl": None,
+                "sampleAudioUrl": sample_url,
                 # provider/model은 AI 내부 메타. 응답엔 노출 안 하지만 내부엔 자리 보관.
                 "provider": None,
                 "model": None,
+                "durationSec": None,
             }
 
     def save(self, voice_data: dict) -> dict:
@@ -86,6 +113,7 @@ class VoiceRepository:
             # provider/model/sampleAudioUrl은 AI/TTS 파트가 클로닝 후 채운다 (생성 시 None).
             "provider": voice_data.get("provider"),
             "model": voice_data.get("model"),
+            "durationSec": voice_data.get("durationSec"),
             # 생성 직후엔 "pending"(AI 클로닝 대기). 실제 클로닝되면 AI 파트가 "ready"로 갱신.
             "status": voice_data.get("status") or "pending",
             "error": voice_data.get("error"),
@@ -97,7 +125,17 @@ class VoiceRepository:
 
     # 클로닝 진행/결과 반영 허용 필드(allowlist). 도메인 밖 임의 키가 voice 레코드에 섞이지 않게 막는다.
     _CLONE_UPDATE_FIELDS = frozenset(
-        {"status", "sampleAudioUrl", "provider", "model", "error", "referenceAudioUrl", "referenceText", "updatedAt"}
+        {
+            "status",
+            "sampleAudioUrl",
+            "provider",
+            "model",
+            "durationSec",
+            "error",
+            "referenceAudioUrl",
+            "referenceText",
+            "updatedAt",
+        }
     )
 
     def apply_clone_update(self, voice_id: str, data: dict) -> dict | None:

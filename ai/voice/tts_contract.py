@@ -30,6 +30,8 @@ def _instruction_for(item: dict[str, Any]) -> str | None:
     instructions = []
     voice_prompt = item.get("voicePrompt")
     voice_name = item.get("voiceName")
+    emotion_prompt = item.get("emotionPrompt")
+    character_prompt = item.get("characterPrompt")
     emotion = item.get("emotion")
     emotion_label = item.get("emotionLabel")
 
@@ -38,7 +40,12 @@ def _instruction_for(item: dict[str, Any]) -> str | None:
     elif voice_name:
         instructions.append(f"Voice style: {voice_name}")
 
-    if emotion or emotion_label:
+    if character_prompt:
+        instructions.append(f"Character style: {character_prompt}")
+
+    if emotion_prompt:
+        instructions.append(emotion_prompt)
+    elif emotion or emotion_label:
         instructions.append(f"Emotion: {emotion or emotion_label}")
 
     if not instructions:

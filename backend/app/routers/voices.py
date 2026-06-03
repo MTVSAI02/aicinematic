@@ -8,6 +8,7 @@ from ..schemas.voice import (
     VoiceUpdateRequest,
 )
 from ..services.voice_clone_service import create_voice_clone_job
+from ..services.voice_sample_service import voice_sample_service
 from ..services.voice_service import voice_service
 
 router = APIRouter(prefix="/api/voices", tags=["voices"])
@@ -45,6 +46,18 @@ async def clone_voice(
         audio_filename=audioFile.filename,
         content_type=audioFile.content_type,
     )
+
+
+@router.post("/presets/samples", response_model=list[VoiceResponse], summary="기본 나레이션 보이스 샘플 일괄 생성")
+def generate_preset_voice_samples():
+    """기본 나레이션 preset 4개의 sample.wav를 백엔드 storage에 저장하고 /storage URL을 반환한다."""
+    return voice_sample_service.generate_preset_samples()
+
+
+@router.post("/{voice_id}/sample", response_model=VoiceResponse, summary="보이스 미리듣기 샘플 생성")
+def generate_voice_sample(voice_id: str):
+    """AI/TTS 임시 URL을 그대로 저장하지 않고 wav bytes를 백엔드 storage에 복사 저장한다."""
+    return voice_sample_service.generate_sample(voice_id)
 
 
 @router.post("", response_model=VoiceResponse, summary="보이스 자산 생성")

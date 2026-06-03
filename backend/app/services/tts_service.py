@@ -2,14 +2,18 @@ from ..core.exceptions import (
     EmptySceneItemsError,
     SceneNotFoundError,
     StoryNotFoundError,
+    TTSGenerationFailedError,
     TTSAudioNotFoundError,
 )
 from ..repositories.character_repo import character_repository
+from ..repositories.job_repo import job_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.tts_audio_repository import tts_audio_repository
 from ..repositories.voice_repository import voice_repository
+from ..schemas.job import JobType
+from .job_manager import job_manager
 from .tts_ai_client import tts_ai_client
-from .tts_job_runner import create_tts_generation_job
+from .tts_job_runner import create_tts_generation_job, create_tts_story_generation_job
 
 # voiceType 매핑: narration → narrator, dialogue → character
 VOICE_TYPE = {
@@ -65,6 +69,113 @@ class TTSService:
         self._voice_repo = voice_repo
 
     def generate_scene_tts(self, story_id: str, scene_id: str) -> dict:
+        saved_audios = self._generate_scene_tts_now(story_id, scene_id)
+        return create_tts_generation_job(story_id, scene_id, saved_audios)
+
+    def generate_story_tts(self, story_id: str) -> dict:
+        story = self._story_repo.get(story_id)
+        if story is None:
+            raise StoryNotFoundError()
+
+        def build_result() -> dict:
+            return self._generate_story_tts_now(story_id, replace_existing=True)
+
+        return create_tts_story_generation_job(story_id, build_result)
+
+    def _generate_story_tts_now(
+        self,
+        story_id: str,
+        *,
+        replace_existing: bool,
+        job_id: str | None = None,
+    ) -> dict:
+        story = self._story_repo.get(story_id)
+        if story is None:
+            raise StoryNotFoundError()
+
+        scenes = list(story.get("scenes", []))
+        scene_results = []
+        all_audios = []
+        total = max(len(scenes), 1)
+
+        for index, scene in enumerate(scenes, start=1):
+            scene_id = scene.get("sceneId")
+            if not scene_id:
+                continue
+            try:
+                audios = self._generate_scene_tts_now(
+                    story_id,
+                    scene_id,
+                    replace_existing=replace_existing,
+                )
+            except EmptySceneItemsError:
+                audios = []
+            scene_results.append({"sceneId": scene_id, "audios": audios})
+            all_audios.extend(audios)
+            if job_id:
+                progress = min(95, 10 + int((index / total) * 85))
+                job_repository.update_status(job_id, "running", progress=progress)
+
+        return {
+            "storyId": story_id,
+            "sceneCount": len(scene_results),
+            "audioCount": len(all_audios),
+            "scenes": scene_results,
+            "audios": all_audios,
+        }
+
+    def _generate_scene_tts_now(
+        self,
+        story_id: str,
+        scene_id: str,
+        *,
+        replace_existing: bool = True,
+    ) -> list[dict]:
+        audio_targets = self._build_scene_audio_targets(story_id, scene_id)
+        if not audio_targets:
+            raise EmptySceneItemsError()
+
+        if replace_existing:
+            # 재생성 정책: 같은 story+scene 기존 audio 삭제 후 새로 저장 (누적 방지)
+            self._tts_audio_repo.delete_by_scene(story_id, scene_id)
+            saved_audios = self._tts_audio_repo.create_many(audio_targets)
+            pending_audios = saved_audios
+        else:
+            existing_by_item = {}
+            for audio in self._tts_audio_repo.list_by_scene(story_id, scene_id):
+                item_index = audio.get("itemIndex")
+                current = existing_by_item.get(item_index)
+                if current is None or (audio.get("audioUrl") and not current.get("audioUrl")):
+                    existing_by_item[item_index] = audio
+            saved_audios = []
+            pending_audios = []
+            for target in audio_targets:
+                existing = existing_by_item.get(target["itemIndex"])
+                if existing and existing.get("audioUrl"):
+                    saved_audios.append(existing)
+                    continue
+                saved = self._tts_audio_repo.upsert_target(
+                    target,
+                    audio_id=existing.get("audioId") if existing else None,
+                )
+                saved_audios.append(saved)
+                pending_audios.append(saved)
+
+        if not pending_audios:
+            return saved_audios
+
+        ai_payload = {
+            "storyId": story_id,
+            "sceneId": scene_id,
+            "items": pending_audios,
+        }
+        ai_result = tts_ai_client.synthesize_scene(ai_payload)
+        if ai_result and isinstance(ai_result.get("audios"), list):
+            self._tts_audio_repo.apply_ai_result(ai_result["audios"])
+            saved_audios = self._tts_audio_repo.list_by_scene(story_id, scene_id)
+        return saved_audios
+
+    def _build_scene_audio_targets(self, story_id: str, scene_id: str) -> list[dict]:
         scene = self._find_scene(story_id, scene_id)
 
         # narration용 나레이터 보이스 (story 단위, 없으면 None)
@@ -141,29 +252,42 @@ class TTSService:
                     "error": None,
                 }
             )
-
-        if not audio_targets:
-            raise EmptySceneItemsError()
-
-        # 재생성 정책: 같은 story+scene 기존 audio 삭제 후 새로 저장 (누적 방지)
-        self._tts_audio_repo.delete_by_scene(story_id, scene_id)
-        saved_audios = self._tts_audio_repo.create_many(audio_targets)
-        ai_payload = {
-            "storyId": story_id,
-            "sceneId": scene_id,
-            "items": saved_audios,
-        }
-        ai_result = tts_ai_client.synthesize_scene(ai_payload)
-        if ai_result and isinstance(ai_result.get("audios"), list):
-            self._tts_audio_repo.apply_ai_result(ai_result["audios"])
-            saved_audios = self._tts_audio_repo.list_by_scene(story_id, scene_id)
-
-        # tts_generate Job 생성 (즉시 completed)
-        return create_tts_generation_job(story_id, scene_id, saved_audios)
+        return audio_targets
 
     def list_scene_audios(self, story_id: str, scene_id: str) -> list[dict]:
         # 조회는 story/scene 존재 검증을 하지 않는다. 저장된 게 없으면 [] 반환.
         return self._tts_audio_repo.list_by_scene(story_id, scene_id)
+
+    def resume_unfinished_story_tts_jobs(self) -> int:
+        resumed = 0
+        jobs = job_repository.list_unfinished(JobType.tts_story_generate.value)
+        for job in jobs:
+            job_id = job.get("jobId")
+            payload = job.get("payload") or {}
+            story_id = job.get("storyId") or payload.get("storyId")
+            if not job_id:
+                continue
+            if not story_id:
+                job_repository.fail(job_id, "Cannot resume TTS job: storyId is missing.")
+                continue
+            if self._story_repo.get(story_id) is None:
+                job_repository.fail(job_id, "Cannot resume TTS job: story not found.")
+                continue
+
+            def build_result(story_id=story_id, job_id=job_id) -> dict:
+                return self._generate_story_tts_now(
+                    story_id,
+                    replace_existing=False,
+                    job_id=job_id,
+                )
+
+            job_manager.resume_async(
+                job_id,
+                build_result,
+                TTSGenerationFailedError.detail,
+            )
+            resumed += 1
+        return resumed
 
     def delete_audio(self, audio_id: str) -> dict:
         if self._tts_audio_repo.get(audio_id) is None:
