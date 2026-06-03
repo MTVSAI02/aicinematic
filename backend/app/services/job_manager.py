@@ -2,7 +2,20 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
 from ..repositories.job_repo import job_repository
-from ..schemas.job import JobStatus
+from ..schemas.job import JobStatus, JobType
+
+# GPU / 외부 AI 서버에 직접 요청하는(또는 무거운) 작업.
+# 단일 GPU 서버(클론/TTS, ComfyUI 이미지)는 동시 요청을 받으면 경합·과부하로 타임아웃/다운된다.
+# → 이 유형들은 전용 직렬 큐(동시성 1)로 "큐에 쌓아 하나씩" 처리한다. (경량 작업은 일반 풀에서 병렬)
+_SERIAL_JOB_TYPES = frozenset({
+    JobType.voice_clone.value,
+    JobType.tts_generate.value,
+    JobType.tts_story_generate.value,
+    JobType.character_generate.value,
+    JobType.character_pose_generate.value,
+    JobType.background_generate.value,
+    JobType.render_generate.value,
+})
 
 
 def _error_detail(exc: Exception, fallback: str) -> str:
@@ -35,8 +48,15 @@ class InMemoryJobManager:
 
     def __init__(self, job_repo, max_workers: int = 4):
         self._job_repo = job_repo
+        # 경량/일반 작업용 풀(병렬 허용).
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
+        # GPU·외부 AI 작업 전용 직렬 큐(동시성 1) — 단일 GPU 서버에 동시 요청이 가지 않게 하나씩 처리.
+        self._gpu_executor = ThreadPoolExecutor(max_workers=1)
         # 동시성 보호는 job_repo가 내부 lock으로 직렬화한다(여기서 별도 lock 불필요).
+
+    def _executor_for(self, job_type: str | None):
+        """GPU/외부 AI 작업이면 직렬 큐, 아니면 일반 풀을 고른다."""
+        return self._gpu_executor if job_type in _SERIAL_JOB_TYPES else self._executor
 
     def run(
         self,
@@ -88,7 +108,8 @@ class InMemoryJobManager:
         """
         job = self._job_repo.create(job_type, payload=payload)  # status=pending
         job_id = job["jobId"]
-        self._executor.submit(self._run_job, job_id, build_result, failed_detail)
+        # GPU/외부 AI 작업은 직렬 큐로 → 동시 요청이 단일 GPU 를 때리지 않게 하나씩 처리.
+        self._executor_for(job_type).submit(self._run_job, job_id, build_result, failed_detail)
         return {
             "jobId": job_id,
             "status": JobStatus.pending.value,
@@ -100,9 +121,14 @@ class InMemoryJobManager:
         job_id: str,
         build_result: Callable[[], dict],
         failed_detail: str,
+        job_type: str | None = None,
     ) -> None:
-        """Resume an already persisted pending/running job with the same jobId."""
-        self._executor.submit(self._run_job, job_id, build_result, failed_detail)
+        """Resume an already persisted pending/running job with the same jobId.
+
+        job_type 을 주면 그 유형 기준으로 풀을 고른다(미지정이면 GPU 직렬 큐 — 재개 대상은 보통 GPU 작업).
+        """
+        executor = self._executor_for(job_type) if job_type else self._gpu_executor
+        executor.submit(self._run_job, job_id, build_result, failed_detail)
 
     def _run_job(
         self, job_id: str, build_result: Callable[[], dict], failed_detail: str

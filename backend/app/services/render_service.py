@@ -6,7 +6,6 @@
 - 스토리당 최신 렌더 1개만 기억한다(새 렌더가 lastRender 를 덮고, 이전 mp4 는 정리).
 """
 
-import os
 import uuid
 from datetime import datetime, timezone
 
@@ -47,20 +46,6 @@ def _validate_audio_ready(story_id: str, plan: dict) -> None:
                     raise RenderAudioNotReadyError()
 
 
-def _persist_dev_snapshot() -> None:
-    """렌더 잡은 HTTP 요청 밖(백그라운드 스레드)에서 끝나 dev_persist 미들웨어가 안 잡는다.
-
-    SEED_DEV 면 직접 스냅샷을 저장해 재시작 후에도 story.lastRender 가 유지되게 한다.
-    """
-    if os.getenv("SEED_DEV") == "1":
-        try:
-            from ..core.dev_persist import save_snapshot
-
-            save_snapshot()
-        except Exception:  # noqa: BLE001 (스냅샷 실패가 렌더 성공을 깨지 않게)
-            pass
-
-
 def create_render_job(story_id: str) -> dict:
     # 동기 검증: story 없음 → StoryNotFoundError(404). plan 비었으면 → RenderPlanInvalidError(400).
     plan = timeline_service.build_render_plan(story_id)
@@ -87,7 +72,6 @@ def create_render_job(story_id: str) -> dict:
                 "createdAt": datetime.now(timezone.utc).isoformat(),
             },
         )
-        _persist_dev_snapshot()  # 백그라운드 완료분을 스냅샷에 반영(재시작 유지)
 
         # 스토리당 최신 1개 유지: 이전 mp4 정리(실패해도 무시)
         if prev and prev.get("renderId") and prev["renderId"] != render_id:

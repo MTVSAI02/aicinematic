@@ -78,25 +78,12 @@ def root():
     return {"service": "Mongsil Bookstore", "status": "running", "docs": "/docs"}
 
 
-# ── ⚠️ 임시 개발 시드/스냅샷 (SEED_DEV=1) ───────────────────────────────────────
-# ComfyUI/AI 서버 없이 scene-editor를 테스트하기 위한 임시 데이터.
-# storage/dev_state.json 으로 백엔드 재시작에도 유지된다(변경마다 저장).
-# 실제 생성/영구저장이 안정화되면 이 블록 + core/dev_seed.py + core/dev_persist.py 를 제거한다.
-if os.getenv("SEED_DEV") == "1":
-    from .core.dev_persist import load_snapshot, save_snapshot
-    from .core.dev_seed import seed_dev_data
+# ── 보이스 preset 보장 (DB) ───────────────────────────────────────────────────
+# voices 는 PostgreSQL 로 이전됨. preset 4개는 Alembic 0002 가 시드하지만, startup 에서도
+# idempotent 보장 + sample.wav 존재 여부로 sampleAudioUrl 갱신.
+from .repositories.voice_repository import voice_repository as _voice_repo  # noqa: E402
 
-    if not load_snapshot():   # 스냅샷 있으면 복원, 없으면 기본값 시드 후 스냅샷 생성
-        seed_dev_data()
-        save_snapshot()
-
-    @app.middleware("http")
-    async def _dev_persist_middleware(request, call_next):
-        response = await call_next(request)
-        # 변경 요청 후 최신 상태를 스냅샷에 저장 (kill로 죽여도 유지)
-        if request.method in ("POST", "PATCH", "PUT", "DELETE"):
-            save_snapshot()
-        return response
+_voice_repo.seed_default_narrator_voices()
 
 
 @app.on_event("startup")

@@ -3,17 +3,16 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import useVoiceStore from '@/store/useVoiceStore'
 import useStoryStore from '@/store/useStoryStore'
 import { getVoices } from '@/api/voices'
-import { getStories } from '@/api/stories'
+import { getStories, getVoiceLocks } from '@/api/stories'
 import { getCharacters } from '@/api/characters'
-import { startStoryTts } from '@/api/tts'
 import { getApiErrorMessage } from '@/utils/apiError'
-import { loadTtsStoryJob, saveTtsStoryJob } from '@/utils/ttsStoryJobStorage'
 import VoiceTargetPanel from '@/components/voices/VoiceTargetPanel'
 import VoiceLibrary from '@/components/voices/VoiceLibrary'
 import styles from './VoicePage.module.css'
 
-// 나레이션(story.narratorVoiceId)과 등장 캐릭터(character.voiceId)에 보이스를 연결하는 페이지.
-// /voice 에서는 보이스 연결을 확정하고 story 전체 TTS 백그라운드 생성을 시작한다.
+// 나레이션/캐릭터에 보이스를 연결하고 대상별로 잠그는 페이지.
+// 모든 필수 대상이 잠겨야 [배경 →] 이 활성화된다(잠금 시 그 대상 TTS가 백그라운드 생성).
+// 씬별 TTS 듣기·타이밍 조정은 /timeline 으로 이동했다(여기서는 연결+잠금만).
 export default function VoicePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -25,13 +24,15 @@ export default function VoicePage() {
   const setStory = useVoiceStore((s) => s.setStory)
   const setCharacters = useVoiceStore((s) => s.setCharacters)
   const setSelectedTarget = useVoiceStore((s) => s.setSelectedTarget)
+  const setVoiceLocks = useVoiceStore((s) => s.setVoiceLocks)
+  const refreshVoiceLocks = useVoiceStore((s) => s.refreshVoiceLocks)
+  const voiceLocks = useVoiceStore((s) => s.voiceLocks)
+  const nextStepEnabled = useVoiceStore((s) => s.nextStepEnabled)
   const message = useVoiceStore((s) => s.message)
   const error = useVoiceStore((s) => s.error)
 
   const [stories, setStories] = useState([])
   const [storyId, setStoryId] = useState(queryStoryId || currentStoryId || '')
-  const [ttsJob, setTtsJob] = useState(null)
-  const [startingStoryTts, setStartingStoryTts] = useState(false)
   const [loadError, setLoadError] = useState('')
 
   // 진입 시 보이스/스토리 목록/캐릭터 로드
@@ -63,38 +64,27 @@ export default function VoicePage() {
     setSelectedTarget(null)
   }, [storyId, stories, setStory, setSelectedTarget])
 
+  // storyId 별 대상별 잠금 상태 로드 (없으면 비움)
   useEffect(() => {
-    setTtsJob(storyId ? loadTtsStoryJob(storyId) : null)
-  }, [storyId])
+    if (!storyId) {
+      setVoiceLocks({ voiceLocks: [], allLocked: false, nextStepEnabled: false })
+      return
+    }
+    getVoiceLocks(storyId)
+      .then(setVoiceLocks)
+      .catch(() => {})
+  }, [storyId, setVoiceLocks])
 
-  const selectedStory = stories.find((s) => s.storyId === storyId) ?? null
+  // 생성 중인 대상이 있으면 폴링 (ready/failed 되면 자동 중단)
+  const anyGenerating = voiceLocks.some((l) => l.ttsStatus === 'generating')
+  useEffect(() => {
+    if (!storyId || !anyGenerating) return undefined
+    const timer = setInterval(() => refreshVoiceLocks(), 3000)
+    return () => clearInterval(timer)
+  }, [storyId, anyGenerating, refreshVoiceLocks])
 
   function handleStoryChange(nextStoryId) {
     setStoryId(nextStoryId)
-  }
-
-  async function handleProceedWithVoiceSettings() {
-    if (!selectedStory || startingStoryTts) return
-
-    setLoadError('')
-    setStartingStoryTts(true)
-    try {
-      const job = await startStoryTts({ storyId })
-      const savedJob = {
-        storyId,
-        jobId: job.jobId,
-        status: job.status,
-        message: job.message,
-        lockedAt: new Date().toISOString(),
-      }
-      saveTtsStoryJob(savedJob)
-      setTtsJob(savedJob)
-      navigate('/background')
-    } catch (err) {
-      setLoadError(getApiErrorMessage(err))
-    } finally {
-      setStartingStoryTts(false)
-    }
   }
 
   return (
@@ -149,32 +139,21 @@ export default function VoicePage() {
             </section>
           </div>
 
-          <section className={styles.proceedPanel}>
-            <div>
-              <h2 className={styles.panelTitle}>보이스 설정 잠금</h2>
-              <p className={styles.hint}>
-                연결을 마치면 현재 나레이션/캐릭터 보이스 설정으로 스토리 전체 TTS 생성을 시작합니다.
-                생성은 백그라운드에서 계속 진행되고, 완성된 음성은 타임라인에서 확인합니다.
-              </p>
-              {ttsJob && (
-                <p className={styles.jobStatus}>
-                  최근 TTS 작업: {ttsJob.jobId} · {ttsJob.status}
-                </p>
-              )}
-            </div>
-            <button
-              className={styles.btn}
-              type="button"
-              disabled={!selectedStory || startingStoryTts}
-              onClick={handleProceedWithVoiceSettings}
-            >
-              {startingStoryTts ? 'TTS 생성 시작 중...' : '이 보이스 설정으로 진행하기'}
-            </button>
-          </section>
+          {voiceLocks.some((l) => l.ttsStatus === 'failed') ? (
+            <p className={styles.error} style={{ marginTop: 16 }}>
+              음성 생성에 실패한 대상이 있습니다. 다시 시도하거나 잠금을 해제한 뒤 다시 설정해주세요.
+            </p>
+          ) : (
+            <p className={styles.hint} style={{ marginTop: 16 }}>
+              {nextStepEnabled
+                ? '모든 목소리가 잠겼어요. 음성은 백그라운드에서 준비됩니다 — 배경 단계로 넘어가도 돼요.'
+                : '나레이션과 모든 캐릭터의 목소리를 연결하고 잠가야 다음 단계로 이동할 수 있어요.'}
+            </p>
+          )}
         </>
       ) : (
         <p className={styles.empty}>
-          스토리를 선택하면 나레이션·등장 캐릭터에 보이스를 연결할 수 있습니다. 저장된 스토리가 없다면 먼저 "스토리 입력"에서 대본을 등록하세요.
+          스토리를 선택하면 나레이션·등장 캐릭터에 보이스를 연결할 수 있습니다. 저장된 스토리가 없다면 먼저 “스토리 입력”에서 대본을 등록하세요.
         </p>
       )}
 
@@ -184,10 +163,11 @@ export default function VoicePage() {
         </button>
         <button
           className={styles.btn}
-          disabled={!selectedStory || startingStoryTts}
-          onClick={handleProceedWithVoiceSettings}
+          onClick={() => navigate('/background')}
+          disabled={!storyId || !nextStepEnabled}
+          title={!nextStepEnabled ? '모든 목소리를 잠가야 이동할 수 있어요' : undefined}
         >
-          {startingStoryTts ? 'TTS 생성 시작 중...' : '이 보이스 설정으로 진행하기'}
+          배경 →
         </button>
       </div>
     </div>

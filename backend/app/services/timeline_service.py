@@ -288,11 +288,12 @@ class TimelineService:
                 new_cues = self._clamp_stored_cue_timings(scene, new_duration)
             planned.append((scene, new_duration, new_cues))
 
-        # 2) 검증 통과 후 한 번에 반영. order/텍스트/배치는 안 건드림. dev_persist 로 유지.
+        # 2) 검증 통과 후 한 번에 반영. order/텍스트/배치는 안 건드림. save_story 로 DB 영속화.
         for scene, new_duration, new_cues in planned:
             scene["duration"] = new_duration
             if new_cues is not None:
                 scene["cueTimings"] = new_cues
+        self._story_repo.save_story(story)
 
         return self.get_timeline(story_id)
 

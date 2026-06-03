@@ -77,9 +77,8 @@ class CharacterService:
             raise CharacterNotFoundError()
         # 파일 정리: 원본 + 포즈 이미지(레코드 삭제 전에 poses 목록 확보). 배경 삭제와 대칭(고아 파일 방지).
         self._delete_character_files(character)
+        # scene_characters 참조는 FK ondelete=CASCADE 가 자동 정리(캐릭터 row 삭제 → 연결 행 삭제).
         self._character_repo.delete(character_id)
-        # 참조 해제: 이 캐릭터를 연결하던 모든 scene 의 characters 에서 제거
-        self._detach_character_from_scenes(character_id)
 
     @staticmethod
     def _delete_character_files(character: dict) -> None:
@@ -139,7 +138,7 @@ class CharacterService:
         - pose_id 가 None 이 아니면 그 캐릭터의 실제 포즈여야 함(아니면 404).
         - 반환: 그 씬의 캐릭터 목록.
         """
-        scene = self._find_scene(story_id, scene_id)
+        story, scene = self._find_story_scene(story_id, scene_id)
         if self._character_repo.get(character_id) is None:
             raise CharacterNotFoundError()  # 라이브러리에 없는 캐릭터(상태 꼬임 방어)
         entry = next(
@@ -153,6 +152,7 @@ class CharacterService:
             if not any(p.get("poseId") == pose_id for p in poses):
                 raise CharacterPoseNotFoundError()
         entry["poseId"] = pose_id
+        self._story_repo.save_story(story)
         return {"storyId": story_id, "sceneId": scene_id, "characters": scene["characters"]}
 
     # ── 씬-캐릭터 연결 (씬당 다중) ─────────────────────────────
@@ -172,7 +172,7 @@ class CharacterService:
         새로 추가될 때 layout이 없으면 기본 배치(겹치지 않게 분산)를 넣는다.
         반환: 그 씬의 전체 캐릭터 목록.
         """
-        scene = self._find_scene(story_id, scene_id)
+        story, scene = self._find_story_scene(story_id, scene_id)
         if self._character_repo.get(character_id) is None:
             raise CharacterNotFoundError()
 
@@ -195,6 +195,7 @@ class CharacterService:
                     else _default_character_layout(len(characters)),
                 }
             )
+        self._story_repo.save_story(story)
         return {"storyId": story_id, "sceneId": scene_id, "characters": characters}
 
     def disconnect_scene_character(
@@ -204,37 +205,28 @@ class CharacterService:
 
         story 없음 → 404, scene 없음 → 404. 반환: 남은 캐릭터 목록.
         """
-        scene = self._find_scene(story_id, scene_id)
+        story, scene = self._find_story_scene(story_id, scene_id)
         scene["characters"] = [
             c
             for c in scene.get("characters", [])
             if c.get("characterId") != character_id
         ]
+        self._story_repo.save_story(story)
         return {
             "storyId": story_id,
             "sceneId": scene_id,
             "characters": scene["characters"],
         }
 
-    def _find_scene(self, story_id: str, scene_id: str) -> dict:
+    def _find_story_scene(self, story_id: str, scene_id: str) -> tuple[dict, dict]:
+        """(story, scene) 를 함께 반환한다 — 수정 후 save_story(story) 로 영속화하기 위함."""
         story = self._story_repo.get(story_id)
         if story is None:
             raise StoryNotFoundError()
         for scene in story.get("scenes", []):
             if scene.get("sceneId") == scene_id:
-                return scene
+                return story, scene
         raise SceneNotFoundError()
-
-    def _detach_character_from_scenes(self, character_id: str) -> None:
-        """캐릭터 삭제 시 모든 씬의 characters 목록에서 제거 (배경 삭제와 대칭)."""
-        for story in self._story_repo.list():
-            for scene in story.get("scenes", []):
-                if "characters" in scene:
-                    scene["characters"] = [
-                        c
-                        for c in scene["characters"]
-                        if c.get("characterId") != character_id
-                    ]
 
 
 character_service = CharacterService(

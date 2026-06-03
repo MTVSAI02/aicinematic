@@ -14,7 +14,9 @@ from ..core.config import AI_REQUEST_HEADERS, AI_VOICE_CLONE_URL
 from ..core.exceptions import AiVoiceServerError
 
 _MIME = {"webm": "audio/webm", "wav": "audio/wav", "mp3": "audio/mpeg", "m4a": "audio/mp4"}
-_TIMEOUT = 120.0
+# 클론은 GPU 추론이라 길어질 수 있다(TTS=900s 와 균형). 120s 는 너무 짧아 단건도 끊겼다.
+# 직렬 큐(job_manager)로 동시 요청은 막되, 단건 자체 여유도 확보.
+_TIMEOUT = float(os.getenv("AI_VOICE_CLONE_TIMEOUT_SEC", "600"))
 _DEFAULT_PROVIDER = "qwen"
 _DEFAULT_MODEL = "Qwen3-TTS-12Hz-0.6B-Base"
 _SAMPLE_TEXT = "이 목소리는 동화 속 캐릭터 대사에 사용됩니다."

@@ -14,8 +14,6 @@
 대상별 audio 만 교체하므로(다른 대상 audio 유지) 캐릭터 하나만 다시 잠가도 나머지는 보존된다.
 """
 
-import os
-
 from ..core.exceptions import (
     StoryNotFoundError,
     VoiceLockTargetNotFoundError,
@@ -31,17 +29,6 @@ from .job_manager import job_manager
 from .tts_service import tts_service
 
 NARRATION_TARGET_ID = "narration"
-
-
-def _persist_dev_snapshot() -> None:
-    """백그라운드 job 은 HTTP 요청 밖에서 끝나 dev_persist 미들웨어가 안 잡는다. SEED_DEV 면 직접 저장."""
-    if os.getenv("SEED_DEV") == "1":
-        try:
-            from ..core.dev_persist import save_snapshot
-
-            save_snapshot()
-        except Exception:  # noqa: BLE001
-            pass
 
 
 def _voice_name(voice_id: str | None) -> str | None:
@@ -219,18 +206,15 @@ def lock_target(story_id: str, target_type: str, target_id: str) -> dict:
 
     # 잠금 + generationToken 캡처. job 은 이 토큰일 때만 결과를 반영(해제/재잠금 race 방어).
     gen = story_repository.lock_voice_target(story_id, target_id)
-    _persist_dev_snapshot()
 
     def build_result() -> dict:
         try:
             result = tts_service.generate_target_audios(story_id, target_type, character_name)
             tts_status = "ready" if result.get("readyCount", 0) > 0 else "failed"
             applied = story_repository.apply_target_tts_status(story_id, target_id, tts_status, gen)
-            _persist_dev_snapshot()
             return {"targetId": target_id, "ttsStatus": tts_status, "applied": applied, **result}
         except Exception:  # noqa: BLE001 — 같은 토큰+locked 일 때만 failed 반영
             story_repository.apply_target_tts_status(story_id, target_id, "failed", gen)
-            _persist_dev_snapshot()
             raise
 
     job_manager.run_async(
@@ -252,5 +236,4 @@ def unlock_target(story_id: str, target_type: str, target_id: str) -> dict:
 
     # unlocked/stale 로. gen 은 유지 — 진행 중 job 은 lockStatus 불일치로 자동 무시됨.
     story_repository.unlock_voice_target(story_id, target_id)
-    _persist_dev_snapshot()
     return _action_view(story_repository.get(story_id), target_type, target_id)
