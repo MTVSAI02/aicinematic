@@ -145,15 +145,6 @@
 
 /* ── Character Job UI 추가분 (기존 스타일 톤 유지) ───────────── */
 
-/* 임시 AI 연결 확인 영역 */
-.aiCheck {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-}
-
 /* 생성 Job 상태 안내 */
 .status {
   font-size: 13px;

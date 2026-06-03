@@ -30,7 +30,6 @@ from .core.config import STORAGE_ROOT, STORAGE_URL_PREFIX
 from .core.exception_handlers import app_exception_handler
 from .core.exceptions import AppException
 from .routers import (
-    ai_health,
     backgrounds,
     characters,
     health,
@@ -66,7 +65,6 @@ app.include_router(health.router)
 app.include_router(stories.router)
 app.include_router(characters.router)
 app.include_router(jobs.router)
-app.include_router(ai_health.router)
 app.include_router(backgrounds.router)
 app.include_router(scenes.router)
 app.include_router(timeline.router)
@@ -84,7 +82,6 @@ def root():
 # ComfyUI/AI 서버 없이 scene-editor를 테스트하기 위한 임시 데이터.
 # storage/dev_state.json 으로 백엔드 재시작에도 유지된다(변경마다 저장).
 # 실제 생성/영구저장이 안정화되면 이 블록 + core/dev_seed.py + core/dev_persist.py 를 제거한다.
-# 제거 추적: TEMP_AI_CONNECTION_TEST.md 와 무관한 별도 임시 스캐폴딩.
 if os.getenv("SEED_DEV") == "1":
     from .core.dev_persist import load_snapshot, save_snapshot
     from .core.dev_seed import seed_dev_data
