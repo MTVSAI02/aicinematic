@@ -1,126 +1,161 @@
-from __future__ import annotations  # list() 메서드가 빌트인 list를 가려 어노테이션 평가가 깨지는 것 방지
+"""캐릭터 repository (PostgreSQL).
 
-import threading
+기존 in-memory 와 같은 메서드/반환(dict, camelCase + poses 임베디드)을 유지한다.
+poses 는 character_poses 테이블(1:N)에 저장하고, get/list 시 character dict 의 "poses" 로 합쳐 반환.
+ID = prefix+ULID. (마이그레이션 시에는 기존 ID를 그대로 넣을 수 있게 create(character_id, ...) 사용)
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import select, update
+
+from ..core.ids import new_id
+from ..db.models import Character, CharacterPose
+from ..db.session import SessionLocal
+
+
+def _pose_to_dict(p: CharacterPose) -> dict:
+    # 포즈 dict 형태(character_pose_job_runner): {poseId, posePrompt, imageUrl}
+    return {"poseId": p.id, "posePrompt": p.prompt, "imageUrl": p.image_url}
+
+
+def _char_to_dict(c: Character, poses: list[CharacterPose]) -> dict:
+    return {
+        "characterId": c.id,
+        "name": c.name,
+        "appearancePrompt": c.appearance_prompt,
+        "description": c.description,
+        "imageUrl": c.image_url,
+        "voiceId": c.voice_id,
+        "aiImagePath": c.ai_image_path,
+        "poses": [_pose_to_dict(p) for p in poses],
+    }
+
+
+def _load_one(db, character_id: str) -> dict | None:
+    c = db.get(Character, character_id)
+    if c is None:
+        return None
+    poses = db.execute(
+        select(CharacterPose).where(CharacterPose.character_id == character_id)
+    ).scalars().all()
+    return _char_to_dict(c, poses)
 
 
 class CharacterRepository:
-    """DB 대신 메모리 dict에 캐릭터를 저장하는 Mock Repository.
-
-    서버 재시작 시 데이터는 초기화된다.
-    비동기 Job(워커 스레드)에서 ID 발급/저장이 일어날 수 있어 counter는 lock으로 보호한다.
-    """
-
-    def __init__(self):
-        self._characters: dict = {}
-        self._counter: int = 0
-        self._pose_counter: int = 0
-        self._lock = threading.Lock()
-
     def reserve_id(self) -> str:
-        """characterId만 발급한다(저장하지 않음).
+        return new_id("character")
 
-        생성(예: ComfyUI 이미지)을 먼저 시도하고 성공한 뒤 create()로 저장하기 위함.
-        → 생성 실패 시 imageUrl=None인 빈 캐릭터(orphan)가 남지 않는다.
-        """
-        with self._lock:
-            self._counter += 1
-            return f"char_mock_{self._counter:03d}"
+    def reserve_pose_id(self) -> str:
+        return new_id("pose")
 
     def create(self, character_id: str, character_data: dict) -> dict:
-        """예약된 characterId로 캐릭터 레코드를 저장한다."""
-        saved = {
-            "characterId": character_id,
-            "name": character_data.get("name"),
-            "appearancePrompt": character_data.get("appearancePrompt"),
-            "description": character_data.get("description"),  # 저장/표시용 메타(ComfyUI prompt 미사용)
-            "imageUrl": character_data.get("imageUrl"),
-            "voiceId": character_data.get("voiceId"),  # 보이스 라이브러리 참조 (없으면 None)
-            # AI 서버 원본 경로(포즈 생성 reference용, 내부 전용). CharacterResponse엔 노출 안 함. 없으면 None.
-            "aiImagePath": character_data.get("aiImagePath"),
-            # 캐릭터별 생성된 포즈 목록(1:N). 포즈 생성 Job 완료 시 append. (별도 repo 대신 레코드에 둠 → dev_persist로 유지)
-            "poses": character_data.get("poses") or [],
-        }
-        with self._lock:
-            self._characters[character_id] = saved
-        return saved
+        """예약된(또는 기존) characterId로 캐릭터 + (있으면) poses 저장."""
+        with SessionLocal() as db:
+            db.add(Character(
+                id=character_id,
+                name=character_data.get("name"),
+                appearance_prompt=character_data.get("appearancePrompt"),
+                description=character_data.get("description"),
+                image_url=character_data.get("imageUrl"),
+                voice_id=character_data.get("voiceId"),
+                ai_image_path=character_data.get("aiImagePath"),
+                legacy_id=character_data.get("legacyId"),
+            ))
+            for pose in character_data.get("poses") or []:
+                db.add(CharacterPose(
+                    id=pose.get("poseId") or new_id("pose"),
+                    character_id=character_id,
+                    label=pose.get("label"),
+                    prompt=pose.get("posePrompt"),
+                    image_url=pose.get("imageUrl"),
+                ))
+            db.commit()
+            return _load_one(db, character_id)
 
     def save(self, character_data: dict) -> dict:
-        """ID 발급 + 즉시 저장 (이미 만들어진 결과를 바로 저장하는 경로)."""
         return self.create(self.reserve_id(), character_data)
 
     def list(self) -> list[dict]:
-        with self._lock:
-            return list(self._characters.values())
+        with SessionLocal() as db:
+            chars = db.execute(select(Character).order_by(Character.created_at)).scalars().all()
+            poses = db.execute(select(CharacterPose)).scalars().all()
+            by_char: dict[str, list] = {}
+            for p in poses:
+                by_char.setdefault(p.character_id, []).append(p)
+            return [_char_to_dict(c, by_char.get(c.id, [])) for c in chars]
 
     def get(self, character_id: str) -> dict | None:
-        return self._characters.get(character_id)
+        with SessionLocal() as db:
+            return _load_one(db, character_id)
 
     def update(self, character_id: str, update_data: dict) -> dict | None:
-        with self._lock:
-            character = self._characters.get(character_id)
-            if not character:
+        with SessionLocal() as db:
+            c = db.get(Character, character_id)
+            if not c:
                 return None
-            # update_data는 라우터에서 exclude_unset으로 만든 dict이므로
-            # "명시적으로 전달된 필드"만 들어 있다.
-            # - name / appearancePrompt: NOT NULL 성격 → None(명시적 null)은 무시한다.
-            # - description / imageUrl: nullable → 명시적 null이면 값을 초기화(None)한다.
-            for field in ("name", "appearancePrompt"):
-                if field in update_data and update_data[field] is not None:
-                    character[field] = update_data[field]
-            for field in ("description", "imageUrl"):
-                if field in update_data:
-                    character[field] = update_data[field]
-            return character
+            # name/appearancePrompt: None(명시적 null)은 무시. description/imageUrl: 명시되면 set(null 허용).
+            if "name" in update_data and update_data["name"] is not None:
+                c.name = update_data["name"]
+            if "appearancePrompt" in update_data and update_data["appearancePrompt"] is not None:
+                c.appearance_prompt = update_data["appearancePrompt"]
+            if "description" in update_data:
+                c.description = update_data["description"]
+            if "imageUrl" in update_data:
+                c.image_url = update_data["imageUrl"]
+            db.commit()
+            return _load_one(db, character_id)
 
     def set_voice(self, character_id: str, voice_id: str | None) -> dict | None:
-        """캐릭터에 voiceId를 연결/해제한다. (None이면 해제)"""
-        with self._lock:
-            character = self._characters.get(character_id)
-            if not character:
+        with SessionLocal() as db:
+            c = db.get(Character, character_id)
+            if not c:
                 return None
-            character["voiceId"] = voice_id
-            return character
+            c.voice_id = voice_id
+            db.commit()
+            return _load_one(db, character_id)
 
     def detach_voice(self, voice_id: str) -> int:
-        """해당 voiceId를 참조하던 모든 캐릭터의 voiceId를 None으로 만든다. (보이스 삭제 시)"""
-        count = 0
-        with self._lock:
-            for character in self._characters.values():
-                if character.get("voiceId") == voice_id:
-                    character["voiceId"] = None
-                    count += 1
-        return count
+        """해당 voiceId 를 참조하던 모든 캐릭터의 voice_id 를 NULL 로(보이스 삭제 캐스케이드)."""
+        with SessionLocal() as db:
+            res = db.execute(
+                update(Character).where(Character.voice_id == voice_id).values(voice_id=None)
+            )
+            db.commit()
+            return res.rowcount or 0
 
     def delete(self, character_id: str) -> bool:
-        with self._lock:
-            if character_id in self._characters:
-                del self._characters[character_id]
-                return True
-            return False
+        with SessionLocal() as db:
+            c = db.get(Character, character_id)
+            if not c:
+                return False
+            db.delete(c)  # poses 는 FK ondelete=CASCADE
+            db.commit()
+            return True
 
-    # ── 포즈 (캐릭터 1:N) ─────────────────────────────────────
-    def reserve_pose_id(self) -> str:
-        """poseId만 발급한다(저장 X). 생성 성공 후 add_pose로 저장."""
-        with self._lock:
-            self._pose_counter += 1
-            return f"pose_mock_{self._pose_counter:03d}"
-
+    # ── 포즈 (1:N) ─────────────────────────────────────
     def add_pose(self, character_id: str, pose: dict) -> dict | None:
-        """캐릭터의 poses 목록에 포즈를 추가한다. 캐릭터 없으면 None."""
-        with self._lock:
-            character = self._characters.get(character_id)
-            if not character:
+        with SessionLocal() as db:
+            if db.get(Character, character_id) is None:
                 return None
-            character.setdefault("poses", []).append(pose)
+            db.add(CharacterPose(
+                id=pose.get("poseId") or new_id("pose"),
+                character_id=character_id,
+                label=pose.get("label"),
+                prompt=pose.get("posePrompt"),
+                image_url=pose.get("imageUrl"),
+            ))
+            db.commit()
             return pose
 
     def list_poses(self, character_id: str) -> list | None:
-        """캐릭터의 포즈 목록. 캐릭터 없으면 None(빈 목록과 구분)."""
-        with self._lock:
-            character = self._characters.get(character_id)
-            if character is None:
+        with SessionLocal() as db:
+            if db.get(Character, character_id) is None:
                 return None
-            return list(character.get("poses") or [])
+            poses = db.execute(
+                select(CharacterPose).where(CharacterPose.character_id == character_id)
+            ).scalars().all()
+            return [_pose_to_dict(p) for p in poses]
 
 
 character_repository = CharacterRepository()

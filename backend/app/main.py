@@ -90,12 +90,20 @@ _voice_repo.seed_default_narrator_voices()
 # storage/dev_state.json 으로 백엔드 재시작에도 유지된다(변경마다 저장).
 # 실제 생성/영구저장이 안정화되면 이 블록 + core/dev_seed.py + core/dev_persist.py 를 제거한다.
 if os.getenv("SEED_DEV") == "1":
-    from .core.dev_persist import load_snapshot, save_snapshot
+    from .core.dev_persist import (
+        load_snapshot,
+        migrate_devstate_backgrounds_to_db,
+        migrate_devstate_characters_to_db,
+        save_snapshot,
+    )
     from .core.dev_seed import seed_dev_data
 
     if not load_snapshot():   # 스냅샷 있으면 복원, 없으면 기본값 시드 후 스냅샷 생성
         seed_dev_data()
         save_snapshot()
+    # voices·characters·backgrounds 는 DB. 기존 dev_state 레코드를 같은 ID로 DB 에 이관(스토리 참조 보존).
+    migrate_devstate_characters_to_db()
+    migrate_devstate_backgrounds_to_db()
 
     @app.middleware("http")
     async def _dev_persist_middleware(request, call_next):
