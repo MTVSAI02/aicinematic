@@ -6,6 +6,10 @@ class TTSSceneGenerateRequest(BaseModel):
     sceneId: str
 
 
+class TTSStoryGenerateRequest(BaseModel):
+    storyId: str
+
+
 class TTSAudioResponse(BaseModel):
     audioId: str
     storyId: str

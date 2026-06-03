@@ -7,6 +7,14 @@
     "nodeId": "REPLACE_VOICE_PROMPT_NODE_ID",
     "path": ["inputs", "text"]
   },
+  "emotionPrompt": {
+    "nodeId": "REPLACE_EMOTION_PROMPT_NODE_ID",
+    "path": ["inputs", "text"]
+  },
+  "characterPrompt": {
+    "nodeId": "REPLACE_CHARACTER_PROMPT_NODE_ID",
+    "path": ["inputs", "text"]
+  },
   "emotion": {
     "nodeId": "REPLACE_EMOTION_NODE_ID",
     "path": ["inputs", "text"]
@@ -14,6 +22,14 @@
   "speaker": {
     "nodeId": "REPLACE_SPEAKER_NODE_ID",
     "path": ["inputs", "speaker"]
+  },
+  "referenceAudioUrl": {
+    "nodeId": "REPLACE_REFERENCE_AUDIO_NODE_ID",
+    "path": ["inputs", "audio"]
+  },
+  "referenceText": {
+    "nodeId": "REPLACE_REFERENCE_TEXT_NODE_ID",
+    "path": ["inputs", "text"]
   },
   "refAudio": {
     "nodeId": "REPLACE_REFERENCE_AUDIO_NODE_ID",

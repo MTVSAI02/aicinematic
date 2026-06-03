@@ -2,18 +2,40 @@
   "voice_preset_narrator_calm_001": {
     "speaker": "sohee",
     "voicePrompt": "calm, warm, gentle narrator voice for fairy tale storytelling",
+    "referenceAudioUrl": null,
+    "referenceText": null,
     "refAudio": null,
     "refText": null
   },
   "voice_preset_narrator_bright_001": {
-    "speaker": "sohee",
+    "speaker": "serena",
     "voicePrompt": "bright, friendly, cheerful narrator voice for children story",
+    "referenceAudioUrl": null,
+    "referenceText": null,
+    "refAudio": null,
+    "refText": null
+  },
+  "voice_preset_narrator_soft_001": {
+    "speaker": "vivian",
+    "voicePrompt": "soft, cozy, gentle storytelling voice",
+    "referenceAudioUrl": null,
+    "referenceText": null,
+    "refAudio": null,
+    "refText": null
+  },
+  "voice_preset_narrator_serious_001": {
+    "speaker": "ryan",
+    "voicePrompt": "serious, calm, stable narrator voice",
+    "referenceAudioUrl": null,
+    "referenceText": null,
     "refAudio": null,
     "refText": null
   },
   "voice_mock_001": {
     "speaker": "custom_character_001",
     "voicePrompt": "warm curious boy voice",
+    "referenceAudioUrl": "/path/to/character/reference.wav",
+    "referenceText": "The exact sentence spoken in the reference audio.",
     "refAudio": "/path/to/character/reference.wav",
     "refText": "The exact sentence spoken in the reference audio."
   }

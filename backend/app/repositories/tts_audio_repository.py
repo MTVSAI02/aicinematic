@@ -124,6 +124,35 @@ class TTSAudioRepository:
             ))
             db.commit()
 
+    def upsert_target(self, audio: dict, audio_id: str | None = None) -> dict:
+        """item 하나를 저장/갱신한다(story TTS 재개 흐름용). audio_id 주면 그 row 갱신, 없으면 신규.
+
+        반환은 입력 dict(rich) + audioId — create_many 와 동일하게 AI payload 로 재사용 가능.
+        """
+        with SessionLocal() as db:
+            scene_pk = self._scene_pk(db, audio.get("storyId"), audio.get("sceneId"))
+            if scene_pk is None:
+                return {**audio, "audioId": audio_id}  # 해소 불가(방어) — passthrough
+            row = db.get(TtsAudio, audio_id) if audio_id else None
+            if row is None:
+                audio_id = audio_id or new_id("tts_audio")
+                row = TtsAudio(id=audio_id)
+                db.add(row)
+            row.scene_id = scene_pk
+            row.story_id = audio.get("storyId")
+            row.item_index = audio.get("itemIndex")
+            row.type = audio.get("type")
+            row.speaker = audio.get("speaker")
+            row.text = audio.get("text")
+            row.emotion = _emotion_str(audio.get("emotion"))
+            row.emotion_label = audio.get("emotionLabel")
+            row.voice_id = audio.get("voiceId")
+            row.audio_url = audio.get("audioUrl")
+            row.duration_sec = audio.get("durationSec")
+            row.error = audio.get("error")
+            db.commit()
+            return {**audio, "audioId": row.id}
+
     # ── 조회 ─────────────────────────────────────────────────
     def list_by_scene(self, story_id: str, scene_id: str) -> list[dict]:
         with SessionLocal() as db:
@@ -133,7 +162,13 @@ class TTSAudioRepository:
             rows = db.execute(
                 select(TtsAudio).where(TtsAudio.scene_id == scene_pk).order_by(TtsAudio.item_index)
             ).scalars().all()
-            return [self._to_dict(db, a, {}, local_scene_id=scene_id) for a in rows]
+            # item_index 당 1건으로 정리(재생성 old/new 공존 시 audioUrl 있는 것 우선) — develop 흐름과 일치.
+            by_item: dict = {}
+            for a in rows:
+                cur = by_item.get(a.item_index)
+                if cur is None or (a.audio_url and not cur.audio_url):
+                    by_item[a.item_index] = a
+            return [self._to_dict(db, by_item[k], {}, local_scene_id=scene_id) for k in sorted(by_item)]
 
     def list_by_story(self, story_id: str) -> list[dict]:
         with SessionLocal() as db:

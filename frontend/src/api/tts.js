@@ -73,3 +73,23 @@ export async function generateSceneTts({ storyId, scene }) {
     audioItems: audios,
   }
 }
+
+export function startStoryTts({ storyId }) {
+  if (!storyId) {
+    throw new Error('storyId가 필요합니다.')
+  }
+
+  return request('/api/tts/story', {
+    ...jsonBody({ storyId }),
+    method: 'POST',
+  })
+}
+
+export function listSceneTts({ storyId, sceneId }) {
+  if (!storyId || !sceneId) {
+    throw new Error('storyId와 sceneId가 필요합니다.')
+  }
+
+  const params = new URLSearchParams({ storyId, sceneId })
+  return request(`/api/tts?${params.toString()}`)
+}
