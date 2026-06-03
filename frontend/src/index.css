@@ -13,10 +13,11 @@
   font-style: normal;
 }
 
-/* 자막 폰트(학교안심 둥근미소 Regular) — /scene-editor·/timeline 미리보기 자막에 사용. 렌더(ffmpeg)도 같은 OTF. */
+/* 자막 폰트(학교안심 둥근미소 Regular) — /scene-editor·/timeline 미리보기 자막에 사용.
+   소스는 design 에셋 단일화(@design alias). 백엔드 렌더(Pillow)도 같은 design OTF 사용. */
 @font-face {
   font-family: 'Hakgyoansim Dunggeunmiso';
-  src: url('/fonts/Hakgyoansim-Dunggeunmiso-R.otf') format('opentype');
+  src: url('@design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF R.otf') format('opentype');
   font-weight: 400;
   font-display: swap;
 }
