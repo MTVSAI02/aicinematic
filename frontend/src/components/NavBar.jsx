@@ -1,17 +1,17 @@
 import { NavLink } from 'react-router-dom'
 import styles from './NavBar.module.css'
 
-import navHome from '@design/assets/figma-icons/nav_home.svg'
-import navVoiceInput from '@design/assets/figma-icons/nav_voice_input.svg'
-import navStoryInput from '@design/assets/figma-icons/nav_story_input.svg'
-import navSceneCheck from '@design/assets/figma-icons/nav_scene_check.svg'
-import navCharacter from '@design/assets/figma-icons/nav_character.svg'
-import navVoice from '@design/assets/figma-icons/nav_voice.svg'
-import navBackground from '@design/assets/figma-icons/nav_background.svg'
-import navSceneEditor from '@design/assets/figma-icons/nav_scene_editor.svg'
-import navTimeline from '@design/assets/figma-icons/nav_timeline.svg'
-import navExport from '@design/assets/figma-icons/nav_export.svg'
-import logo from '@design/assets/figma-images/Home_Logo.svg'
+import navHome from '@design/assets/figma-icons/Nav/nav_home.svg'
+import navVoiceInput from '@design/assets/figma-icons/Nav/nav_voice_input.svg'
+import navStoryInput from '@design/assets/figma-icons/Nav/nav_story_input.svg'
+import navSceneCheck from '@design/assets/figma-icons/Nav/nav_scene_check.svg'
+import navCharacter from '@design/assets/figma-icons/Nav/nav_character.svg'
+import navVoice from '@design/assets/figma-icons/Nav/nav_voice.svg'
+import navBackground from '@design/assets/figma-icons/Nav/nav_background.svg'
+import navSceneEditor from '@design/assets/figma-icons/Nav/nav_scene_editor.svg'
+import navTimeline from '@design/assets/figma-icons/Nav/nav_timeline.svg'
+import navExport from '@design/assets/figma-icons/Nav/nav_export.svg'
+import logo from '@design/assets/figma-icons/Nav/nav_Logo.svg'
 
 const NAV_ITEMS = [
   { to: '/', label: '홈', icon: navHome },

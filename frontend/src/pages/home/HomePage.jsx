@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styles from './HomePage.module.css'
 
-import homeLogoAnim from '@design/assets/figma-images/Home_logo_anim.svg'
-import homeBook from '@design/assets/figma-images/Home_book.svg'
+import homeLogoAnim from '@design/assets/figma-icons/Home/Home_logo_anim.svg'
+import homeBook from '@design/assets/figma-icons/Home/Home_book.svg'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -16,7 +16,7 @@ export default function HomePage() {
     // 좌우 흔들림 (X축) 변수
     let angle = 0
     let velocity = 0
-    
+
     // 위아래 탄성 (Y축) 변수
     // 인트로 연출을 위해 초기 Y 오프셋을 -250px(화면 위쪽 뷰포트 바깥)로 설정
     let yOffset = -250
@@ -35,14 +35,14 @@ export default function HomePage() {
     // 물리 상수 정의
     const springK = 0.16     // X축 좌우 복원력 계수
     const damping = 0.91      // X축 좌우 감쇠 계수
-    
+
     // 인트로 및 수직 탄성에 쓰이는 물리상수
     const ySpringK = 0.18    // Y축 복원 스프링 (살짝 더 쫀득하게 복원되도록 0.18 설정)
     const yDamping = 0.88     // Y축 복원 감쇠력
 
     const updatePhysics = () => {
       time += 16.67 // 약 60fps 흐름 모사
-      
+
       // 둥둥 뜨는 효과 (더 크게 움직이며 더 느리게 둥실거리도록 조정: 진폭 8px, 속도 약 2배 감축)
       // 인트로 낙하 중에는 둥실거림을 적용하지 않거나 서서히 섞어줌
       const floatY = isIntro ? 0 : Math.sin(time * 0.0012) * 8
@@ -107,15 +107,15 @@ export default function HomePage() {
         // X축 드래그 (회전)
         const deltaX = e.clientX - lastX
         angle += deltaX * 0.07
-        
+
         // Y축 드래그 (세로 늘어남)
         const deltaY = e.clientY - lastY
         yOffset += deltaY * 0.35
-        
+
         // 회전 각도 및 수직 오프셋 상하한선 타이트하게 제한
         if (angle > 18) angle = 18
         if (angle < -18) angle = -18
-        
+
         if (yOffset > 25) yOffset = 25
         if (yOffset < -10) yOffset = -10
 
@@ -123,11 +123,11 @@ export default function HomePage() {
           // 릴리즈 시 부드러운 평활 필터링
           const targetVelocity = (deltaX / dt) * 3.5
           velocity = velocity * 0.4 + targetVelocity * 0.6
-          
+
           const targetYVelocity = (deltaY / dt) * 5
           yVelocity = yVelocity * 0.4 + targetYVelocity * 0.6
         }
-        
+
         lastX = e.clientX
         lastY = e.clientY
         lastTime = now
@@ -135,14 +135,14 @@ export default function HomePage() {
         // 마우스 호버 살랑임 효과 (X/Y축 대칭)
         const deltaX = e.clientX - lastX
         const deltaY = e.clientY - lastY
-        
+
         if (Math.abs(deltaX) > 2) {
           velocity += deltaX * 0.005
         }
         if (Math.abs(deltaY) > 2) {
           yVelocity += deltaY * 0.015
         }
-        
+
         lastX = e.clientX
         lastY = e.clientY
       }
