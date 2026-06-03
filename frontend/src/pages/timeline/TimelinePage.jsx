@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useStoryStore from '@/store/useStoryStore'
 import { getTimeline, updateTimeline } from '@/api/timeline'
+import { getVoiceLocks } from '@/api/stories'
 import { getApiErrorMessage } from '@/utils/apiError'
 import TimelineSceneCard from '@/components/timeline/TimelineSceneCard'
 import TimelineSceneDetail from '@/components/timeline/TimelineSceneDetail'
@@ -24,6 +25,7 @@ export default function TimelinePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved | failed
+  const [voiceReady, setVoiceReady] = useState(true) // 모든 필수 대상 locked(=nextStepEnabled) 인지
 
   // ── 브라우저 미리보기 재생(렌더링 아님): React state + requestAnimationFrame ──
   const [playing, setPlaying] = useState(false)
@@ -57,6 +59,10 @@ export default function TimelinePage() {
       })
       .catch((e) => setError(getApiErrorMessage(e)))
       .finally(() => setLoading(false))
+    // 보이스 잠금 완료 여부(미완료면 상단 안내) — 실패는 무시(타임라인 자체는 보여줌)
+    getVoiceLocks(storyId)
+      .then((d) => setVoiceReady(Boolean(d?.allLocked)))
+      .catch(() => setVoiceReady(true))
   }, [storyId])
 
   // 언마운트 시 보류 중인 저장 타이머 정리
@@ -197,6 +203,34 @@ export default function TimelinePage() {
     persist()
   }
 
+  // 음성 길이에 맞추기: 각 cue durationSec = audioDurationSec(없으면 기존 유지), startSec 누적, 씬 duration = 합계.
+  // 합계가 30초(씬 최대)를 넘으면 적용/저장하지 않고 안내만(무리한 축소 방지).
+  function handleFitToAudio(sceneId) {
+    setError('')
+    const scene = latestScenes.current.find((s) => s.sceneId === sceneId)
+    const cues = [...(scene?.cueTimings ?? [])].sort((a, b) => a.cueOrder - b.cueOrder)
+    if (cues.length === 0) return
+    // cue 길이 = 그 cue items 음성 합계(없으면 기존 자막 길이 유지)
+    const lengths = cues.map((c) => {
+      const sum = (c.items ?? []).reduce((a, it) => a + (it.audioDurationSec || 0), 0)
+      return sum > 0 ? round3(sum) : c.durationSec
+    })
+    const total = round3(lengths.reduce((a, b) => a + b, 0))
+    if (total > 30) {
+      setError('음성 길이 합계가 씬 최대 길이 30초를 초과합니다. 자막을 줄이거나 씬을 나눠주세요.')
+      return
+    }
+    let acc = 0
+    const newCues = cues.map((t, i) => {
+      const startSec = round3(acc)
+      acc += lengths[i]
+      return { ...t, startSec, durationSec: round3(lengths[i]) }
+    })
+    const newDuration = clampDuration(total)
+    setScenes((cur) => cur.map((s) => (s.sceneId === sceneId ? { ...s, duration: newDuration, cueTimings: newCues } : s)))
+    persist()
+  }
+
   if (!storyId) {
     return (
       <div className={styles.page}>
@@ -234,6 +268,17 @@ export default function TimelinePage() {
         씬 순서는 스토리 원본 그대로입니다. 카드를 <b>클릭</b>해 아래에서 <b>재생 길이</b>와 <b>자막 타이밍</b>을 조절하세요. (변경 시 자동 저장)
       </p>
 
+      {!voiceReady && (
+        <div className={styles.voiceGuard}>
+          <span>
+            보이스 설정이 완료되지 않았습니다. 보이스 페이지에서 나레이션과 모든 캐릭터의 목소리를 확정해주세요.
+          </span>
+          <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
+            보이스 페이지로 이동
+          </button>
+        </div>
+      )}
+
       {loading && scenes.length === 0 ? (
         <p className={styles.empty}>불러오는 중…</p>
       ) : scenes.length === 0 ? (
@@ -254,11 +299,13 @@ export default function TimelinePage() {
 
           <TimelineSceneDetail
             scene={selectedScene}
+            allScenes={scenes}
             saveStatus={saveStatus}
             playback={playback}
             onDurationChange={handleDurationChange}
             onCueTimingChange={handleCueTimingChange}
             onAutoSplitCues={handleAutoSplitCues}
+            onFitToAudio={handleFitToAudio}
           />
         </>
       )}
