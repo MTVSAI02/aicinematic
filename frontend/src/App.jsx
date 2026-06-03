@@ -58,6 +58,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <div className="global-bg" />
       <NavBar />
       <Routes>
         <Route path="/" element={<HomePage />} />
