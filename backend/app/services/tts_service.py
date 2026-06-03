@@ -1,3 +1,8 @@
+import logging
+
+import httpx
+
+from ..core.config import AUDIO_STORAGE_DIR, storage_url
 from ..core.exceptions import (
     EmptySceneItemsError,
     SceneNotFoundError,
@@ -10,6 +15,36 @@ from ..repositories.tts_audio_repository import tts_audio_repository
 from ..repositories.voice_repository import voice_repository
 from .tts_ai_client import tts_ai_client
 from .tts_job_runner import create_tts_generation_job
+
+logger = logging.getLogger(__name__)
+
+# AI 어댑터(ngrok 등)에서 audio 다운로드 시 ngrok 무료 경고 페이지를 우회하는 헤더.
+_AUDIO_DOWNLOAD_HEADERS = {"ngrok-skip-browser-warning": "1"}
+
+
+def _rehost_audio_to_storage(audio: dict) -> dict:
+    """AI가 준 외부 audioUrl(ngrok/ComfyUI)을 백엔드 /storage 로 복사해 브라우저가 바로 재생하게 한다.
+
+    - 브라우저 <audio> 는 ngrok 'skip-browser-warning' 헤더를 못 붙여 경고 HTML 을 받게 됨 → 재생 불가.
+      백엔드가 받아 /storage/audio/{audioId}.wav 로 저장하고 그 URL 로 바꿔 내려준다.
+    - 실패(다운로드 오류/오디오 아님)하면 원본 audioUrl 을 그대로 둔다(부분 실패 허용).
+    """
+    url = audio.get("audioUrl")
+    audio_id = audio.get("audioId")
+    if not url or not audio_id:
+        return audio
+    try:
+        resp = httpx.get(url, headers=_AUDIO_DOWNLOAD_HEADERS, timeout=120, follow_redirects=True)
+        resp.raise_for_status()
+        if not resp.headers.get("content-type", "").startswith("audio/"):
+            logger.warning("TTS audio 재호스팅 건너뜀(오디오 아님): %s", url)
+            return audio  # ngrok 경고 HTML 등 → 원본 유지(깨진 파일 저장 안 함)
+        AUDIO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        (AUDIO_STORAGE_DIR / f"{audio_id}.wav").write_bytes(resp.content)
+        return {**audio, "audioUrl": storage_url("audio", f"{audio_id}.wav")}
+    except Exception as exc:  # noqa: BLE001 - 실패 시 원본 URL 유지
+        logger.warning("TTS audio 재호스팅 실패(%s): %s", audio_id, exc)
+        return audio
 
 # voiceType 매핑: narration → narrator, dialogue → character
 VOICE_TYPE = {
@@ -155,7 +190,9 @@ class TTSService:
         }
         ai_result = tts_ai_client.synthesize_scene(ai_payload)
         if ai_result and isinstance(ai_result.get("audios"), list):
-            self._tts_audio_repo.apply_ai_result(ai_result["audios"])
+            # 외부(ngrok/ComfyUI) audioUrl → 백엔드 /storage 로 복사해 브라우저 재생 가능하게
+            rehosted = [_rehost_audio_to_storage(a) for a in ai_result["audios"]]
+            self._tts_audio_repo.apply_ai_result(rehosted)
             saved_audios = self._tts_audio_repo.list_by_scene(story_id, scene_id)
 
         # tts_generate Job 생성 (즉시 completed)
