@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { generateSceneVoice } from '@/api/voiceApi'
+import { generateSceneTts } from '@/api/tts'
+import styles from '@/pages/voice/VoicePage.module.css'
 
 function getSpeakerLabel(item, characterNameById) {
   if (item.type === 'narration') return '나레이터'
@@ -15,7 +16,7 @@ function getAudioForItem(item, audioItems) {
   return audioItems.find((audio) => audio.itemIndex === item.itemIndex)
 }
 
-export function AudioPanel({
+export default function SceneTtsPanel({
   storyId,
   scenes,
   characterNameById,
@@ -34,7 +35,7 @@ export function AudioPanel({
     }))
 
     try {
-      const audio = await generateSceneVoice({ storyId, scene })
+      const audio = await generateSceneTts({ storyId, scene })
       onSceneAudioGenerated(scene.id, audio)
       setSceneStatuses((current) => ({
         ...current,
@@ -57,22 +58,21 @@ export function AudioPanel({
   }
 
   return (
-    <section className="panel">
-      <div className="panel-header">
+    <section className={styles.ttsPanel}>
+      <div className={styles.ttsHeader}>
         <div>
-          <p className="eyebrow">R-40 · R-41</p>
-          <h2>TTS 음성 생성</h2>
+          <p className={styles.eyebrow}>TTS</p>
+          <h2 className={styles.panelTitle}>씬별 음성 생성/출력</h2>
         </div>
-        <p className="panel-description">
-          한 씬 안의 나레이션과 캐릭터 대사를 각각 분리해서 생성하고
-          미리듣기합니다.
+        <p className={styles.ttsDescription}>
+          연결된 보이스 정보를 기준으로 씬 안의 나레이션과 대사를 각각 생성하고 바로 미리듣기합니다.
         </p>
       </div>
 
       {scenes.length === 0 ? (
-        <p className="empty-message">선택한 스토리에 생성할 씬이 없습니다.</p>
+        <p className={styles.empty}>선택한 스토리에 생성할 씬이 없습니다.</p>
       ) : (
-        <div className="scene-list">
+        <div className={styles.ttsSceneList}>
           {scenes.map((scene) => {
             const status = sceneStatuses[scene.id] ?? {
               state: 'idle',
@@ -83,37 +83,35 @@ export function AudioPanel({
             const audioItems = status.audioItems ?? scene.audioItems ?? []
 
             return (
-              <article className="scene-card" key={scene.id}>
-                <div className="scene-card-top">
-                  <span className="scene-order">Scene {scene.order}</span>
-                  <span className={`status-badge status-${status.state}`}>
+              <article className={styles.ttsSceneCard} key={scene.id}>
+                <div className={styles.ttsSceneTop}>
+                  <span className={styles.sceneOrder}>Scene {scene.order}</span>
+                  <span className={`${styles.statusBadge} ${styles[`status_${status.state}`]}`}>
                     {status.message}
                   </span>
                 </div>
 
-                <div className="tts-item-list">
+                <div className={styles.ttsItemList}>
                   {scene.items.map((item) => {
                     const itemAudio = getAudioForItem(item, audioItems)
 
                     return (
-                      <div className="tts-item" key={item.itemIndex}>
-                        <div className="scene-meta">
-                          <span>
-                            {item.type === 'narration' ? '나레이션' : '대사'}
-                          </span>
+                      <div className={styles.ttsItem} key={item.itemIndex}>
+                        <div className={styles.sceneMeta}>
+                          <span>{item.type === 'narration' ? '나레이션' : '대사'}</span>
                           <span>{getSpeakerLabel(item, characterNameById)}</span>
                           <span>{getVoiceLabel(item, characterNameById)}</span>
                           {item.emotionLabel && <span>{item.emotionLabel}</span>}
                         </div>
 
-                        <p className="scene-line">{item.text}</p>
+                        <p className={styles.sceneLine}>{item.text}</p>
 
                         {itemAudio?.error && (
-                          <p className="tts-item-error">{itemAudio.error}</p>
+                          <p className={styles.ttsItemError}>{itemAudio.error}</p>
                         )}
 
                         {itemAudio?.audioUrl && (
-                          <div className="tts-item-audio">
+                          <div className={styles.ttsItemAudio}>
                             <span>
                               음성 길이{' '}
                               {itemAudio.durationSec
@@ -121,7 +119,7 @@ export function AudioPanel({
                                 : '-'}
                             </span>
                             <audio
-                              className="audio-player"
+                              className={styles.audioPlayer}
                               controls
                               src={itemAudio.audioUrl}
                             >
@@ -134,14 +132,14 @@ export function AudioPanel({
                   })}
                 </div>
 
-                <div className="scene-timing">
+                <div className={styles.sceneTiming}>
                   <span>씬 길이 {scene.durationSec.toFixed(1)}초</span>
                   <span>대사 항목 {scene.items.length}개</span>
                 </div>
 
-                <div className="scene-actions">
+                <div className={styles.ttsActions}>
                   <button
-                    className="primary-button"
+                    className={styles.btn}
                     type="button"
                     disabled={isLoading}
                     onClick={() => handleGenerateVoice(scene)}

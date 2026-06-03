@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useVoiceStore from '@/store/useVoiceStore'
 import useStoryStore from '@/store/useStoryStore'
@@ -10,10 +10,44 @@ import { getApiErrorMessage } from '@/utils/apiError'
 import AiConnectionCheck from '@/components/AiConnectionCheck'
 import VoiceTargetPanel from '@/components/voices/VoiceTargetPanel'
 import VoiceLibrary from '@/components/voices/VoiceLibrary'
+import SceneTtsPanel from '@/components/voices/SceneTtsPanel'
 import styles from './VoicePage.module.css'
 
+function getCharacterId(character) {
+  return character.characterId ?? character.id
+}
+
+function getSceneId(scene) {
+  return scene.sceneId ?? scene.id
+}
+
+function toTtsScene(scene, audioMeta) {
+  const segments = scene.items ?? scene.segments ?? []
+  const items = segments.map((segment, index) => ({
+    itemIndex: segment.itemIndex ?? index,
+    type: segment.type ?? 'narration',
+    speaker: segment.speaker ?? null,
+    text: segment.text ?? segment.line ?? '',
+    emotion: segment.emotion ?? null,
+    emotionLabel: segment.emotionLabel ?? null,
+  }))
+
+  return {
+    id: getSceneId(scene),
+    order: scene.order,
+    items,
+    durationSec: scene.duration ?? scene.durationSec ?? 3,
+    audioPath: audioMeta?.audioPath ?? scene.audioUrl ?? scene.audio_url,
+    audioDurationSec:
+      audioMeta?.audioDurationSec ??
+      scene.audioDurationSec ??
+      scene.audio_duration_sec,
+    audioItems: audioMeta?.audioItems ?? scene.audioItems ?? [],
+  }
+}
+
 // 나레이션(story.narratorVoiceId)과 등장 캐릭터(character.voiceId)에 보이스를 연결하는 페이지.
-// 실제 합성/클로닝/샘플 생성은 AI 단계이며, 여기서는 voiceId 연결까지만 한다.
+// /voice 안에서 voiceId 연결과 씬별 TTS 생성/출력을 함께 처리한다.
 export default function VoicePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -23,6 +57,7 @@ export default function VoicePage() {
 
   const setVoices = useVoiceStore((s) => s.setVoices)
   const setStory = useVoiceStore((s) => s.setStory)
+  const characters = useVoiceStore((s) => s.characters)
   const setCharacters = useVoiceStore((s) => s.setCharacters)
   const setSelectedTarget = useVoiceStore((s) => s.setSelectedTarget)
   const message = useVoiceStore((s) => s.message)
@@ -30,6 +65,7 @@ export default function VoicePage() {
 
   const [stories, setStories] = useState([])
   const [storyId, setStoryId] = useState(queryStoryId || currentStoryId || '')
+  const [sceneAudioById, setSceneAudioById] = useState({})
   const [loadError, setLoadError] = useState('')
 
   // 진입 시 보이스/스토리 목록/캐릭터 로드
@@ -61,6 +97,35 @@ export default function VoicePage() {
     setSelectedTarget(null)
   }, [storyId, stories, setStory, setSelectedTarget])
 
+  const selectedStory = stories.find((s) => s.storyId === storyId) ?? null
+  const ttsScenes = useMemo(
+    () =>
+      (selectedStory?.scenes ?? []).map((scene) =>
+        toTtsScene(scene, sceneAudioById[getSceneId(scene)]),
+      ),
+    [selectedStory, sceneAudioById],
+  )
+  const characterNameById = useMemo(
+    () =>
+      characters.reduce((result, character) => {
+        result[getCharacterId(character)] = character.name
+        return result
+      }, {}),
+    [characters],
+  )
+
+  function handleStoryChange(nextStoryId) {
+    setStoryId(nextStoryId)
+    setSceneAudioById({})
+  }
+
+  function updateSceneAudio(sceneId, audio) {
+    setSceneAudioById((current) => ({
+      ...current,
+      [sceneId]: audio,
+    }))
+  }
+
   return (
     <div className={styles.page}>
       <h1>보이스</h1>
@@ -89,7 +154,7 @@ export default function VoicePage() {
           <select
             className={styles.input}
             value={storyId}
-            onChange={(e) => setStoryId(e.target.value)}
+            onChange={(e) => handleStoryChange(e.target.value)}
           >
             <option value="">스토리 선택</option>
             {stories.map((s) => (
@@ -109,16 +174,27 @@ export default function VoicePage() {
       {error && <p className={styles.error}>{error}</p>}
 
       {storyId ? (
-        <div className={styles.layout}>
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>목소리를 적용할 대상</h2>
-            <VoiceTargetPanel />
-          </section>
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>연결할 목소리 선택</h2>
-            <VoiceLibrary />
-          </section>
-        </div>
+        <>
+          <div className={styles.layout}>
+            <section className={styles.panel}>
+              <h2 className={styles.panelTitle}>목소리를 적용할 대상</h2>
+              <VoiceTargetPanel />
+            </section>
+            <section className={styles.panel}>
+              <h2 className={styles.panelTitle}>연결할 목소리 선택</h2>
+              <VoiceLibrary />
+            </section>
+          </div>
+
+          {selectedStory && (
+            <SceneTtsPanel
+              storyId={storyId}
+              scenes={ttsScenes}
+              characterNameById={characterNameById}
+              onSceneAudioGenerated={updateSceneAudio}
+            />
+          )}
+        </>
       ) : (
         <p className={styles.empty}>
           스토리를 선택하면 나레이션·등장 캐릭터에 보이스를 연결할 수 있습니다. 저장된 스토리가 없다면 먼저 “스토리 입력”에서 대본을 등록하세요.
