@@ -6,13 +6,42 @@ import re
 EMOTION_MAP = {
     "기본": "neutral",
     "잔잔함": "calm",
+
     "기쁨": "happy",
+    "즐거움": "happy",
+
     "슬픔": "sad",
+    "시무룩": "disappointed",
+    "서운함": "disappointed",
+
     "화남": "angry",
     "무서움": "scared",
+
+    "걱정": "worried",
+    "불안": "worried",
+    "초조함": "worried",
+
     "신남": "excited",
+    "설렘": "excited",
+    "기대감": "excited",
+
     "다정함": "friendly",
+    "따뜻함": "friendly",
+
     "진지함": "serious",
+
+    "호기심": "curious",
+    "궁금함": "curious",
+
+    "장난스러움": "playful",
+
+    "퉁명스럽게": "curt",
+    "퉁명함": "curt",
+    "새침함": "curt",
+    "도도함": "curt",
+
+    "부끄러움": "shy",
+    "신비로움": "mysterious",
 }
 
 # 타입별 기본 감정 (감정 태그가 없거나 미지원일 때)
@@ -34,6 +63,9 @@ KEYWORD_EMOTIONS = [
     ("scared", ("무서워", "무서웠", "두려워", "떨었", "벌벌", "덜덜")),
     ("sad", ("슬퍼", "슬펐다", "눈물", "울었다", "울었어", "울고")),
     ("angry", ("화가", "화났", "싫어", "싫었", "짜증")),
+    ("worried", ("걱정", "불안", "초조")),
+    ("curious", ("궁금", "호기심")),
+    ("excited", ("신나", "설레")),
     ("friendly", ("안녕", "반가워", "반가웠")),
     ("calm", ("조용히", "천천히", "별빛", "고요")),
 ]
@@ -84,10 +116,8 @@ def _parse_line(line: str) -> dict | None:
 
     # 1. 맨 앞 [감정] 태그 추출 후 제거 (지원 여부와 무관하게 제거)
     emotion_label = None
-    has_tag = False
     tag_match = _EMOTION_TAG_RE.match(line)
     if tag_match:
-        has_tag = True
         emotion_label = tag_match.group(1).strip()  # 라벨 앞뒤 공백 허용
         line = tag_match.group(2).strip()
 
@@ -111,14 +141,17 @@ def _parse_line(line: str) -> dict | None:
         }
 
     # 3. emotion 결정 (우선순위)
-    #    a. 지원하는 [감정] 태그가 있으면 그대로 적용 (명시 우선)
-    #    b. 태그가 "없을 때만" 본문 키워드로 추정
-    #    c. 그래도 못 정하면 타입별 기본값
+    #    a. 지원하는 [감정] 태그 → 매핑 적용 (명시 우선)
+    #    b. 미지원 [감정] 태그 → 기본 emotion 키, 단 사용자가 입력한 라벨은 보존
+    #    c. 태그 없음 → 본문 키워드 추정, 못 정하면 타입별 기본값
     if emotion_label and emotion_label in EMOTION_MAP:
         item["emotion"] = EMOTION_MAP[emotion_label]
         item["emotionLabel"] = emotion_label
-    else:
-        inferred = None if has_tag else _infer_emotion_from_text(item["text"])
+    elif emotion_label:  # 미지원 태그: 키는 기본값(파싱 실패 방지), 라벨은 입력 그대로
+        item["emotion"] = DEFAULT_EMOTION[item["type"]][0]
+        item["emotionLabel"] = emotion_label
+    else:  # 태그 없음
+        inferred = _infer_emotion_from_text(item["text"])
         item["emotion"], item["emotionLabel"] = inferred or DEFAULT_EMOTION[item["type"]]
 
     return item
