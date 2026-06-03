@@ -87,3 +87,103 @@ $env:QWEN_TTS_ENABLED="1"
 $env:HF_HUB_OFFLINE="1"
 .\.venv-qwen3-tts\Scripts\python.exe -m uvicorn backend.app.main:app --reload
 ```
+
+## Remote AI_TTS_URL ComfyUI adapter for teammates
+
+The team flow is:
+
+```text
+Frontend
+-> teammate backend POST /api/tts/scene
+-> AI_TTS_URL adapter POST /tts
+-> ComfyUI /prompt + /history
+-> ComfyUI output/qwen3_tts/*.wav
+-> adapter returns playable audioUrl
+```
+
+Mock adapter test without ComfyUI:
+
+```bash
+cd ~/aicinematic2
+python -m pip install fastapi uvicorn httpx
+export TTS_ADAPTER_MOCK="1"
+export AI_TTS_PUBLIC_BASE_URL="http://127.0.0.1:8100"
+python -m uvicorn ai.voice.tts_server:app --host 0.0.0.0 --port 8100
+```
+
+When `TTS_ADAPTER_MOCK=1`, `POST /tts` returns one playable mock wav URL per
+input item:
+
+```text
+http://127.0.0.1:8100/mock-audio/<audioId>.wav
+```
+
+Run the voice/TTS ComfyUI on the shared PC. If GPU 0 is used by character or
+background generation, run voice/TTS on GPU 1:
+
+```bash
+cd ~/comfyui_project/ComfyUI
+source ~/comfyui_project/.venv/bin/activate
+CUDA_VISIBLE_DEVICES=1 python main.py --listen 0.0.0.0 --port 8189
+```
+
+Run the `/tts` adapter in a separate terminal on the same shared PC:
+
+```bash
+cd ~/aicinematic2
+source ~/comfyui_project/.venv/bin/activate
+python -m pip install fastapi uvicorn httpx
+export COMFYUI_VOICE_URL="http://127.0.0.1:8189"
+export COMFYUI_TTS_WORKFLOW_PATH="/path/to/qwen3_tts_workflow_api.json"
+export COMFYUI_TTS_MAPPING_PATH="/path/to/qwen3_tts_mapping.json"
+export COMFYUI_TTS_VOICE_MAP_PATH="/path/to/qwen3_tts_voice_map.json"
+export COMFYUI_TTS_OUTPUT_DIR="$HOME/comfyui_project/ComfyUI/output/qwen3_tts"
+export AI_TTS_PUBLIC_BASE_URL="http://<SHARED_PC_LAN_IP>:8100"
+python -m uvicorn ai.voice.tts_server:app --host 0.0.0.0 --port 8100
+```
+
+The workflow JSON must be the ComfyUI API-format workflow. The mapping JSON says
+which workflow node receives `text`, `voicePrompt`, `emotion`, etc. At minimum it
+must map `text`. See `ai/workflows/qwen3_tts_mapping.example.json`, for example:
+
+```json
+{
+  "text": { "nodeId": "12", "path": ["inputs", "text"] },
+  "voicePrompt": { "nodeId": "13", "path": ["inputs", "text"] },
+  "speaker": { "nodeId": "14", "path": ["inputs", "speaker"] },
+  "refAudio": { "nodeId": "15", "path": ["inputs", "audio"] },
+  "refText": { "nodeId": "16", "path": ["inputs", "text"] },
+  "seed": { "nodeId": "20", "path": ["inputs", "seed"] }
+}
+```
+
+The optional voice map JSON translates backend `voiceId` values into ComfyUI
+voice inputs. See `ai/workflows/qwen3_tts_voice_map.example.json`, for example:
+
+```json
+{
+  "voice_preset_narrator_calm_001": {
+    "speaker": "sohee",
+    "voicePrompt": "calm, warm narrator",
+    "refAudio": "/path/to/reference.wav",
+    "refText": "The exact sentence spoken in the reference audio."
+  }
+}
+```
+
+Health check from another teammate PC:
+
+```bash
+curl http://<SHARED_PC_LAN_IP>:8100/health
+```
+
+On each teammate backend PC, put this in `backend/.env`:
+
+```env
+AI_TTS_URL=http://<SHARED_PC_LAN_IP>:8100
+QWEN_TTS_ENABLED=0
+AI_TTS_TIMEOUT_SEC=300
+```
+
+If `/health` works but audio does not play, check the shared PC firewall and make
+sure port `8100` is allowed.

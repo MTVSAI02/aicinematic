@@ -1,8 +1,8 @@
 # TTS 백엔드 ↔ AI/TTS 파트 요청·응답 계약
 
 백엔드가 AI/TTS 파트에 **① 보이스 클로닝**과 **② 음성 합성**을 요청할 때의 **JSON 계약**이다.
-(현재 백엔드는 mock 단계라 실제 AI 호출은 아직 코드에 없지만, 백엔드의 `Voice`/`TTSAudio` 모델에서 그대로 도출되는 계약이다.
-AI 파트는 이 형식을 받아 구현하면 되고, 실제 연동 시 백엔드 mock 부분만 이 호출로 교체한다.)
+(현재 백엔드는 `AI_TTS_URL`이 설정되어 있으면 이 계약으로 실제 AI/TTS 서버에 요청한다.
+`AI_TTS_URL`이 없고 로컬 Qwen 설정도 없으면 합성 파일 없이 `audioUrl=null` 상태로 동작한다.)
 
 > 역할 분리
 > - **Story Parse**: 감정(emotion) 결정
@@ -175,6 +175,35 @@ AI 파트가 자유롭게 선택한다.
 ## 참고: 현재 백엔드 상태
 - **보이스 라이브러리**: `POST/GET/PATCH/DELETE /api/voices` 구현됨(mock). voiceId 발급·메타 저장만 하고 클로닝 결과(provider/model/sampleAudioUrl/status)는 비워둔다.
 - **캐릭터 연결**: `PATCH /api/characters/{id}/voice`로 캐릭터에 voiceId 연결(보이스 삭제 시 참조 캐릭터 voiceId는 null 캐스케이드).
-- **TTS**: `POST /api/tts/scene`은 위 AI 호출 없이 **mock**으로 `audioUrl=null`을 만든다. dialogue speaker→캐릭터(name 매칭)→characterId/voiceId 복사는 **이미 동작**한다(목소리 참조까지 흐름, 합성만 AI).
-- 실제 연동 시 `backend/app/services/tts_service.py` / `tts_job_runner.py`의 mock 생성 부분을 위 AI 요청/응답으로 교체하고, 응답의 `audioUrl`을 `TTSAudio`에 저장하면 된다.
+- **TTS**: `POST /api/tts/scene`은 audio target을 만들고 `AI_TTS_URL`이 있으면 `{AI_TTS_URL}/tts`로 요청한다. dialogue speaker→캐릭터(name 매칭)→characterId/voiceId 복사는 **이미 동작**한다(목소리 참조까지 흐름, 합성은 AI/TTS 서버).
+- `AI_TTS_URL`이 없고 `QWEN_TTS_ENABLED=1`이면 로컬 Qwen fallback을 사용한다. 둘 다 없으면 합성 파일 없이 `audioUrl=null`로 남는다.
 - 백엔드 TTS/Voice 구조·필드 상세는 `backend/README.md`의 "TTS(음성 생성) API" / "보이스(Voice) 라이브러리" 참고.
+
+---
+
+## Remote ComfyUI TTS adapter URL rule
+
+When the AI/TTS process runs on a different PC from the backend, `audioUrl`
+must be playable from the teammate's browser. Prefer returning an absolute URL:
+
+```json
+{
+  "audioId": "audio_mock_001",
+  "audioUrl": "http://192.168.0.23:8100/view?filename=tts_xxx.wav&type=output",
+  "durationSec": 3.2,
+  "error": null
+}
+```
+
+The bundled `ai.voice.tts_server` is a ComfyUI adapter for this contract. It
+receives `POST /tts`, queues the configured ComfyUI voice workflow, then returns
+an adapter-hosted URL such as `/view?...` or `/tts-output/tts_xxx.wav`.
+
+Keep the backend unchanged: the remote TTS adapter should return an absolute
+`audioUrl` by using `AI_TTS_PUBLIC_BASE_URL` or the incoming request base URL.
+Do not rely on the backend to rewrite a relative URL.
+
+For ComfyUI workflows that need engine-specific voice inputs, the adapter can
+translate backend `voiceId` into values like `speaker`, `refAudio`, or `refText`
+through `COMFYUI_TTS_VOICE_MAP_PATH`. The backend still sends the stable
+contract fields; only the shared PC adapter owns this ComfyUI-specific mapping.

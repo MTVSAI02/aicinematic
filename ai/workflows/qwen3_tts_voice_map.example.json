@@ -1,0 +1,20 @@
+{
+  "voice_preset_narrator_calm_001": {
+    "speaker": "sohee",
+    "voicePrompt": "calm, warm, gentle narrator voice for fairy tale storytelling",
+    "refAudio": null,
+    "refText": null
+  },
+  "voice_preset_narrator_bright_001": {
+    "speaker": "sohee",
+    "voicePrompt": "bright, friendly, cheerful narrator voice for children story",
+    "refAudio": null,
+    "refText": null
+  },
+  "voice_mock_001": {
+    "speaker": "custom_character_001",
+    "voicePrompt": "warm curious boy voice",
+    "refAudio": "/path/to/character/reference.wav",
+    "refText": "The exact sentence spoken in the reference audio."
+  }
+}
