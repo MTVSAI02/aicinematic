@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { to: '/scene-editor', label: '씬 편집' },
   { to: '/timeline', label: '타임라인' },
   { to: '/render', label: '영상' },
-  { to: '/export', label: '출력' },
 ]
 
 export default function NavBar() {

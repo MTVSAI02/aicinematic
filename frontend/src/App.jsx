@@ -11,7 +11,6 @@ import VoiceInputPage from '@/pages/voice-input/VoiceInputPage'
 import VoicePage from '@/pages/voice/VoicePage'
 import TimelinePage from '@/pages/timeline/TimelinePage'
 import RenderPage from '@/pages/render/RenderPage'
-import ExportPage from '@/pages/export/ExportPage'
 import useStoryStore from '@/store/useStoryStore'
 import { getStories } from '@/api/stories'
 
@@ -71,7 +70,6 @@ export default function App() {
         <Route path="/voice" element={<VoicePage />} />
         <Route path="/timeline" element={<TimelinePage />} />
         <Route path="/render" element={<RenderPage />} />
-        <Route path="/export" element={<ExportPage />} />
       </Routes>
     </BrowserRouter>
   )
