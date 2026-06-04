@@ -24,6 +24,11 @@ class JobNotFoundError(AppException):
     detail = "Job not found"
 
 
+class NotificationNotFoundError(AppException):
+    status_code = 404
+    detail = "Notification not found"
+
+
 class NoFieldsToUpdateError(AppException):
     status_code = 400
     detail = "No fields to update"

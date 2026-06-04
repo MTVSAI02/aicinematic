@@ -12,6 +12,7 @@ from ulid import ULID
 PREFIX: dict[str, str] = {
     "user": "user_",
     "job": "job_",
+    "notification": "notif_",
     "story": "story_",
     "scene": "scene_",
     "scene_character": "scenechar_",

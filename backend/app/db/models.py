@@ -235,3 +235,27 @@ class User(Base):
     display_name: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
+
+
+class Notification(Base):
+    """job 완료/실패 알림. job 1건 → 알림 1건(UNIQUE(related_job_id,type) 로 중복 방지).
+
+    user 기능 전이라 user_id 는 nullable(전역 알림). id = prefix+ULID(notif_).
+    related_* 는 plain text(FK 아님) — 알림은 운영 메타라 대상 삭제와 독립.
+    """
+    __tablename__ = "notifications"
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(Text, index=True)
+    type: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    message: Mapped[str | None] = mapped_column(Text)
+    related_job_id: Mapped[str | None] = mapped_column(Text, index=True)
+    related_story_id: Mapped[str | None] = mapped_column(Text)
+    related_scene_id: Mapped[str | None] = mapped_column(Text)
+    related_target_id: Mapped[str | None] = mapped_column(Text)
+    is_read: Mapped[bool] = mapped_column(nullable=False, server_default=text("false"), index=True)
+    created_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
+    read_at: Mapped[datetime | None] = mapped_column(_TS)
+    __table_args__ = (
+        UniqueConstraint("related_job_id", "type", name="uq_notification_job_type"),
+    )

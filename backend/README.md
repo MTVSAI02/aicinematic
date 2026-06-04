@@ -168,6 +168,13 @@ backend/
 | PATCH | `/api/voices/{voice_id}` | 보이스 수정 |
 | DELETE | `/api/voices/{voice_id}` | 보이스 삭제 (+참조 캐릭터 voiceId null) |
 | PATCH | `/api/characters/{character_id}/voice` | 캐릭터에 보이스 연결 (body: voiceId) |
+| GET | `/api/notifications?limit=` | job 완료/실패 알림 목록 (limit 1~100, 기본 50; created_at desc) |
+| GET | `/api/notifications/unread-count` | 읽지 않은 알림 개수 `{count}` |
+| PATCH | `/api/notifications/{notification_id}/read` | 단일 알림 읽음 처리 |
+| PATCH | `/api/notifications/read-all` | 전체 읽음 처리 `{updated}` |
+
+> 알림은 `job_manager` 가 job 완료/실패 직후 자동 생성(대상: character/background/voice_clone/tts/tts_story/render_generate).
+> 같은 job 중복은 `UNIQUE(related_job_id, type)` 로 차단. 저장은 PostgreSQL `notifications` 테이블. 상세: `docs/backend_db_postgresql.md`.
 
 ### 파싱 규칙
 
