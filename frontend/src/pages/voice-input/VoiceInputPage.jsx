@@ -42,13 +42,18 @@ const VOICE_TYPES = [
   { id: 'character', label: '캐릭터', desc: '등장인물의 대사 목소리', icon: navCharacter },
 ]
 
-// 책 뒤에서 빼꼼 튀어나올 RIrur 캐릭터 위치 정보
+// 책 뒤에서 빼꼼 튀어나올 RIrur 캐릭터 위치 정보 (캐릭터 얼굴이 완벽하게 식별되도록 돌출 범위와 은닉 거리를 대폭 확대한 튜닝)
 const RIRUR_POSITIONS = [
-  { top: '-110px', left: '12%', transform: 'translateY(110%) scale(0.6)', activeTransform: 'translateY(0) scale(1) rotate(-12deg)', origin: 'bottom center' },
-  { top: '-115px', left: '46%', transform: 'translateY(110%) scale(0.6)', activeTransform: 'translateY(0) scale(1) rotate(6deg)', origin: 'bottom center' },
-  { top: '-110px', right: '12%', transform: 'translateY(110%) scale(0.6)', activeTransform: 'translateY(0) scale(1) rotate(12deg)', origin: 'bottom center' },
-  { left: '-110px', top: '22%', transform: 'translateX(110%) scale(0.6)', activeTransform: 'translateX(0) scale(1) rotate(-85deg)', origin: 'center right' },
-  { right: '-110px', top: '22%', transform: 'translateX(-110%) scale(0.6)', activeTransform: 'translateX(0) scale(1) rotate(85deg)', origin: 'center left' },
+  // 1. 책 왼쪽 위에서 왼쪽으로 빼꼼
+  { left: '-160px', top: '22%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-75deg)', origin: 'center right' },
+  // 2. 책 왼쪽 아래에서 왼쪽으로 빼꼼
+  { left: '-160px', top: '62%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-105deg)', origin: 'center right' },
+  // 3. 책 오른쪽 위에서 오른쪽으로 빼꼼
+  { right: '-160px', top: '22%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(75deg)', origin: 'center left' },
+  // 4. 책 오른쪽 아래에서 오른쪽으로 빼꼼
+  { right: '-160px', top: '62%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(105deg)', origin: 'center left' },
+  // 5. 책 아래쪽 중앙에서 아래로 빼꼼 (거꾸로 매달린 형태)
+  { bottom: '-160px', left: '46%', transform: 'translateY(-200px) scale(0.1) rotate(180deg)', activeTransform: 'translateY(110px) scale(1) rotate(180deg)', origin: 'top center' },
 ]
 
 function formatTime(sec) {
@@ -371,6 +376,7 @@ export default function VoiceInputPage() {
               onClick={handleRirurClick}
               style={{
                 top: RIRUR_POSITIONS[rirurPos].top || 'auto',
+                bottom: RIRUR_POSITIONS[rirurPos].bottom || 'auto',
                 left: RIRUR_POSITIONS[rirurPos].left || 'auto',
                 right: RIRUR_POSITIONS[rirurPos].right || 'auto',
                 transform: rirurVisible ? RIRUR_POSITIONS[rirurPos].activeTransform : RIRUR_POSITIONS[rirurPos].transform,

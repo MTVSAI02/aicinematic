@@ -867,6 +867,11 @@
     margin-top: 10px;
   }
 
+  .rirurCharacter {
+    display: none;
+    /* 모바일에서는 책 레이아웃이 사라지므로 캐릭터를 숨김 */
+  }
+
   .speakerGrid {
     grid-template-columns: 1fr;
   }
@@ -1008,8 +1013,8 @@
 /* 책 뒤에서 뿅 튀어나오는 RIrur 캐릭터 스타일 */
 .rirurCharacter {
   position: absolute;
-  width: 140px;
-  height: 140px;
+  width: 240px;
+  height: 240px;
   object-fit: contain;
   z-index: 0; /* bookBackground(z-index: 1) 뒤에 배치하여 책 뒤에서 나오는 연출 */
   cursor: pointer;
