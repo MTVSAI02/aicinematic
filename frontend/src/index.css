@@ -22,6 +22,13 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'KerisKedu';
+  src: url('@design/assets/fonts/케리스 케듀체/KERISKEDU_B.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;

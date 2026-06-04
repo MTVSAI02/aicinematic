@@ -70,3 +70,9 @@ RULES.md
 # ==== db =====
 docker-compose.yml
 
+# ===== Figma Unused Assets (Kept locally only) =====
+design/assets/fonts/Pretendard/
+design/assets/figma-images/Home_Character.svg
+design/assets/figma-images/VoiceInput_Adult.svg
+design/assets/figma-images/VoiceInput_Kid.svg
+design/assets/figma-images/VoiceInput_Edit.svg

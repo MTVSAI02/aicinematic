@@ -1,524 +1,1023 @@
-/* 음성 입력(보이스 클로닝) 페이지.
-   CSS 변수만 사용, 하드코딩 색 금지 (--danger 계열 예외). */
+/* 음성 입력(보이스 클로닝) 페이지 고도화 CSS.
+   전체적으로 피그마 디자인 스펙을 충실히 따르고, 뽀얀 보라빛의 유리 질감 카드와 애니메이션을 가미함. */
 
 .page {
-  padding: 40px 24px;
-  max-width: 980px;
+  padding: 40px 0 80px;
+  /* 좌우 패딩을 0으로 만들어 #root의 64px 마진 정렬선과 일치시킴 */
+  width: 100%;
+  max-width: 100%;
+  /* max-width 900px 제한 해제 */
   margin: 0 auto;
+  font-family: "Hakgyoansim Dunggeunmiso TTF", "Inter", sans-serif;
 }
 
-.help {
-  font-size: 13px;
-  color: var(--text);
+/* ── 상단 헤더 영역 ── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  gap: 20px;
+}
+
+.headerLeft {
+  flex: 1;
+  padding-left: 100px;
+}
+
+.headerSubTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #A171DF;
+  /* 조정된 보라색 계열 */
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.headerTitle {
+  font-family: 'KerisKedu', sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 16px 0;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+}
+
+.headerDesc {
+  font-size: 20px;
+  color: #4B5563;
   line-height: 1.6;
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-border);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin-bottom: 32px;
+  margin: 0;
+  font-weight: 400;
+  /* Regular */
 }
 
-/* ── 섹션 ──────────────────────────────────── */
+.headerRight {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  /* 우측에 바짝 밀착시켜 NAV 오른쪽 끝선과 정렬 동기화 */
+  align-items: center;
+  width: 520px;
+  /* 420px에서 520px로 대폭 키움 */
+}
+
+/* 토끼 인형 마스코트 */
+.headerMascot {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.08));
+  animation: mascotFloat 4s ease-in-out infinite alternate;
+  margin-right: -10px;
+  /* SVG 이미지 내부 공백 보정하여 우측 끝선 완벽 정렬 */
+}
+
+@keyframes mascotFloat {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  100% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+/* ── 섹션 공통 ── */
 .section {
-  margin-bottom: 36px;
+  background: rgba(255, 255, 255, 0.5);
+  /* 책의 내지 색감이 살짝 스며들도록 투명도 조절 */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 236, 250, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
+  /* 콤팩트 패딩 */
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(186, 174, 230, 0.04);
 }
 
 .stepTitle {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  color: var(--text-h);
-  margin: 0 0 16px;
+  gap: 12px;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 25px;
+  /* 크기 조정 */
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.8px;
 }
 
 .stepBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  background: #C084FC;
+  /* 부드러운 보라빛 동그라미 */
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
-/* ── 역할 선택 카드 ────────────────────────── */
-.roleGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  max-width: 440px;
+.sectionHelp {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.5;
+  margin: 16px 0 0 0;
+  letter-spacing: -0.3px;
 }
 
-.roleCard {
+.sectionHelp strong {
+  color: #4B5563;
+  font-weight: 700;
+}
+
+.sectionSubDesc {
+  font-size: 14px;
+  color: #6B7280;
+  margin: -10px 0 20px 0;
+  letter-spacing: -0.5px;
+}
+
+/* ── 1단계: 화자 선택 ── */
+.speakerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.speakerCard {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 22px 16px;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg);
+  padding: 24px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  background: #FFFFFF;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
-.roleCard:hover {
-  border-color: var(--accent-border);
-  box-shadow: var(--shadow);
+.speakerCard:hover {
+  transform: translateY(-2px);
+  border-color: #C084FC;
+  box-shadow: 0 6px 16px rgba(192, 132, 252, 0.08);
 }
 
-.roleCardSelected {
-  border-color: var(--accent);
-  background: var(--accent-bg);
-  box-shadow: var(--shadow);
+.speakerCardSelected {
+  border-color: #8B5CF6;
+  background: rgba(245, 243, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.12);
+  transform: translateY(-2px);
 }
 
-.roleEmoji {
-  font-size: 36px;
+.speakerIcon {
+  width: 140px;
+  /* 50px 확대 */
+  height: 140px;
+  /* 50px 확대 */
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.speakerLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  /* Bold */
+  color: #1F2937;
+  margin-bottom: 6px;
+}
+
+.speakerDesc {
+  font-size: 15px;
+  color: #a2a9b7;
+  line-height: 1.4;
+  word-break: keep-all;
+  font-family: 'Hakgyoansim', sans-serif;
+}
+
+.customInputContainer {
+  margin-top: 16px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── 2단계: 추천 용도 ── */
+.voiceTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 600px;
+}
+
+.voiceTypeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.voiceTypeCard:hover {
+  transform: translateY(-2px);
+  border-color: #C084FC;
+  box-shadow: 0 6px 16px rgba(192, 132, 252, 0.08);
+}
+
+.voiceTypeCardSelected {
+  border-color: #8B5CF6;
+  background: rgba(245, 243, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.12);
+  transform: translateY(-2px);
+}
+
+.voiceTypeIcon {
+  width: 114px;
+  /* 50px 확대 */
+  height: 114px;
+  /* 50px 확대 */
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.voiceTypeLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  /* Bold */
+  color: #1F2937;
+  margin-bottom: 6px;
+}
+
+.voiceTypeDesc {
+  font-size: 15px;
+  color: #a2a9b7;
+  line-height: 1.4;
+  font-family: 'Hakgyoansim', sans-serif;
+}
+
+/* ── 3단계: 목소리 정보 입력 ── */
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.input {
+  padding: 14px 16px;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.input::placeholder {
+  color: #9CA3AF;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: #9CA3AF;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* ── 4단계: 따라 읽을 문장 ── */
+.scriptBox {
+  position: relative;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 24px 28px 60px;
+  /* 아래 리프레시 버튼 공간 고려 */
+  min-height: 80px;
+}
+
+.scriptText {
+  font-size: 15px;
+  /* 크기 조정 */
+  color: #1F2937;
+  line-height: 1.8;
+  margin: 0;
+  font-weight: 400;
+  /* Regular */
+  word-break: keep-all;
+}
+
+.scriptRefreshBtn {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  transition: all 0.15s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.scriptRefreshBtn:hover:not(:disabled) {
+  border-color: #9CA3AF;
+  color: #374151;
+  background: #F3F4F6;
+}
+
+.scriptRefreshBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refreshIcon {
+  font-size: 13px;
   line-height: 1;
 }
 
-.roleLabel {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.roleDesc {
-  font-size: 12px;
-  color: var(--text);
-  line-height: 1.4;
-}
-
-/* ── 샘플 문장 박스 ────────────────────────── */
-.sampleBox {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  background: var(--code-bg);
-  border-radius: 10px;
-  padding: 20px;
-  min-height: 110px; /* 3~4문장(2~3줄)이 안정적으로 들어가도록 — 문장 전환 시 높이 출렁임 방지 */
-}
-
-.sampleText {
-  font-size: 16px;
-  color: var(--text-h);
-  line-height: 1.8;
-  flex: 1;
-  margin: 0;
-  word-break: keep-all; /* 한국어 어절 단위 줄바꿈 */
-}
-
-.refreshBtn {
-  flex-shrink: 0;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--text);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-
-.refreshBtn:hover {
-  background: var(--bg);
-}
-
-/* ── 녹음 영역 ─────────────────────────────── */
+/* ── 5단계: 녹음하기 ── */
 .minLabel {
   font-size: 12px;
-  font-weight: 400;
-  padding: 2px 10px;
-  border-radius: 20px;
-  background: var(--accent-bg);
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(243, 244, 246, 0.8);
+  color: #4B5563;
+  margin-left: 10px;
+  border: 1px solid #E5E7EB;
 }
 
-.recordArea {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.recordControls {
+.recordingContainer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.recordBtn {
-  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 28px;
-  font-size: 15px;
-  font-family: inherit;
-  border: 2px solid var(--accent-border);
-  border-radius: 10px;
-  background: var(--accent-bg);
-  color: var(--accent);
-  cursor: pointer;
-  transition: opacity 0.15s;
+  padding-top: 10px;
 }
 
-.recordBtn:hover {
-  opacity: 0.85;
+.recordingRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 24px;
 }
 
-.recordBtnActive {
-  border-color: var(--danger);
-  background: rgba(192, 57, 43, 0.08);
-  color: var(--danger);
-  animation: pulse 1.5s ease-in-out infinite;
+/* 말풍선 공통 스타일 */
+.speechBubbleLeft,
+.speechBubbleRight {
+  flex: 1;
+  max-width: 280px;
+  /* 18px 텍스트 크기에 대응해 가로폭 소폭 증가 */
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  font-size: 18px;
+  /* 크기 조정 */
+  color: #4B5563;
+  line-height: 1.5;
+  font-weight: 400;
+  /* Regular */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  position: relative;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
+/* 말풍선 꼬리 (왼쪽용 -> 꼬리가 우측 중앙) */
+.speechBubbleLeft::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent #FFFFFF;
 }
 
-.recordDot {
-  width: 10px;
-  height: 10px;
+.speechBubbleLeft::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -11px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent #E5E7EB;
+  z-index: -1;
+}
+
+/* 말풍선 꼬리 (오른쪽용 -> 꼬리가 좌측 중앙) */
+.speechBubbleRight::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #FFFFFF transparent transparent;
+}
+
+.speechBubbleRight::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #E5E7EB transparent transparent;
+  z-index: -1;
+}
+
+/* 원형 녹음기 버튼 외곽 */
+.micButtonWrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 190px;
+  /* 50px 확대 */
+  height: 190px;
+  /* 50px 확대 */
+  z-index: 5;
+}
+
+.micButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 170px;
+  /* 50px 확대 */
+  height: 170px;
+  /* 50px 확대 */
   border-radius: 50%;
-  background: var(--danger);
-  flex-shrink: 0;
-  animation: blink 1s step-start infinite;
+  border: 4px solid #F4ECFA;
+  background: linear-gradient(135deg, #F3E8FF 0%, #D8B4FE 100%);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.15);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  z-index: 10;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.15; }
+.micButton:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.25);
+  border-color: #E8D5F8;
+}
+
+.micButtonActive {
+  background: linear-gradient(135deg, #FCA5A5 0%, #EF4444 100%);
+  border-color: #FEE2E2;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+.micIcon {
+  width: 80px;
+  /* 20px 확대 */
+  height: 80px;
+  /* 20px 확대 */
+  margin-bottom: 6px;
+  transition: transform 0.2s;
+}
+
+.micButtonActive .micIcon {
+  transform: scale(1.1);
+  filter: brightness(0) invert(1);
+}
+
+.micLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6B21A8;
+}
+
+.micButtonActive .micLabel {
+  color: #FFFFFF;
+}
+
+/* 녹음 진행 시 물결 파동 백그라운드 */
+.micPulseBg {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 170px;
+  /* 50px 확대 (190px wrapper 중앙 정치) */
+  height: 170px;
+  /* 50px 확대 */
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  z-index: 1;
+  animation: voicePulse 1.8s infinite ease-out;
+}
+
+@keyframes voicePulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* ── 미리보기 및 결과 ── */
+.previewArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 20px;
+  background: rgba(249, 250, 251, 0.8);
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px 24px;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+.previewTop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.audio {
+  height: 40px;
+  flex: 1;
+}
+
+.previewResetBtn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  color: #4B5563;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.previewResetBtn:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.durationOk {
+  font-size: 13px;
+  color: #10B981;
+  font-weight: 600;
+  margin: 0;
+}
+
+.durationWarn {
+  font-size: 13px;
+  color: #EF4444;
+  font-weight: 600;
+  margin: 0;
+  font-family: 'Hakgyoansim', sans-serif;
 }
 
 .orDivider {
   font-size: 13px;
-  color: var(--text);
+  color: #9CA3AF;
+  margin: 16px 0;
+  position: relative;
+  width: 100%;
+  text-align: center;
 }
 
-.uploadLabel {
-  display: inline-flex;
+.orDivider::before,
+.orDivider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 42%;
+  height: 1px;
+  background: #E5E7EB;
+}
+
+.orDivider::before {
+  left: 0;
+}
+
+.orDivider::after {
+  right: 0;
+}
+
+/* ── 파일 업로드 바 (가로형 보라 그라데이션) ── */
+.fileUploadContainer {
+  width: 100%;
+  max-width: 500px;
+}
+
+.fileUploadBar {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-family: inherit;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  background: var(--bg);
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(180deg, #F3E8FF 0%, #DDD6FE 100%);
+  border: 1px solid #C4B5FD;
+  border-radius: 12px;
+  color: #6D28D9;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(109, 40, 217, 0.05);
 }
 
-.uploadLabel:hover {
-  background: var(--code-bg);
+.fileUploadBar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.12);
+  background: linear-gradient(180deg, #ECE0FD 0%, #D3C9FE 100%);
 }
 
 .fileInput {
   display: none;
 }
 
-/* ── 진행 바 ─────────────────────────────────── */
-.progressWrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.folderIcon {
+  font-size: 16px;
 }
 
-.progressTrack {
-  width: 200px;
-  height: 6px;
-  background: var(--border);
-  border-radius: 99px;
-  overflow: hidden;
+.legalNotice {
+  font-size: 11px;
+  color: #9CA3AF;
+  margin-top: 14px;
 }
 
-.progressBar {
-  height: 100%;
-  border-radius: 99px;
-  background: var(--danger);
-  transition: width 0.4s ease, background 0.3s;
-}
-
-.progressBarOk {
-  background: #22c55e;
-}
-
-.progressLabel {
-  font-size: 12px;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.progressLabelOk {
-  color: #22c55e;
-  font-weight: 600;
-}
-
-/* ── 미리보기 ────────────────────────────────── */
-.previewArea {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.previewTop {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.durationOk {
-  font-size: 13px;
-  color: #22c55e;
-  margin: 0;
-  font-weight: 500;
-}
-
-.durationWarn {
-  font-size: 13px;
-  color: var(--danger);
-  margin: 0;
-}
-
-.audio {
-  height: 36px;
-}
-
-.resetBtn {
-  padding: 7px 16px;
-  font-size: 13px;
-  font-family: inherit;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.resetBtn:hover {
-  background: var(--code-bg);
-}
-
-/* ── 동의 문구 / 상태 ──────────────────────── */
-.consent {
-  font-size: 12px;
-  color: var(--text);
-  opacity: 0.75;
-  margin: 10px 0 0;
-}
-
-.message {
-  font-size: 13px;
-  color: var(--accent);
-  margin: 0 0 8px;
-}
-
+/* ── 에러 및 네비게이션 ── */
 .error {
+  color: #EF4444;
   font-size: 13px;
-  color: var(--danger);
-  margin: 0 0 8px;
+  font-weight: 600;
+  text-align: center;
+  margin: 16px 0 0 0;
 }
 
-/* ── 하단 네비게이션 ────────────────────────── */
 .pageNav {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 24px;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 40px;
 }
 
-.navRight {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 10px 24px;
-  background: var(--accent);
-  color: #fff;
+.btnPrimary {
+  padding: 12px 28px;
+  background: #8B5CF6;
+  color: #FFFFFF;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 15px;
-  font-family: inherit;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
 }
 
-.btn:disabled {
-  opacity: 0.4;
+.btnPrimary:disabled {
+  background: #DDD6FE;
+  color: #A78BFA;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-.btn:not(:disabled):hover {
-  opacity: 0.85;
+.btnPrimary:not(:disabled):hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
 }
 
 .btnSecondary {
-  padding: 10px 20px;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
+  padding: 12px 24px;
+  background: #FFFFFF;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  font-family: inherit;
+  transition: all 0.2s;
 }
 
 .btnSecondary:hover {
-  background: var(--code-bg);
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
 }
 
-/* ── 반응형 ─────────────────────────────────── */
-@media (max-width: 600px) {
-  .roleGrid {
-    max-width: 100%;
-  }
-
-  .sampleBox {
-    flex-direction: column;
-  }
-
-  .recordArea {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .pageNav {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-
-  .navRight {
-    flex-direction: column;
-  }
-}
-
-/* ── 보이스 클로닝: 입력 필드 ── */
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-.label {
-  font-size: 13px;
-  color: var(--text-h);
-  font-weight: 600;
-}
-.input,
-.select {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--text-h);
-  font-size: 14px;
-  width: 100%;
-  box-sizing: border-box;
-}
-.input:focus,
-.select:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-/* ── 진행/결과 카드 ── */
+/* ── 진행/결과 전용 큰 카드 ── */
 .statusCard {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--bg);
-  box-shadow: var(--shadow);
-  padding: 28px 24px;
+  border: 1px solid rgba(244, 236, 250, 0.7);
+  border-radius: 20px;
+  background: #FFFFFF;
+  box-shadow: 0 8px 32px rgba(186, 174, 230, 0.1);
+  padding: 48px 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   text-align: center;
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .statusCardError {
-  border-color: var(--danger);
+  border-color: #FCA5A5;
+  background: rgba(254, 242, 242, 0.5);
 }
+
 .cardTitle {
   margin: 0;
-  font-size: 18px;
-  color: var(--text-h);
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1F2937;
 }
+
 .cardDesc {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text);
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  color: #4B5563;
   line-height: 1.6;
-  max-width: 460px;
+  max-width: 480px;
 }
-.muted {
-  font-size: 13px;
-  color: var(--text);
-  margin: 0;
-}
-.emoji {
-  font-size: 40px;
-  line-height: 1;
-}
+
 .resultMeta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
-  color: var(--text-h);
-}
-.cardActions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 6px;
-}
-.spinner {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 3px solid var(--accent-bg);
-  border-top-color: var(--accent);
-  animation: voiceSpin 0.8s linear infinite;
-}
-@keyframes voiceSpin {
-  to { transform: rotate(360deg); }
+  gap: 6px;
+  font-size: 15px;
+  color: #374151;
+  background: #F3F4F6;
+  padding: 16px 28px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
 }
 
-/* ── 역할 안내 박스 / 필드 도움말 ── */
-.infoBox {
+.resultMeta b {
+  font-size: 18px;
+  color: #111827;
+}
+
+.emoji {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.muted {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 4px solid #EDE9FE;
+  border-top-color: #8B5CF6;
+  animation: voiceSpin 0.9s linear infinite;
+}
+
+@keyframes voiceSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── 반응형 레이아웃 ── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .headerMascot {
+    width: 220px;
+    margin-top: 10px;
+  }
+
+  .rirurCharacter {
+    display: none;
+    /* 모바일에서는 책 레이아웃이 사라지므로 캐릭터를 숨김 */
+  }
+
+  .speakerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .voiceTypeGrid {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+
+  .recordingRow {
+    flex-direction: column;
+  }
+
+  .speechBubbleLeft,
+  .speechBubbleRight {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 모바일 말풍선 꼬리 위치 수정 */
+  .speechBubbleLeft::after,
+  .speechBubbleLeft::before,
+  .speechBubbleRight::after,
+  .speechBubbleRight::before {
+    display: none;
+    /* 모바일에서는 꼬리를 숨김 */
+  }
+
+  .pageNav {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* 모바일 환경에서는 고정비율 책 배경을 풀고 일반적인 세로 스크롤 레이아웃으로 변경 */
+  .bookContainer {
+    aspect-ratio: auto;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    background: transparent;
+    border: none;
+  }
+
+  .bookBackground {
+    display: none;
+    /* 배경 책 이미지 숨김 */
+  }
+
+  .bookContentOverlay {
+    position: static;
+    padding: 0;
+  }
+
+  .formScrollArea {
+    overflow-y: visible;
+    padding: 0;
+  }
+}
+
+/* ── 책 배경 오버레이 및 컨텐츠 스크롤 제어 ── */
+.bookContainer {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  /* 950px 고정 제한을 제거하여 NAV 좌우 폭과 정확히 1:1 일치시킴 */
+  margin: 0 auto;
+  aspect-ratio: 1000 / 670;
+  /* 펼쳐진 책 이미지의 고유 비율 */
+  overflow: visible;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.bookBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  /* 컨테이너 비율에 맞춰 정확히 채움 */
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 15px 35px rgba(139, 92, 246, 0.25));
+  /* 박스 그림자 대신 실제 책 윤곽선을 따라 입체 그림자 적용 */
+}
+
+.bookContentOverlay {
+  position: absolute;
+  top: 7.5%;
+  /* 위 보라색 뜨개질 여백 비율 조정 */
+  bottom: 11%;
+  /* 아래 보라색 여백 침범을 막기 위해 높이를 상향 조정 */
+  left: 7%;
+  /* 왼쪽 여백 */
+  right: 7%;
+  /* 오른쪽 여백 */
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  border: 1px solid var(--accent-border);
-  background: var(--accent-bg);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  color: var(--text-h);
 }
-.hint {
-  font-size: 12px;
-  color: var(--text);
-  line-height: 1.5;
+
+.formScrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 36px;
+  /* 하단 여백 추가로 마지막 스크롤 시 안정감 제공 */
+  box-sizing: border-box;
+}
+
+/* 책 내부 전용 스크롤바 디자인 */
+.formScrollArea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.formScrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.formScrollArea::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.35);
+  border-radius: 99px;
+}
+
+.formScrollArea::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.55);
+}
+
+/* 책 뒤에서 뿅 튀어나오는 RIrur 캐릭터 스타일 */
+.rirurCharacter {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  object-fit: contain;
+  z-index: 0; /* bookBackground(z-index: 1) 뒤에 배치하여 책 뒤에서 나오는 연출 */
+  cursor: pointer;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+  pointer-events: auto;
 }

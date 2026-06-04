@@ -6,6 +6,17 @@ import { getApiErrorMessage } from '@/utils/apiError'
 import useVoiceStore from '@/store/useVoiceStore'
 import styles from './VoiceInputPage.module.css'
 
+// 디자인 자산 임포트
+import voiceRabbit from '@design/assets/figma-icons/Voice_input/VoiceInput_Rabbit.svg'
+import voiceAdult from '@design/assets/figma-icons/Voice_input/VoiceInput_Adult.svg'
+import voiceKid from '@design/assets/figma-icons/Voice_input/VoiceInput_Kid.svg'
+import voiceEdit from '@design/assets/figma-icons/Voice_input/VoiceInput_Edit.svg'
+import navVoice from '@design/assets/figma-icons/Nav/nav_voice.svg'
+import navCharacter from '@design/assets/figma-icons/Nav/nav_character.svg'
+import navVoiceInput from '@design/assets/figma-icons/Nav/nav_voice_input.svg'
+import bookBg from '@design/assets/figma-images/Book.png'
+import rirurChar from '@design/assets/figma-icons/RIrur.svg'
+
 const MIN_SECONDS = 20
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 const ALLOWED_EXT = ['webm', 'wav', 'mp3', 'm4a']
@@ -20,15 +31,29 @@ const SAMPLE_TEXTS = [
 
 // 누가 녹음했는지 (speakerLabel). voiceType(용도)과 독립.
 const SPEAKERS = [
-  { id: 'mom', label: '엄마', emoji: '👩' },
-  { id: 'child', label: '아이', emoji: '👧' },
-  { id: 'custom', label: '직접 입력', emoji: '✏️' },
+  { id: 'mom', label: '어른', desc: '엄마, 아빠의 목소리를 들려주세요', icon: voiceAdult },
+  { id: 'child', label: '아이', desc: '우리 아이의 목소리를 들려주세요', icon: voiceKid },
+  { id: 'custom', label: '직접 입력', desc: '누구든 목소리를 입력할 수 있어요', icon: voiceEdit },
 ]
 
 // 이 목소리의 추천 용도(voiceType). 연결을 제한하지 않는 분류 태그일 뿐 — /voice에서 어디든 연결 가능.
 const VOICE_TYPES = [
-  { id: 'narrator', label: '나레이션에 추천', emoji: '📖', desc: '이야기를 읽어주는 목소리로 추천' },
-  { id: 'character', label: '캐릭터에 추천', emoji: '🧒', desc: '등장인물 대사 목소리로 추천' },
+  { id: 'narrator', label: '나레이션', desc: '이야기를 읽어주는 목소리', icon: navVoice },
+  { id: 'character', label: '캐릭터', desc: '등장인물의 대사 목소리', icon: navCharacter },
+]
+
+// 책 뒤에서 빼꼼 튀어나올 RIrur 캐릭터 위치 정보 (캐릭터 얼굴이 완벽하게 식별되도록 돌출 범위와 은닉 거리를 대폭 확대한 튜닝)
+const RIRUR_POSITIONS = [
+  // 1. 책 왼쪽 위에서 왼쪽으로 빼꼼
+  { left: '-160px', top: '22%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-75deg)', origin: 'center right' },
+  // 2. 책 왼쪽 아래에서 왼쪽으로 빼꼼
+  { left: '-160px', top: '62%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-105deg)', origin: 'center right' },
+  // 3. 책 오른쪽 위에서 오른쪽으로 빼꼼
+  { right: '-160px', top: '22%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(75deg)', origin: 'center left' },
+  // 4. 책 오른쪽 아래에서 오른쪽으로 빼꼼
+  { right: '-160px', top: '62%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(105deg)', origin: 'center left' },
+  // 5. 책 아래쪽 중앙에서 아래로 빼꼼 (거꾸로 매달린 형태)
+  { bottom: '-160px', left: '46%', transform: 'translateY(-200px) scale(0.1) rotate(180deg)', activeTransform: 'translateY(110px) scale(1) rotate(180deg)', origin: 'top center' },
 ]
 
 function formatTime(sec) {
@@ -73,6 +98,10 @@ export default function VoiceInputPage() {
   const [resultVoice, setResultVoice] = useState(null)
   const [error, setError] = useState('')
 
+  // RIrur 캐릭터 인터랙티브 상태
+  const [rirurPos, setRirurPos] = useState(null)
+  const [rirurVisible, setRirurVisible] = useState(false)
+
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const timerRef = useRef(null)
@@ -99,6 +128,45 @@ export default function VoiceInputPage() {
   const isDurationOk = audioDuration >= MIN_SECONDS
   const canSubmit =
     !!speakerLabel && !!voiceType && !!name.trim() && !!audioBlob && isDurationOk
+
+  // RIrur 캐릭터 뿅 튀어나오는 타이머 설정
+  useEffect(() => {
+    if (phase !== 'form') {
+      setRirurVisible(false)
+      setRirurPos(null)
+      return
+    }
+
+    let timer
+    const scheduleNextPop = () => {
+      // 4초 ~ 8초 사이의 랜덤 대기 시간 후에 튀어나옴
+      const delay = Math.random() * 4000 + 4000
+      timer = setTimeout(() => {
+        setRirurPos((prev) => {
+          let next
+          do {
+            next = Math.floor(Math.random() * RIRUR_POSITIONS.length)
+          } while (next === prev && RIRUR_POSITIONS.length > 1)
+          return next
+        })
+        setRirurVisible(true)
+      }, delay)
+    }
+
+    if (!rirurVisible) {
+      scheduleNextPop()
+    }
+
+    return () => clearTimeout(timer)
+  }, [rirurVisible, phase])
+
+  function handleRirurClick() {
+    setRirurVisible(false)
+    // 쏙 들어가는 애니메이션(400ms) 완료 후 상태 초기화
+    setTimeout(() => {
+      setRirurPos(null)
+    }, 400)
+  }
 
   useEffect(() => {
     return () => {
@@ -226,18 +294,21 @@ export default function VoiceInputPage() {
 
   return (
     <div className={styles.page}>
-      <h1>음성 입력</h1>
-      <p className={styles.help}>
-        먼저 목소리를 만들어 <strong>보이스 라이브러리</strong>에 저장해요. 저장한 목소리는 다음 보이스 페이지에서
-        나레이션이나 캐릭터에 자유롭게 연결할 수 있습니다. <strong>최소 {MIN_SECONDS}초 이상 녹음</strong>이 정확한 분석에 좋아요.
-      </p>
-
-      {phase === 'form' && (
-        <div className={styles.infoBox}>
-          <span><b>1단계 (지금)</b> — 이 화면에서 목소리를 만듭니다.</span>
-          <span><b>2단계 (다음)</b> — 보이스 페이지에서 만든 목소리를 나레이션 또는 캐릭터에 연결합니다.</span>
+      {/* ── 상단 헤더 영역 ── */}
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerSubTitle}>동화 속 캐릭터에게 생생한 목소리를 입혀주세요</div>
+          <h1 className={styles.headerTitle}>동화 속<br />목소리 만들기</h1>
+          <p className={styles.headerDesc}>
+            누가, 어떤 목소리로 이야기할지 정하고<br />
+            아래 문장을 천천히 읽어주세요.<br />
+            AI가 자연스러운 목소리를 만들어 드려요
+          </p>
         </div>
-      )}
+        <div className={styles.headerRight}>
+          <img src={voiceRabbit} alt="토끼 마스코트" className={styles.headerMascot} />
+        </div>
+      </header>
 
       {/* ── 진행/결과 카드 ── */}
       {(phase === 'submitting' || phase === 'processing') && (
@@ -268,7 +339,7 @@ export default function VoiceInputPage() {
               <p className={styles.muted}>샘플 음성은 준비되는 대로 보이스 페이지에서 들을 수 있어요.</p>
             )}
             <div className={styles.cardActions}>
-              <button className={styles.btn} onClick={() => navigate('/voice')}>보이스 페이지에서 연결하기</button>
+              <button className={styles.btnPrimary} onClick={() => navigate('/voice')}>보이스 페이지에서 연결하기</button>
               <button className={styles.btnSecondary} onClick={handleRecordAgain}>다시 녹음하기</button>
             </div>
           </div>
@@ -285,7 +356,7 @@ export default function VoiceInputPage() {
             </p>
             {aiNotConnected && <p className={styles.muted}>{error}</p>}
             <div className={styles.cardActions}>
-              <button className={styles.btn} onClick={handleRetry}>다시 시도</button>
+              <button className={styles.btnPrimary} onClick={handleRetry}>다시 시도</button>
               <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>보이스 라이브러리</button>
             </div>
           </div>
@@ -294,181 +365,215 @@ export default function VoiceInputPage() {
 
       {/* ── 입력 폼 ── */}
       {phase === 'form' && (
-        <>
-          {/* 1 — 누가 녹음 */}
-          <section className={styles.section}>
-            <h2 className={styles.stepTitle}><span className={styles.stepBadge}>1</span>누가 녹음하나요?</h2>
-            <div className={styles.roleGrid}>
-              {SPEAKERS.map((s) => (
-                <button
-                  key={s.id}
-                  className={`${styles.roleCard} ${speaker === s.id ? styles.roleCardSelected : ''}`}
-                  onClick={() => setSpeaker(s.id)}
-                >
-                  <span className={styles.roleEmoji}>{s.emoji}</span>
-                  <span className={styles.roleLabel}>{s.label}</span>
-                </button>
-              ))}
-            </div>
-            {speaker === 'custom' && (
-              <input
-                className={styles.input}
-                placeholder="누구의 목소리인가요? (예: 아빠, 할머니)"
-                value={customSpeaker}
-                onChange={(e) => setCustomSpeaker(e.target.value)}
-                style={{ marginTop: 10 }}
-              />
-            )}
-            <p className={styles.muted} style={{ marginTop: 8 }}>
-              녹음한 사람을 표시하기 위한 정보예요. 이 선택이 나레이션/캐릭터 용도를 정하지 않습니다 —
-              엄마가 녹음해도 캐릭터에, 아이가 녹음해도 나레이션에 쓸 수 있어요.
-            </p>
-          </section>
+        <div className={styles.bookContainer}>
+          <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
+          
+          {rirurPos !== null && (
+            <img
+              src={rirurChar}
+              alt="리룰 캐릭터"
+              className={styles.rirurCharacter}
+              onClick={handleRirurClick}
+              style={{
+                top: RIRUR_POSITIONS[rirurPos].top || 'auto',
+                bottom: RIRUR_POSITIONS[rirurPos].bottom || 'auto',
+                left: RIRUR_POSITIONS[rirurPos].left || 'auto',
+                right: RIRUR_POSITIONS[rirurPos].right || 'auto',
+                transform: rirurVisible ? RIRUR_POSITIONS[rirurPos].activeTransform : RIRUR_POSITIONS[rirurPos].transform,
+                transformOrigin: RIRUR_POSITIONS[rirurPos].origin,
+                opacity: rirurVisible ? 1 : 0,
+              }}
+            />
+          )}
 
-          {/* 2 — 추천 용도(태그) */}
-          <section className={styles.section}>
-            <h2 className={styles.stepTitle}><span className={styles.stepBadge}>2</span>추천 용도를 선택해주세요</h2>
-            <div className={styles.roleGrid}>
-              {VOICE_TYPES.map((t) => (
-                <button
-                  key={t.id}
-                  className={`${styles.roleCard} ${voiceType === t.id ? styles.roleCardSelected : ''}`}
-                  onClick={() => setVoiceType(t.id)}
-                >
-                  <span className={styles.roleEmoji}>{t.emoji}</span>
-                  <span className={styles.roleLabel}>{t.label}</span>
-                  <span className={styles.roleDesc}>{t.desc}</span>
-                </button>
-              ))}
-            </div>
-            <p className={styles.muted} style={{ marginTop: 8 }}>
-              선택한 용도는 보이스 카드의 <b>추천 태그</b>로만 쓰여요. 연결을 제한하지 않습니다 —
-              나레이션 추천 목소리도 캐릭터에, 캐릭터 추천 목소리도 나레이션에 연결할 수 있어요.
-            </p>
-          </section>
-
-          {/* 3 — 목소리 카드 정보 */}
-          <section className={styles.section}>
-            <h2 className={styles.stepTitle}><span className={styles.stepBadge}>3</span>목소리 카드 정보</h2>
-            <p className={styles.muted} style={{ marginTop: -2, marginBottom: 6 }}>
-              보이스 페이지에서 이 목소리를 찾기 쉽게 이름과 설명을 입력해주세요.
-            </p>
-            <div className={styles.field}>
-              <label className={styles.label}>목소리 이름 *</label>
-              <input
-                className={styles.input}
-                placeholder="예: 엄마 목소리 / 아이가 읽은 나레이션 / 엄마가 연기한 어린왕자 목소리"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <span className={styles.hint}>보이스 라이브러리에 표시될 이름이에요. 캐릭터 이름이 아니라, 이 목소리를 구분하는 이름입니다.</span>
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>원하는 목소리 느낌 (선택)</label>
-              <input
-                className={styles.input}
-                placeholder="예: 따뜻하고 차분한 목소리 / 맑고 순수한 소년 목소리 / 밝고 또랑또랑한 목소리"
-                value={voicePrompt}
-                onChange={(e) => setVoicePrompt(e.target.value)}
-              />
-              <span className={styles.hint}>AI가 목소리를 만들 때 참고할 분위기예요. 비워두어도 생성됩니다.</span>
-            </div>
-          </section>
-
-          {/* 4 — 따라 읽기 문장 (referenceText) */}
-          <section className={styles.section}>
-            <h2 className={styles.stepTitle}><span className={styles.stepBadge}>4</span>아래 문장을 따라 읽어주세요</h2>
-            <div className={styles.sampleBox}>
-              <p className={styles.sampleText}>{sampleText}</p>
-              <button
-                className={styles.refreshBtn}
-                disabled={isRecording}
-                onClick={() => setSampleIndex((i) => (i + 1) % SAMPLE_TEXTS.length)}
-              >
-                다른 문장 ↻
-              </button>
-            </div>
-          </section>
-
-          {/* 6 — 녹음 */}
-          <section className={styles.section}>
-            <h2 className={styles.stepTitle}>
-              <span className={styles.stepBadge}>5</span>녹음하기
-              <span className={styles.minLabel}>최소 {MIN_SECONDS}초</span>
-            </h2>
-            <div className={styles.recordArea}>
-              {!audioUrl ? (
-                <>
-                  <div className={styles.recordControls}>
+          <div className={styles.bookContentOverlay}>
+            <div className={styles.formScrollArea}>
+              {/* 1 — 누가 이야기하나요? */}
+              <section className={styles.section}>
+                <h2 className={styles.stepTitle}>
+                  <span className={styles.stepBadge}>1</span>누가 이야기하나요?
+                </h2>
+                <div className={styles.speakerGrid}>
+                  {SPEAKERS.map((s) => (
                     <button
-                      className={`${styles.recordBtn} ${isRecording ? styles.recordBtnActive : ''}`}
-                      onClick={isRecording ? handleStopRecording : handleStartRecording}
+                      key={s.id}
+                      className={`${styles.speakerCard} ${speaker === s.id ? styles.speakerCardSelected : ''}`}
+                      onClick={() => setSpeaker(s.id)}
                     >
-                      {isRecording ? (
-                        <>
-                          <span className={styles.recordDot} />
-                          {formatTime(recordingTime)}
-                          {isMinReached ? ' — 중지' : ` — ${MIN_SECONDS - recordingTime}초 더`}
-                        </>
-                      ) : (
-                        <>🎙 녹음 시작</>
-                      )}
+                      <img src={s.icon} alt={s.label} className={styles.speakerIcon} />
+                      <span className={styles.speakerLabel}>{s.label}</span>
+                      <span className={styles.speakerDesc}>{s.desc}</span>
                     </button>
-                    {isRecording && (
-                      <div className={styles.progressWrap}>
-                        <div className={styles.progressTrack}>
-                          <div
-                            className={`${styles.progressBar} ${isMinReached ? styles.progressBarOk : ''}`}
-                            style={{ width: `${progressPct}%` }}
-                          />
-                        </div>
-                        <span className={`${styles.progressLabel} ${isMinReached ? styles.progressLabelOk : ''}`}>
-                          {isMinReached ? '✓ 충분해요!' : `${recordingTime} / ${MIN_SECONDS}초`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <span className={styles.orDivider}>또는</span>
-                  <label className={styles.uploadLabel}>
-                    <input
-                      type="file"
-                      accept="audio/webm,audio/wav,audio/mpeg,audio/mp4,.webm,.wav,.mp3,.m4a"
-                      className={styles.fileInput}
-                      onChange={handleFileChange}
-                    />
-                    📂 파일 업로드
-                  </label>
-                </>
-              ) : (
-                <div className={styles.previewArea}>
-                  <div className={styles.previewTop}>
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <audio className={styles.audio} controls src={audioUrl} />
-                    <button className={styles.resetBtn} onClick={handleResetAudio}>다시 녹음</button>
-                  </div>
-                  {isDurationOk ? (
-                    <p className={styles.durationOk}>✓ {Math.floor(audioDuration)}초 — 제출할 수 있어요</p>
-                  ) : (
-                    <p className={styles.durationWarn}>⚠ {Math.floor(audioDuration)}초 — 정확한 분석을 위해 {MIN_SECONDS}초 이상 녹음해 주세요.</p>
-                  )}
+                  ))}
                 </div>
-              )}
-            </div>
-            <p className={styles.consent}>본인 또는 사용 허가를 받은 목소리만 업로드해 주세요.</p>
-          </section>
+                {speaker === 'custom' && (
+                  <div className={styles.customInputContainer}>
+                    <input
+                      className={styles.input}
+                      placeholder="누구의 목소리인가요? (예: 아빠, 할머니)"
+                      value={customSpeaker}
+                      onChange={(e) => setCustomSpeaker(e.target.value)}
+                    />
+                  </div>
+                )}
+                <p className={styles.sectionHelp}>
+                  <strong>녹음한 사람</strong>을 표시하기 위한 정보예요. 엄마가 녹음해도 캐릭터에, 아이가 녹음해도 나레이션에 쓸 수 있어요.
+                </p>
+              </section>
 
-          {error && <p className={styles.error}>{error}</p>}
+              {/* 2 — 어떤 목소리인가요? */}
+              <section className={styles.section}>
+                <h2 className={styles.stepTitle}>
+                  <span className={styles.stepBadge}>2</span>어떤 목소리인가요?
+                </h2>
+                <div className={styles.voiceTypeGrid}>
+                  {VOICE_TYPES.map((t) => (
+                    <button
+                      key={t.id}
+                      className={`${styles.voiceTypeCard} ${voiceType === t.id ? styles.voiceTypeCardSelected : ''}`}
+                      onClick={() => setVoiceType(t.id)}
+                    >
+                      <img src={t.icon} alt={t.label} className={styles.voiceTypeIcon} />
+                      <span className={styles.voiceTypeLabel}>{t.label}</span>
+                      <span className={styles.voiceTypeDesc}>{t.desc}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className={styles.sectionHelp}>
+                  보이스 카드의 <strong>추천 태그</strong>로만 쓰여요. 나레이션 추천 목소리도 캐릭터에, 캐릭터 추천 목소리도 나레이션에 연결 가능해요.
+                </p>
+              </section>
 
-          <div className={styles.pageNav}>
-            <button className={styles.btnSecondary} onClick={() => navigate('/')}>← 홈</button>
-            <div className={styles.navRight}>
-              <button className={styles.btnSecondary} onClick={() => navigate('/story-input')}>나중에 하기</button>
-              <button className={styles.btn} disabled={!canSubmit} onClick={handleSubmit}>
-                목소리 만들기 →
-              </button>
+              {/* 3 — 목소리 카드 정보 */}
+              <section className={styles.section}>
+                <h2 className={styles.stepTitle}>
+                  <span className={styles.stepBadge}>3</span>목소리 카드 정보
+                </h2>
+                <p className={styles.sectionSubDesc}>보이스 페이지에서 이 목소리를 찾기 쉽게 이름과 설명을 입력해주세요</p>
+                
+                <div className={styles.fieldGroup}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>목소리 이름</label>
+                    <input
+                      className={styles.input}
+                      placeholder="예: 엄마 목소리 / 아이가 읽은 나레이션 / 엄마가 연기한 어린왕자 목소리"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                    <span className={styles.fieldHint}>보이스 라이브러리에 표시될 이름이에요. 캐릭터 이름이 아니라, 이 목소리를 구분하는 이름입니다.</span>
+                  </div>
+                  
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>원하는 목소리 느낌 (선택)</label>
+                    <input
+                      className={styles.input}
+                      placeholder="예: 따뜻하고 차분한 목소리 / 맑고 순수한 목소리 / 밝고 또랑또랑한 목소리"
+                      value={voicePrompt}
+                      onChange={(e) => setVoicePrompt(e.target.value)}
+                    />
+                    <span className={styles.fieldHint}>AI가 목소리를 만들 때 참고할 분위기예요. 비워두어도 생성됩니다.</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* 4 — 아래 문장을 따라 읽어 주세요. */}
+              <section className={styles.section}>
+                <h2 className={styles.stepTitle}>
+                  <span className={styles.stepBadge}>4</span>아래 문장을 따라 읽어 주세요.
+                </h2>
+                <div className={styles.scriptBox}>
+                  <p className={styles.scriptText}>{sampleText}</p>
+                  <button
+                    className={styles.scriptRefreshBtn}
+                    disabled={isRecording}
+                    onClick={() => setSampleIndex((i) => (i + 1) % SAMPLE_TEXTS.length)}
+                  >
+                    다른 문장 <span className={styles.refreshIcon}>↻</span>
+                  </button>
+                </div>
+              </section>
+
+              {/* 5 — 녹음하기 */}
+              <section className={styles.section}>
+                <h2 className={styles.stepTitle}>
+                  <span className={styles.stepBadge}>5</span>녹음하기
+                  <span className={styles.minLabel}>최소 {MIN_SECONDS}초</span>
+                </h2>
+
+                <div className={styles.recordingContainer}>
+                  <div className={styles.recordingRow}>
+                    {/* 좌측 안내 말풍선 */}
+                    <div className={styles.speechBubbleLeft}>
+                      마이크 버튼을 눌러<br />20초 이상 녹음해 주세요.
+                    </div>
+
+                    {/* 중앙 원형 녹음 버튼 */}
+                    <div className={styles.micButtonWrapper}>
+                      <button
+                        className={`${styles.micButton} ${isRecording ? styles.micButtonActive : ''}`}
+                        onClick={isRecording ? handleStopRecording : handleStartRecording}
+                      >
+                        <img src={navVoiceInput} alt="마이크" className={styles.micIcon} />
+                        <span className={styles.micLabel}>
+                          {isRecording ? formatTime(recordingTime) : '녹음하기'}
+                        </span>
+                      </button>
+                      {isRecording && <div className={styles.micPulseBg} />}
+                    </div>
+
+                    {/* 우측 안내 말풍선 */}
+                    <div className={styles.speechBubbleRight}>
+                      AI가 학습해서<br />자연스러운 대화를 만들어요
+                    </div>
+                  </div>
+
+                  {/* 녹음 오디오 미리보기 영역 */}
+                  {audioUrl && (
+                    <div className={styles.previewArea}>
+                      <div className={styles.previewTop}>
+                        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                        <audio className={styles.audio} controls src={audioUrl} />
+                        <button className={styles.previewResetBtn} onClick={handleResetAudio}>다시 녹음</button>
+                      </div>
+                      {isDurationOk ? (
+                        <p className={styles.durationOk}>✓ {Math.floor(audioDuration)}초 — 제출할 수 있어요</p>
+                      ) : (
+                        <p className={styles.durationWarn}>⚠ {Math.floor(audioDuration)}초 — 정확한 분석을 위해 {MIN_SECONDS}초 이상 녹음해 주세요.</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className={styles.orDivider}>또는</div>
+
+                  {/* 파일 업로드 바 */}
+                  <div className={styles.fileUploadContainer}>
+                    <label className={styles.fileUploadBar}>
+                      <input
+                        type="file"
+                        accept="audio/webm,audio/wav,audio/mpeg,audio/mp4,.webm,.wav,.mp3,.m4a"
+                        className={styles.fileInput}
+                        onChange={handleFileChange}
+                      />
+                      <span className={styles.folderIcon}>📁</span> 파일 업로드
+                    </label>
+                  </div>
+
+                  <p className={styles.legalNotice}>본인 또는 사용 허가를 받은 목소리만 업로드해 주세요.</p>
+                </div>
+              </section>
+
+              {error && <p className={styles.error}>{error}</p>}
+
+              {/* ── 하단 네비게이션 ── */}
+              <div className={styles.pageNav}>
+                <button className={styles.btnSecondary} onClick={() => navigate('/story-input')}>나중에 하기</button>
+                <button className={styles.btnPrimary} disabled={!canSubmit} onClick={handleSubmit}>
+                  목소리 만들기 →
+                </button>
+              </div>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
