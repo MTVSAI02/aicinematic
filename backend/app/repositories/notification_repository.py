@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete as sa_delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..core.ids import new_id
@@ -95,6 +95,23 @@ class NotificationRepository:
                 .where(Notification.is_read.is_(False))
                 .values(is_read=True, read_at=datetime.now(timezone.utc))
             )
+            db.commit()
+            return res.rowcount or 0
+
+    def delete(self, notification_id: str) -> bool:
+        """알림 1건 삭제. 없으면 False."""
+        with SessionLocal() as db:
+            n = db.get(Notification, notification_id)
+            if n is None:
+                return False
+            db.delete(n)
+            db.commit()
+            return True
+
+    def delete_all(self) -> int:
+        """전체 알림 삭제. 삭제된 건수 반환."""
+        with SessionLocal() as db:
+            res = db.execute(sa_delete(Notification))
             db.commit()
             return res.rowcount or 0
 

@@ -172,6 +172,8 @@ backend/
 | GET | `/api/notifications/unread-count` | 읽지 않은 알림 개수 `{count}` |
 | PATCH | `/api/notifications/{notification_id}/read` | 단일 알림 읽음 처리 |
 | PATCH | `/api/notifications/read-all` | 전체 읽음 처리 `{updated}` |
+| DELETE | `/api/notifications/{notification_id}` | 단일 알림 삭제 (성공 204 / 없으면 404) |
+| DELETE | `/api/notifications` | 전체 알림 삭제 `{deleted}` |
 
 > 알림은 `job_manager` 가 job 완료/실패 직후 자동 생성(대상: character/background/voice_clone/tts/tts_story/render_generate).
 > 같은 job 중복은 `UNIQUE(related_job_id, type)` 로 차단. 저장은 PostgreSQL `notifications` 테이블. 상세: `docs/backend_db_postgresql.md`.

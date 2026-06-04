@@ -222,6 +222,7 @@ def lock_target(story_id: str, target_type: str, target_id: str) -> dict:
         build_result,
         "Target TTS generation failed",
         "Target TTS generation started.",
+        payload={"storyId": story_id},  # 실패 알림도 storyId 보존(클릭→해당 timeline 이동)
     )
     return _action_view(story_repository.get(story_id), target_type, target_id)
 

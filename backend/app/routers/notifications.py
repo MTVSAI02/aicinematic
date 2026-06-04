@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, status
 
 from ..schemas.notification import (
+    DeleteAllResponse,
     MarkAllReadResponse,
     NotificationResponse,
     UnreadCountResponse,
@@ -30,3 +31,15 @@ def mark_all_read():
 def mark_read(notification_id: str):
     """존재하지 않으면 404(Notification not found)."""
     return notification_service.mark_read(notification_id)
+
+
+@router.delete("", response_model=DeleteAllResponse, summary="전체 알림 삭제")
+def delete_all():
+    """알림 전부 삭제(목록 비우기). 삭제된 건수 반환."""
+    return notification_service.delete_all_notifications()
+
+
+@router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT, summary="단일 알림 삭제")
+def delete_notification(notification_id: str):
+    """존재하지 않으면 404(Notification not found). 성공 시 204."""
+    notification_service.delete_notification(notification_id)

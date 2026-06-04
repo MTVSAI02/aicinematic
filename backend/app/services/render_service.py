@@ -84,6 +84,7 @@ def create_render_job(story_id: str) -> dict:
         build_result,
         FFmpegRenderFailedError.detail,
         "Render job started.",
+        payload={"storyId": story_id},  # 실패 알림도 storyId 보존(클릭→해당 영상/스토리 이동)
     )
 
 
