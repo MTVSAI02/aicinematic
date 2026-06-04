@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from ..schemas.story import (
+    EmotionOption,
     NarratorVoiceResponse,
     NarratorVoiceUpdateRequest,
     StoryParseRequest,
@@ -14,21 +15,22 @@ from ..services.story_service import story_service
 router = APIRouter(prefix="/api/stories", tags=["stories"])
 
 
-@router.post("/parse", response_model=StoryParseResponse, summary="대본 파싱")
+@router.post("/parse", response_model=StoryParseResponse, summary="대본 파싱(raw/structured)")
 def parse_story(request: StoryParseRequest):
     """
-    사용자가 입력한 동화 대본을 장면(scene) 단위로 분해합니다.
+    스토리를 장면(scene)/대사(item) 단위로 저장합니다. `inputMode` 로 입력 방식이 갈립니다.
 
-    **파싱 규칙**
-    - 빈 줄(공백만 있는 줄 포함) 기준으로 씬을 나눕니다.
-    - `화자: "대사"` 형식(큰따옴표 필수)이면 **dialogue**로 처리합니다.
-    - 그 외 모든 문장은 **narration**으로 처리합니다.
-    - 형식이 맞지 않아도 에러 없이 narration으로 처리합니다.
+    **inputMode=structured** (프론트 기본 — 구조화 입력 UI)
+    - 이미 나뉜 `scenes[].items[]` 를 그대로 저장(빈 줄/따옴표 파싱 안 함).
+    - speaker 비면 narration / 있으면 dialogue. emotion 은 emotionLabel 로 정규화.
+    - 빈 text item 은 422.
 
-    파싱 결과는 메모리 Mock Repository에 저장되며 storyId로 조회할 수 있습니다.
-    서버 재시작 시 데이터는 초기화됩니다.
+    **inputMode=raw** (기존 textarea — 하위호환 유지)
+    - 빈 줄 기준 씬 분리, `화자: "대사"` 형식 dialogue, 줄 맨 앞 `[감정]` 태그.
+
+    저장 결과는 PostgreSQL 에 영속되며 storyId 로 조회합니다. sceneId 는 `scene_001…` 계약 유지.
     """
-    return story_service.parse_and_save(request.title, request.script)
+    return story_service.parse_and_save(request)
 
 
 @router.get("", response_model=list[StoryParseResponse], summary="스토리 목록 조회")
@@ -37,6 +39,15 @@ def list_stories():
     메모리 Mock Repository에 저장된 스토리 목록을 전부 반환합니다.
     """
     return story_service.list_stories()
+
+
+@router.get("/emotions", response_model=list[EmotionOption], summary="감정 셀렉터 옵션")
+def list_emotions():
+    """structured 입력 UI 의 감정 셀렉터 옵션(label/value). EMOTION_MAP 기준 전체 라벨.
+
+    ⚠️ `/{story_id}` 보다 먼저 선언해야 한다('emotions' 가 story_id 로 매칭되지 않도록).
+    """
+    return story_service.list_emotions()
 
 
 @router.get("/{story_id}", response_model=StoryParseResponse, summary="스토리 단건 조회")

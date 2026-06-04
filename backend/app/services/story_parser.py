@@ -53,6 +53,11 @@ DEFAULT_EMOTION = {
 # emotion 키 → 한글 라벨 (키워드 추정 결과에 라벨을 붙일 때 사용)
 EMOTION_TO_LABEL = {emotion: label for label, emotion in EMOTION_MAP.items()}
 
+# 감정 셀렉터(structured 입력 UI) 옵션 — EMOTION_MAP 그대로(별칭 전부 노출).
+# ⚠️ EMOTION_TO_LABEL 같은 자동 역매핑으로 만들지 않는다(별칭 중 마지막이 대표가 되어 어색해짐).
+# GET /api/stories/emotions 가 이 목록을 그대로 내려준다. label 은 유일, value 는 중복 허용(기쁨/즐거움→happy).
+EMOTION_OPTIONS = [{"label": label, "value": emotion} for label, emotion in EMOTION_MAP.items()]
+
 # 본문 키워드 → emotion 추정 (LLM 전 단계, 규칙 기반 추정).
 # 명시 [감정] 태그가 "없을 때만" 동작한다. 위에서부터 먼저 매칭되는 감정을 사용한다.
 # 부분 문자열 매칭이라, 너무 짧거나 일반 단어에 자주 포함되는 키워드는 오탐을 만든다.
@@ -155,3 +160,55 @@ def _parse_line(line: str) -> dict | None:
         item["emotion"], item["emotionLabel"] = inferred or DEFAULT_EMOTION[item["type"]]
 
     return item
+
+
+def _build_scene(order: int, items: list[dict]) -> dict:
+    """내부 scene dict 1개 생성. raw/structured 가 동일한 모양을 쓰도록 단일화."""
+    return {
+        "sceneId": f"scene_{order:03d}",
+        "order": order,  # 스토리 원본 순서. 이후 변경하지 않는다.
+        "duration": 3.0,
+        "backgroundId": None,
+        "items": items,
+        "subtitleSettings": {},
+    }
+
+
+def parse_structured_story(scenes: list[dict]) -> list[dict]:
+    """구조화 입력(scenes/items) → 내부 scene dict 리스트.
+
+    raw 파서(parse_script_to_scenes)와 **동일한 출력 모양**을 만든다(저장 계층 그대로 재사용).
+    - sceneOrder 순서대로 1..N 으로 order 재정렬(중간 삭제로 생긴 공백 정리).
+    - speaker 비면 narration / 있으면 dialogue.
+    - emotion 코드는 emotionLabel(EMOTION_MAP) 우선 → 제공된 emotion → 타입 기본값.
+    - 빈 text 는 ValueError (스키마에서 먼저 막지만 방어적으로 한 번 더).
+    """
+    result: list[dict] = []
+    for order, scene in enumerate(scenes, start=1):
+        items: list[dict] = []
+        for raw in scene.get("items", []):
+            text = (raw.get("text") or "").strip()
+            if not text:
+                raise ValueError("빈 대사/나레이션은 저장할 수 없습니다.")
+            speaker = (raw.get("speaker") or "").strip()
+            label = (raw.get("emotionLabel") or "").strip()
+            item_type = "dialogue" if speaker else "narration"
+            emotion = EMOTION_MAP.get(label) or raw.get("emotion") or DEFAULT_EMOTION[item_type][0]
+            items.append({
+                "type": item_type,
+                "speaker": speaker or None,
+                "text": text,
+                "emotion": emotion,
+                "emotionLabel": label or DEFAULT_EMOTION[item_type][1],
+            })
+        if not items:
+            raise ValueError("씬에는 최소 1개의 항목이 필요합니다.")
+        result.append(_build_scene(order, items))
+    return result
+
+
+def parse_story(payload: dict) -> list[dict]:
+    """inputMode 에 따라 raw / structured 파서로 분기한다(기본 raw)."""
+    if payload.get("inputMode") == "structured":
+        return parse_structured_story(payload.get("scenes") or [])
+    return parse_script_to_scenes(payload.get("script") or "")
