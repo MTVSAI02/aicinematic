@@ -83,6 +83,7 @@ class NotificationService:
                 or result.get("voiceId")
                 or result.get("backgroundId")
                 or result.get("renderId")
+                or payload.get("targetId")  # 실패 시 result 없음 → payload 로 대상 id 보존
             )
             return self._repo.create(
                 {
@@ -116,6 +117,13 @@ class NotificationService:
     def mark_all_read(self) -> dict:
         count = self._repo.mark_all_read()
         return {"updated": count}
+
+    def delete_notification(self, notification_id: str) -> None:
+        if not self._repo.delete(notification_id):
+            raise NotificationNotFoundError()
+
+    def delete_all_notifications(self) -> dict:
+        return {"deleted": self._repo.delete_all()}
 
 
 notification_service = NotificationService(notification_repository)

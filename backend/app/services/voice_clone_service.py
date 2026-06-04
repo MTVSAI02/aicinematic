@@ -141,6 +141,7 @@ def create_voice_clone_job(
         build_result,
         VoiceCloneFailedError.detail,
         "Voice cloning job started.",
+        payload={"targetId": voice_id, "characterId": char_id},  # 실패 알림도 voiceId 보존
     )
     resp["voiceId"] = voice_id  # 응답에 voiceId 포함(폴링 전에도 어떤 보이스인지 알 수 있게)
     return resp

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import styles from './NavBar.module.css'
+import NotificationBell from './NotificationBell'
 
 import navHome from '@design/assets/figma-icons/Nav/nav_home.svg'
 import navVoiceInput from '@design/assets/figma-icons/Nav/nav_voice_input.svg'
@@ -48,6 +49,7 @@ export default function NavBar() {
           </li>
         ))}
       </ul>
+      <NotificationBell />
     </nav>
   )
 }

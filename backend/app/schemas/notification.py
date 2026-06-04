@@ -22,3 +22,7 @@ class UnreadCountResponse(BaseModel):
 
 class MarkAllReadResponse(BaseModel):
     updated: int = Field(description="읽음 처리된 알림 수")
+
+
+class DeleteAllResponse(BaseModel):
+    deleted: int = Field(description="삭제된 알림 수")
