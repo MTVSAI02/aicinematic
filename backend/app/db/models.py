@@ -74,7 +74,6 @@ class Character(Base):
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     legacy_id: Mapped[str | None] = mapped_column(Text, index=True)
     name: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    description: Mapped[str | None] = mapped_column(Text)
     appearance_prompt: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(Text)  # storage path
     ai_image_path: Mapped[str | None] = mapped_column(Text)  # 포즈 생성용 원본

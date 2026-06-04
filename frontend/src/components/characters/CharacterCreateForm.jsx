@@ -18,7 +18,6 @@ export default function CharacterCreateForm() {
   const setCharacters = useCharacterStore((s) => s.setCharacters)
 
   const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
   const [appearancePrompt, setAppearancePrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [jobStatus, setJobStatus] = useState(null)
@@ -50,7 +49,6 @@ export default function CharacterCreateForm() {
       // 1. 생성 Job 요청 → jobId 수신 (비동기: 즉시 pending 반환)
       const job = await characterApi.generateCharacter({
         name: trimmedName,
-        description: description.trim(),
         appearancePrompt: trimmedPrompt,
       })
       setJobStatus(job.status)
@@ -66,7 +64,6 @@ export default function CharacterCreateForm() {
       const list = await characterApi.getCharacters()
       setCharacters(list)
       setName('')
-      setDescription('')
       setAppearancePrompt('')
     } catch (e) {
       if (e.aborted) return // 언마운트 취소 → 무시
@@ -92,15 +89,6 @@ export default function CharacterCreateForm() {
           placeholder="어린왕자"
           value={name}
           onChange={(e) => setName(e.target.value)}
-        />
-      </label>
-      <label className={styles.label}>
-        외형 설명
-        <input
-          className={styles.input}
-          placeholder="예: 금발 단발의 작은 소년, 초록 외투"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
         />
       </label>
       <label className={styles.label}>
