@@ -21,7 +21,7 @@ CHARACTER_PROMPT_PREFIX = "A single character, full body, standing, white backgr
 def build_character_final_prompt(appearance_prompt: str) -> str:
     """appearancePrompt를 외부 AI 서버에 보낼 최종 캐릭터 prompt로 조립한다.
 
-    description은 포함하지 않는다(저장/표시용 메타데이터). 배경의 assemble_final_prompt 와 대칭.
+    배경의 assemble_final_prompt 와 대칭.
     """
     return f"{CHARACTER_PROMPT_PREFIX} {appearance_prompt.strip()}"
 

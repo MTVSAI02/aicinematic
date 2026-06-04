@@ -44,9 +44,6 @@ export default function CharacterCard({ character }) {
       ) : (
         <>
           <span>{character.name}</span>
-          {character.description && (
-            <span className={styles.cardDesc}>{character.description}</span>
-          )}
           <span className={styles.cardMeta}>{character.appearancePrompt}</span>
           {isSelected && <span className={styles.selectedBadge}>선택됨</span>}
           {/* 임시 수정/삭제 버튼 (디자인 확정 전) */}

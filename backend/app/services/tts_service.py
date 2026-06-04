@@ -85,12 +85,9 @@ DEFAULT_EMOTION_PROMPT = EMOTION_PROMPT["neutral"]  # 알 수 없는 emotion →
 
 
 def _character_prompt(character: dict | None) -> str | None:
-    """캐릭터 대사 합성용 prompt. 1순위 description → 2순위 appearancePrompt → 3순위 name 기반 기본 설명."""
+    """캐릭터 대사 합성용 prompt. 1순위 appearancePrompt → 2순위 name 기반 기본 설명."""
     if not character:
         return None
-    desc = (character.get("description") or "").strip()
-    if desc:
-        return desc
     appearance = (character.get("appearancePrompt") or "").strip()
     if appearance:
         return appearance

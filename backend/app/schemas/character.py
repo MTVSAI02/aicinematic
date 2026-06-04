@@ -13,8 +13,6 @@ class CharacterGenerateRequest(BaseModel):
 
     name: str = Field(min_length=1, examples=["어린왕자"])
     appearancePrompt: str = Field(min_length=1, examples=["금발 단발, 초록 외투를 입은 작은 소년"])
-    # 저장/표시용 캐릭터 설명. ComfyUI 생성 prompt에는 appearancePrompt만 쓰고 description은 메타데이터로만 보관한다.
-    description: str | None = Field(default=None, examples=["호기심 많고 다정한 어린 왕자"])
 
     @field_validator("name", "appearancePrompt")
     @classmethod
@@ -40,7 +38,6 @@ class CharacterUpdateRequest(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, examples=["작은 왕자"])
     appearancePrompt: str | None = Field(default=None, min_length=1)
-    description: str | None = Field(default=None, examples=["호기심 많고 다정한 어린 왕자"])
     imageUrl: str | None = Field(default=None, examples=["/static/characters/prince.png"])
 
     @field_validator("name", "appearancePrompt")
@@ -131,7 +128,6 @@ class CharacterResponse(BaseModel):
     characterId: str = Field(description="char_mock_001 형식으로 자동 생성")
     name: str
     appearancePrompt: str
-    description: str | None = Field(default=None, description="저장/표시용 설명. 없으면 null")
     imageUrl: str | None = Field(default=None, description="생성된 원본 이미지 경로. 없으면 null")
     voiceId: str | None = Field(default=None, description="연결된 보이스 ID. 없으면 null")
     # 참고: 포즈 목록은 GET /api/characters/{id}/poses 로 따로 조회(목록 응답을 가볍게 유지).
@@ -144,7 +140,6 @@ class CharacterResponse(BaseModel):
                 "characterId": "char_mock_001",
                 "name": "어린왕자",
                 "appearancePrompt": "금발 단발, 초록 외투를 입은 작은 소년",
-                "description": "호기심 많고 다정한 어린 왕자",
                 "imageUrl": None,
                 "voiceId": None,
             }

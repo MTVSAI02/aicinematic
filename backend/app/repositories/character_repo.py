@@ -24,7 +24,6 @@ def _char_to_dict(c: Character, poses: list[CharacterPose]) -> dict:
         "characterId": c.id,
         "name": c.name,
         "appearancePrompt": c.appearance_prompt,
-        "description": c.description,
         "imageUrl": c.image_url,
         "voiceId": c.voice_id,
         "aiImagePath": c.ai_image_path,
@@ -56,7 +55,6 @@ class CharacterRepository:
                 id=character_id,
                 name=character_data.get("name"),
                 appearance_prompt=character_data.get("appearancePrompt"),
-                description=character_data.get("description"),
                 image_url=character_data.get("imageUrl"),
                 voice_id=character_data.get("voiceId"),
                 ai_image_path=character_data.get("aiImagePath"),
@@ -94,13 +92,11 @@ class CharacterRepository:
             c = db.get(Character, character_id)
             if not c:
                 return None
-            # name/appearancePrompt: None(명시적 null)은 무시. description/imageUrl: 명시되면 set(null 허용).
+            # name/appearancePrompt: None(명시적 null)은 무시. imageUrl: 명시되면 set(null 허용).
             if "name" in update_data and update_data["name"] is not None:
                 c.name = update_data["name"]
             if "appearancePrompt" in update_data and update_data["appearancePrompt"] is not None:
                 c.appearance_prompt = update_data["appearancePrompt"]
-            if "description" in update_data:
-                c.description = update_data["description"]
             if "imageUrl" in update_data:
                 c.image_url = update_data["imageUrl"]
             db.commit()
