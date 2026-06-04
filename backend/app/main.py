@@ -34,6 +34,7 @@ from .routers import (
     characters,
     health,
     jobs,
+    notifications,
     render,
     scenes,
     stories,
@@ -71,6 +72,7 @@ app.include_router(timeline.router)
 app.include_router(tts.router)
 app.include_router(voices.router)
 app.include_router(render.router)
+app.include_router(notifications.router)
 
 
 @app.get("/")

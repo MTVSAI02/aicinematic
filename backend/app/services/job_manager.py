@@ -79,12 +79,14 @@ class InMemoryJobManager:
         except Exception as exc:  # noqa: BLE001
             detail = _error_detail(exc, failed_detail)
             self._job_repo.fail(job_id, detail)
+            self._notify_job_done(job_id)
             return {
                 "jobId": job_id,
                 "status": JobStatus.failed.value,
                 "message": detail,
             }
 
+        self._notify_job_done(job_id)
         return {
             "jobId": job_id,
             "status": JobStatus.completed.value,
@@ -130,17 +132,31 @@ class InMemoryJobManager:
         executor = self._executor_for(job_type) if job_type else self._gpu_executor
         executor.submit(self._run_job, job_id, build_result, failed_detail)
 
+    def _notify_job_done(self, job_id: str) -> None:
+        """job 완료/실패 직후 알림 생성(대상 job 만 — notification_service 가 필터).
+
+        알림 생성이 job 처리를 깨면 안 되므로 실패는 전부 무시. lazy import 로 순환 방지.
+        """
+        try:
+            from .notification_service import notification_service
+
+            notification_service.create_for_job(self._job_repo.get(job_id))
+        except Exception:  # noqa: BLE001
+            pass
+
     def _run_job(
         self, job_id: str, build_result: Callable[[], dict], failed_detail: str
     ) -> None:
-        """워커 스레드 본체: running 표시 → build_result 실행 → completed/failed."""
+        """워커 스레드 본체: running 표시 → build_result 실행 → completed/failed → 알림."""
         self._job_repo.update_status(job_id, JobStatus.running.value, progress=10)
         try:
             result = build_result()
         except Exception as exc:  # noqa: BLE001
             self._job_repo.fail(job_id, _error_detail(exc, failed_detail))
+            self._notify_job_done(job_id)
             return
         self._job_repo.complete(job_id, result=result)
+        self._notify_job_done(job_id)
 
 
 job_manager = InMemoryJobManager(job_repository)
