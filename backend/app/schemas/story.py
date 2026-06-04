@@ -1,17 +1,68 @@
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .character import SceneCharacterItem
 from .text_overlay import TextOverlay
 
 
+def _not_blank(value: str) -> str:
+    if not (value or "").strip():
+        raise ValueError("must not be blank")
+    return value
+
+
+class StructuredStoryItem(BaseModel):
+    """structured 입력의 item 한 줄(나레이션/대사). 사용자는 문법/따옴표를 입력하지 않는다."""
+
+    emotion: str | None = Field(default=None, description="감정 코드(없으면 emotionLabel 로 서버가 파생)")
+    emotionLabel: str = Field(description="셀렉터에서 고른 한글 라벨(예: 잔잔함)")
+    speaker: str | None = Field(default=None, description="비어 있으면 narration, 있으면 dialogue")
+    text: str = Field(description="나레이션 또는 대사 본문")
+
+    @field_validator("emotionLabel", "text")
+    @classmethod
+    def _nb(cls, v: str) -> str:
+        return _not_blank(v)
+
+
+class StructuredScene(BaseModel):
+    sceneOrder: int = Field(ge=1, description="씬 순서(서버에서 1..N 으로 재정렬)")
+    items: list[StructuredStoryItem] = Field(min_length=1, description="씬당 최소 1개")
+
+
 class StoryParseRequest(BaseModel):
-    title: str = Field(examples=["어린 왕자"])
-    script: str = Field(
-        description="줄 맨 앞에 선택적으로 [감정] 태그를 붙일 수 있다. 예: [화남] 어린왕자: \"싫어\"",
-        examples=[
-            "[잔잔함] 어린 왕자는 조용히 별을 바라보았다.\n[화남] 어린왕자: \"싫어\"\n\n어린 왕자는 별빛을 따라 사막에 도착했어요.\n여우: \"안녕, 나는 여우야.\""
-        ],
+    """대본 입력. inputMode=raw(기존 textarea) / structured(씬·item 구조화) 둘 다 지원."""
+
+    title: str = Field(min_length=1, examples=["어린 왕자"])
+    inputMode: Literal["raw", "structured"] = Field(default="raw", description="기본 raw(하위호환)")
+    script: str | None = Field(
+        default=None,
+        description="raw 모드 본문. 줄 맨 앞에 선택적 [감정] 태그. 예: [화남] 어린왕자: \"싫어\"",
+        examples=["[잔잔함] 어린 왕자는 조용히 별을 바라보았다.\n여우: \"안녕, 나는 여우야.\""],
     )
+    scenes: list[StructuredScene] | None = Field(default=None, description="structured 모드 씬 목록")
+
+    @field_validator("title")
+    @classmethod
+    def _title_nb(cls, v: str) -> str:
+        return _not_blank(v)
+
+    @model_validator(mode="after")
+    def _check_mode(self):
+        if self.inputMode == "structured":
+            if not self.scenes:
+                raise ValueError("structured 모드는 scenes 가 1개 이상 필요합니다.")
+        elif not (self.script or "").strip():
+            raise ValueError("raw 모드는 script 가 필요합니다.")
+        return self
+
+
+class EmotionOption(BaseModel):
+    """GET /api/stories/emotions 응답 한 항목. label 유일, value 는 중복 가능."""
+
+    label: str = Field(examples=["기쁨"])
+    value: str = Field(examples=["happy"])
 
 
 class StoryItemResponse(BaseModel):

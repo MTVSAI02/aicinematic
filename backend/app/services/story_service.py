@@ -7,7 +7,7 @@ from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
 from .image_resolve import resolve_character_display_image
-from .story_parser import parse_script_to_scenes
+from .story_parser import EMOTION_OPTIONS, parse_story
 from .text_overlay_service import build_text_overlays
 
 
@@ -44,9 +44,19 @@ class StoryService:
         self._story_repo = story_repo
         self._voice_repo = voice_repo
 
-    def parse_and_save(self, title: str, script: str) -> dict:
-        scenes = parse_script_to_scenes(script)
-        return _serialize_story(self._story_repo.save({"title": title, "scenes": scenes}))
+    def parse_and_save(self, request) -> dict:
+        """StoryParseRequest 를 inputMode(raw/structured)에 따라 파싱·저장한다.
+
+        작성 중 데이터는 저장하지 않고, 이 호출(=씬 분해/다음 단계)에서만 새 story 를 생성한다.
+        """
+        scenes = parse_story(request.model_dump())
+        return _serialize_story(
+            self._story_repo.save({"title": request.title.strip(), "scenes": scenes})
+        )
+
+    def list_emotions(self) -> list[dict]:
+        """감정 셀렉터 옵션(label/value). EMOTION_MAP 기준 전체 라벨."""
+        return EMOTION_OPTIONS
 
     def list_stories(self) -> list[dict]:
         return [_serialize_story(s) for s in self._story_repo.list()]

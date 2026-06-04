@@ -2,12 +2,19 @@
 // 공통 fetch 래퍼는 utils/request.js 를 사용한다 (실패 시 error.detail 보존).
 import { request, jsonBody } from '@/utils/request'
 
-// POST /api/stories/parse — 대본을 씬으로 분해 후 저장
-export function parseStory({ title, script }) {
+// POST /api/stories/parse — 스토리 저장.
+// payload 예) structured: { title, inputMode:'structured', scenes:[{sceneOrder, items:[{emotion,emotionLabel,speaker,text}]}] }
+//            raw: { title, script } (inputMode 생략 시 raw)
+export function parseStory(payload) {
   return request('/api/stories/parse', {
-    ...jsonBody({ title, script }),
+    ...jsonBody(payload),
     method: 'POST',
   })
+}
+
+// GET /api/stories/emotions — 감정 셀렉터 옵션 [{label, value}]
+export function getEmotions() {
+  return request('/api/stories/emotions')
 }
 
 // GET /api/stories — 저장된 스토리 목록 (배경/보이스 페이지의 스토리 선택 드롭다운용)
