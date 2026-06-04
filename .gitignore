@@ -66,3 +66,7 @@ docs/
 
 # ===== 기타 =====
 RULES.md
+
+# ==== db =====
+docker-compose.yml
+

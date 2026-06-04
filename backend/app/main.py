@@ -78,14 +78,6 @@ def root():
     return {"service": "Mongsil Bookstore", "status": "running", "docs": "/docs"}
 
 
-# ── 보이스 preset 보장 (DB) ───────────────────────────────────────────────────
-# voices 는 PostgreSQL 로 이전됨. preset 4개는 Alembic 0002 가 시드하지만, startup 에서도
-# idempotent 보장 + sample.wav 존재 여부로 sampleAudioUrl 갱신.
-from .repositories.voice_repository import voice_repository as _voice_repo  # noqa: E402
-
-_voice_repo.seed_default_narrator_voices()
-
-
 @app.on_event("startup")
 def _resume_unfinished_tts_jobs():
     from .services.tts_service import tts_service

@@ -1,33 +1,17 @@
 """보이스 라이브러리 repository (PostgreSQL).
 
 기존 in-memory 와 같은 메서드/반환(dict, camelCase 키)을 유지해 서비스/스키마는 그대로 쓴다.
-ID = prefix+ULID (preset 은 시스템 고정 ID). 파일은 storage, DB엔 path/url만.
-preset 4개는 Alembic 0002 가 시드하지만, seed_default_narrator_voices() 로도 idempotent 보장 + 샘플 경로 갱신.
+ID = prefix+ULID. 파일은 storage, DB엔 path/url만.
+(과거의 preset 나레이션 보이스 자동 시드는 폐지 — 보이스는 화면/클론 플로우에서 생성한다.)
 """
 
 from datetime import datetime
 
 from sqlalchemy import select
 
-from ..core.config import VOICE_STORAGE_DIR, storage_url
 from ..core.ids import new_id
 from ..db.models import Voice
 from ..db.session import SessionLocal
-
-DEFAULT_NARRATOR_VOICE_PRESETS: list[dict] = [
-    {"voiceId": "voice_preset_narrator_calm_001", "name": "차분한 나레이션",
-     "description": "잔잔하고 따뜻하게 동화를 읽어주는 목소리",
-     "voicePrompt": "calm, warm, gentle narrator voice for fairy tale storytelling"},
-    {"voiceId": "voice_preset_narrator_bright_001", "name": "밝은 나레이션",
-     "description": "밝고 친근하게 이야기를 읽어주는 목소리",
-     "voicePrompt": "bright, friendly, cheerful narrator voice for children story"},
-    {"voiceId": "voice_preset_narrator_soft_001", "name": "부드러운 나레이션",
-     "description": "포근하고 부드러운 분위기의 동화 구연 목소리",
-     "voicePrompt": "soft, cozy, gentle storytelling voice"},
-    {"voiceId": "voice_preset_narrator_serious_001", "name": "진지한 나레이션",
-     "description": "안정감 있고 차분하게 장면을 설명하는 목소리",
-     "voicePrompt": "serious, calm, stable narrator voice"},
-]
 
 _CLONE_UPDATE_FIELDS = frozenset(
     {"status", "sampleAudioUrl", "provider", "model", "error", "referenceAudioUrl", "referenceText", "updatedAt"}
@@ -69,29 +53,6 @@ def _to_dict(v: Voice) -> dict:
 
 
 class VoiceRepository:
-    @staticmethod
-    def _preset_sample_url(voice_id: str) -> str | None:
-        if (VOICE_STORAGE_DIR / voice_id / "sample.wav").exists():
-            return storage_url("voices", voice_id, "sample.wav")
-        return None
-
-    def seed_default_narrator_voices(self) -> None:
-        """preset 4개 보장(idempotent) + sample.wav 존재 시 sampleAudioUrl 갱신."""
-        with SessionLocal() as db:
-            for preset in DEFAULT_NARRATOR_VOICE_PRESETS:
-                vid = preset["voiceId"]
-                sample_url = self._preset_sample_url(vid)
-                row = db.get(Voice, vid)
-                if row is None:
-                    db.add(Voice(
-                        id=vid, name=preset["name"], description=preset["description"],
-                        voice_prompt=preset["voicePrompt"], voice_type="narrator",
-                        is_preset=True, status="ready", sample_audio_url=sample_url,
-                    ))
-                else:
-                    row.sample_audio_url = sample_url
-            db.commit()
-
     def save(self, voice_data: dict) -> dict:
         with SessionLocal() as db:
             v = Voice(
