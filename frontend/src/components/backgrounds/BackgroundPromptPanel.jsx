@@ -88,56 +88,46 @@ export default function BackgroundPromptPanel() {
 
   return (
     <div className={styles.form}>
-      {/* 사용법 안내: 씬 선택은 선택사항, 핵심은 배경 프롬프트 */}
-      <p className={styles.help}>
-        <strong>배경 프롬프트만 있으면 후보를 만들 수 있어요.</strong> 아래 “배경 프롬프트”에 원하는 배경을
-        직접 적고 <strong>[배경 후보 생성]</strong>을 누르면 됩니다.
-        <br />
-        어떤 배경을 넣을지 막막하면, <strong>(선택)</strong> 스토리·씬을 골라 그 장면에 어울리는 프롬프트를
-        자동으로 추천받을 수 있어요. <strong>스토리·씬 선택은 필수가 아닙니다.</strong>
-      </p>
-
-      {/* (선택) 씬 기반 추천 */}
-      <p className={styles.stepLabel}>① (선택) 씬에서 프롬프트 추천받기</p>
-      <p className={styles.hint}>
-        스토리와 씬을 고르면 그 장면 내용으로 배경 프롬프트가 아래에 자동으로 채워집니다.
-        건너뛰고 바로 직접 입력해도 됩니다.
-      </p>
+      
+      {/* 씬 기반 추천 드롭다운 */}
       <StorySceneSelect />
-      <button className={styles.btnSecondary} onClick={handleSuggest} disabled={!canSuggest}>
-        씬에서 배경 프롬프트 추천받기
-      </button>
+      
+      <div className={styles.centerBtnRow}>
+        <button className={styles.recommendBtn} onClick={handleSuggest} disabled={!canSuggest}>
+          🪄 씬에서 배경 프롬프트 추천받기
+        </button>
+      </div>
 
       {sourceText && (
         <p className={styles.validation}>참고 문장: {sourceText}</p>
       )}
 
-      <p className={styles.divider}>— 또는 직접 입력 —</p>
-
-      {/* 프롬프트 입력/수정 (실제로 생성에 쓰이는 값) */}
-      <p className={styles.stepLabel}>② 배경 프롬프트 (필수)</p>
-      <p className={styles.hint}>
-        이 내용으로 후보가 생성됩니다. 추천받은 문장을 수정해도 되고, 처음부터 직접 써도 됩니다.
-      </p>
-      <label className={styles.label}>
-        <textarea
-          className={styles.textarea}
-          placeholder="예) 별빛이 비치는 조용한 사막, 따뜻한 동화풍 배경"
-          value={promptInput}
-          onChange={(e) => setPromptInput(e.target.value)}
-        />
-      </label>
-
-      {finalPromptPreview && (
-        <div className={styles.label}>
-          finalPrompt 미리보기 (현재 프롬프트 기준 · 전송되지 않음 · 실제 조립은 백엔드)
-          <div className={styles.preview}>{finalPromptPreview}</div>
+      {/* 프롬프트 입력/수정 */}
+      <div className={styles.fieldSection}>
+        <label className={styles.fieldLabel}>배경 프롬프트</label>
+        <div className={styles.textareaWrapper}>
+          <textarea
+            className={styles.textarea}
+            placeholder="예) 별빛이 비치는 조용한 숲속, 따뜻한 동화풍 배경"
+            value={promptInput}
+            maxLength={500}
+            onChange={(e) => setPromptInput(e.target.value)}
+          />
+          <span className={styles.charCounter}>{promptInput.length} / 500</span>
         </div>
-      )}
+      </div>
 
-      <button className={styles.btn} onClick={handleGenerate} disabled={!canGenerate}>
-        {loading ? '생성 중...' : '배경 생성'}
-      </button>
+      <div className={styles.centerBtnRow}>
+        <button className={styles.generateBtn} onClick={handleGenerate} disabled={!canGenerate || loading}>
+          {loading ? (
+            <>
+              <span className={styles.spinner} /> 생성 중...
+            </>
+          ) : (
+            '✨ 배경 생성'
+          )}
+        </button>
+      </div>
 
       {!promptInput.trim() && !loading && (
         <p className={styles.validation}>배경 프롬프트를 입력하거나 추천을 받아주세요.</p>
