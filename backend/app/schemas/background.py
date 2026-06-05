@@ -38,24 +38,7 @@ class BackgroundGenerateRequest(BaseModel):
         return _not_blank(value)
 
 
-class BackgroundCandidate(BaseModel):
-    candidateId: str
-    prompt: str
-    finalPrompt: str
-    imageUrl: str | None = None
-
-
 # ── 배경 라이브러리 ───────────────────────────────────────────
-
-
-class BackgroundCreateRequest(BaseModel):
-    candidateId: str
-    name: str = Field(min_length=1, examples=["별빛 사막 배경"])
-
-    @field_validator("name")
-    @classmethod
-    def name_not_blank(cls, value: str) -> str:
-        return _not_blank(value)
 
 
 class BackgroundResponse(BaseModel):

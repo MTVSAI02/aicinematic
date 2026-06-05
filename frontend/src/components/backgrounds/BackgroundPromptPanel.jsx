@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
 import { pollJob } from '@/utils/pollJob'
@@ -18,13 +18,15 @@ export default function BackgroundPromptPanel() {
     storyId, sceneId, promptInput, sourceText,
     promptSuffix, loading, error,
     setPromptInput, setPromptSuffix,
-    setSourceText, setCandidates, setCurrentJobId, setSelectedCandidateId,
-    setLoading, setError, resetCandidates,
+    setSourceText, setCurrentJobId, setBackgrounds,
+    setLoading, setError,
   } = useBackgroundStore()
 
   // 언마운트 시 진행 중 폴링 취소 (페이지 이동 후 늦게 끝난 Job이 store를 갱신하는 것 방지)
   const abortRef = useRef(null)
   useEffect(() => () => abortRef.current?.abort(), [])
+
+  const [savedMessage, setSavedMessage] = useState('')
 
   // finalPrompt 미리보기는 항상 현재 promptInput 기준으로 실시간 계산한다 (stale 방지).
   // suffix(배경 규칙)는 추천 응답에서 추출해 보관한 값. 추천을 안 받았으면 미리보기는 표시하지 않는다.
@@ -54,24 +56,25 @@ export default function BackgroundPromptPanel() {
   async function handleGenerate() {
     if (!promptInput.trim() || loading) return
     setError(null)
+    setSavedMessage('')
     setLoading(true)
-    resetCandidates()
     try {
-      // 사용자 prompt만 보낸다(finalPrompt 조립)
-      // 비동기: 즉시 jobId 반환 → completed/failed 까지 폴링
+      // 사용자 prompt만 보낸다(finalPrompt 조립). 비동기: 즉시 jobId → completed/failed 폴링.
       const job = await backgroundApi.generateBackground({
         prompt: promptInput.trim(),
       })
       setCurrentJobId(job.jobId)
 
       abortRef.current = new AbortController()
-      const finished = await pollJob(job.jobId, { signal: abortRef.current.signal })
-      setCandidates(finished.result?.candidates ?? [])
-      setSelectedCandidateId(null)
+      await pollJob(job.jobId, { signal: abortRef.current.signal })
+      // 1장 생성 즉시 백엔드가 라이브러리에 저장 → 목록 갱신(아래 라이브러리에 바로 표시)
+      const list = await backgroundApi.getBackgrounds()
+      setBackgrounds(list)
+      setSavedMessage('배경이 생성되어 라이브러리에 저장되었습니다.')
     } catch (e) {
       if (e.aborted) return // 언마운트 취소 → 무시
       if (e.timedOut) {
-        setError('배경 생성이 오래 걸리고 있어요. 잠시 후 다시 시도해주세요.')
+        setError('배경 생성이 오래 걸리고 있어요. 잠시 후 라이브러리를 새로고침해 확인해주세요.')
       } else {
         setError(getApiErrorMessage(e))
       }
@@ -133,12 +136,13 @@ export default function BackgroundPromptPanel() {
       )}
 
       <button className={styles.btn} onClick={handleGenerate} disabled={!canGenerate}>
-        {loading ? '처리 중...' : '배경 후보 생성'}
+        {loading ? '생성 중...' : '배경 생성'}
       </button>
 
       {!promptInput.trim() && !loading && (
         <p className={styles.validation}>배경 프롬프트를 입력하거나 추천을 받아주세요.</p>
       )}
+      {savedMessage && <p className={styles.status}>{savedMessage}</p>}
       {error && <p className={styles.error}>{error}</p>}
     </div>
   )

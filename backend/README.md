@@ -92,7 +92,6 @@ backend/
 │   │   ├── story_repo.py      # 메모리 Mock Repository
 │   │   ├── character_repo.py  # 캐릭터 메모리 Mock Repository
 │   │   ├── job_repo.py        # Job 상태 메모리 Mock Repository
-│   │   ├── background_candidate_repository.py  # 배경 후보(임시) 메모리 저장
 │   │   ├── background_repository.py            # 배경 라이브러리 메모리 저장
 │   │   ├── tts_audio_repository.py             # TTS audio 메타 메모리 저장
 │   │   └── voice_repository.py                 # 보이스 라이브러리 메모리 저장
@@ -101,7 +100,7 @@ backend/
 │   │   ├── story.py           # StoryParseRequest, StoryParseResponse (scene backgroundId/emotion 포함)
 │   │   ├── character.py       # Character 요청/응답 모델
 │   │   ├── job.py             # JobStatus/JobType Enum, JobResponse, JobCreatedResponse
-│   │   ├── background.py      # Background 후보/라이브러리/씬연결 모델
+│   │   ├── background.py      # Background 라이브러리/씬연결 모델
 │   │   ├── tts.py             # TTS 생성 요청/audio 응답/삭제 응답 모델
 │   │   └── voice.py           # Voice 생성/수정/응답/삭제 모델
 │   ├── core/
@@ -142,8 +141,7 @@ backend/
 | PATCH | `/api/characters/{character_id}` | 캐릭터 부분 수정 (name/appearancePrompt/imageUrl) |
 | DELETE | `/api/characters/{character_id}` | 캐릭터 삭제 |
 | POST | `/api/backgrounds/prompt-suggestions` | 씬 기반 배경 프롬프트 추천 (이미지 생성 X) |
-| POST | `/api/backgrounds/generate` | 배경 후보 생성 Job (**비동기** → `pending` 반환, 폴링; body `{prompt}`만). Backend→AI 서버(/generate)→ComfyUI |
-| POST | `/api/backgrounds` | 후보 1장 → 배경 라이브러리 저장 |
+| POST | `/api/backgrounds/generate` | 배경 생성 Job (**비동기** → `pending` 반환, 폴링; body `{prompt}`만). **1장 생성 → 라이브러리 자동 저장**(`result.background`). Backend→AI 서버(/generate)→ComfyUI |
 | GET | `/api/backgrounds` | 저장된 배경 목록 조회 |
 | GET | `/api/backgrounds/{background_id}` | 저장된 배경 단건 조회 |
 | PATCH | `/api/backgrounds/{background_id}` | 배경 수정 (name만) |
@@ -221,7 +219,7 @@ backend/
 - storyId 자동 생성: `story_mock_001`, `story_mock_002`, ...
 - characterId 자동 생성: `char_mock_001`, `char_mock_002`, ...
 - jobId 자동 생성: `job_mock_001`, `job_mock_002`, ...
-- backgroundId 자동 생성: `bg_mock_001`, ...  / 배경 후보: `bg_candidate_001`, ...
+- backgroundId 자동 생성: `bg_mock_001`, ... (생성 즉시 라이브러리에 저장)
 - audioId 자동 생성(TTS): `audio_mock_001`, ...
 - 서버 재시작 시 데이터 초기화됨
 

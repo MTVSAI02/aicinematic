@@ -18,23 +18,23 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
 
 **그래서 우리 서비스의 합의 구조:**
 - **AI 서버가 `voiceId → voice_clone_prompt`를 캐싱**하면, 백엔드는 `voiceId`만으로 재사용 요청이 가능하다.
-- 단 **cache miss(서버 재시작/캐시 비움) 대비**, 백엔드는 합성 요청에 **`referenceAudioUrl` + `referenceText`를 항상 함께** 보낸다.
+- 단 **cache miss(서버 재시작/캐시 비움) 대비**, 백엔드는 합성 요청에 **`referenceAudioBase64`(+`referenceAudioMime`) + `referenceText`를 항상 함께** 보낸다. (⚠️ AI 서버가 백엔드와 **다른 PC**일 수 있어 URL 대신 **base64 동봉**으로 확정)
 
 **AI 서버 합성 처리 순서:**
 1. `voiceId`로 `voice_clone_prompt` 캐시 조회
 2. 캐시 있으면 그대로 사용
-3. 캐시 없으면 `referenceAudioUrl` 다운로드 + `referenceText`로 `create_voice_clone_prompt` 재생성
+3. 캐시 없으면 `referenceAudioBase64`를 **디코딩**(URL 다운로드 아님) + `referenceText`로 `create_voice_clone_prompt` 재생성
 4. 재생성한 prompt를 `voiceId` 기준으로 다시 캐시
 5. `generate_voice_clone` 합성 실행
 
-**preset 보이스 주의:** 기본 나레이터 preset(§1.1)은 사용자 reference가 없어 `referenceAudioUrl/referenceText`가 **null**일 수 있다. 이 경우 **AI 서버가 해당 preset `voiceId`의 기본 speaker/prompt를 자체 보유**해야 한다.
+**preset 보이스 주의:** 기본 나레이터 preset(§1.1)은 사용자 reference가 없어 `referenceAudioBase64/referenceText`가 **null**일 수 있다. 이 경우 **AI 서버가 해당 preset `voiceId`의 기본 speaker/prompt를 자체 보유**해야 한다.
 
 > **voiceId가 흐르는 길**
 > `POST /api/voices`(보이스 자산 생성, voiceId 발급) → 연결 → `POST /api/tts/scene`(audio에 voiceId 복사) → AI는 그 voiceId의 목소리로 합성.
 > - **dialogue**: `PATCH /api/characters/{id}/voice`로 캐릭터에 연결 → TTS가 speaker로 캐릭터 찾아 그 `voiceId` 복사.
 > - **narration**: `PATCH /api/stories/{id}/narrator-voice`로 스토리에 연결 → TTS가 story의 `narratorVoiceId` 복사.
 >
-> **연결 제한 = `status=ready`만** (voiceType 아님). `voiceType`(narrator/character)은 추천 태그일 뿐 — narrator 추천 보이스도 캐릭터에, character 추천 보이스도 나레이션에 연결 가능. preset narrator 4개(§1.1)는 기본 나레이터로 쓰라고 제공되지만, 연결 자체에 타입 제한은 없다.
+> **연결 제한 = `status=ready`만** (voiceType 아님). `voiceType`(narrator/character)은 추천 태그일 뿐 — narrator 추천 보이스도 캐릭터에, character 추천 보이스도 나레이션에 연결 가능. 연결 자체에 타입 제한은 없다. (preset 나레이터는 현재 제거됨 — §1.1 참고)
 
 ---
 
@@ -89,14 +89,17 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
 | `voiceType` / `isPreset` | 백엔드 | 추천 용도(narrator/character) / 시스템 기본 보이스 여부 |
 | `provider` / `model` | **AI/TTS** | 클로닝에 쓴 제공자/모델 — **AI가 채운다.** 내부 보관용이라 `GET /api/voices` 응답엔 노출 안 함 |
 | `sampleAudioUrl` | **AI/TTS** | 미리듣기 샘플 음성 URL — **AI가 채운다** |
-| `status` | **AI/TTS** | 생성 직후 `"pending"`(클로닝 대기). 클로닝 완료 시 AI가 `"ready"` 등으로 갱신 (preset은 seed 시 `"ready"`) |
+| `status` | **AI/TTS** | 생성 직후 `"pending"`(클로닝 대기). 클로닝 완료 시 백엔드 Job이 AI 결과로 `"ready"`/`"failed"` 갱신 |
 
 - 백엔드는 `voiceId` + 메타(name/description/voicePrompt/voiceType/isPreset)만 정한다. **"실제 목소리를 어떻게 만드는가"(provider/model/클로닝)는 AI 영역**이라 생성/수정 요청으로 받지 않는다.
-- ⚠️ 현재 백엔드엔 AI가 클로닝 결과(provider/model/sampleAudioUrl/status)를 써넣는 **통로가 아직 없다.** 보이스 클로닝 연동 시, AI 결과를 보이스 자산에 반영하는 엔드포인트/콜백을 추가한다.
+- ✅ (구현됨) 백엔드는 클로닝을 **Job**으로 돌려 AI 결과(provider/model/sampleAudioUrl/status)를 보이스 자산에 **자동 반영**한다(`voice_clone_service` → `apply_clone_update`). 별도 콜백 엔드포인트 불필요.
 
-### 1.1 기본 나레이션 보이스 preset (AI가 샘플·클로닝 채울 대상)
+### 1.1 기본 나레이션 보이스 preset — ⚠️ 현재 제거됨 (narration 전략 재정의 예정)
 
-백엔드가 **기본 나레이터 보이스 4개**를 고정 voiceId로 메모리 seed한다. narration은 화자가 없어 캐릭터로 못 붙으므로, 사용자가 이 중 하나를 골라 `story.narratorVoiceId`로 쓴다. 현재 mock 자산이라 `sampleAudioUrl=null`.
+> **변경 안내:** 아래 preset 나레이터 4개는 **백엔드에서 제거됨**(seed 폐지). 지금은 narration도 일반 보이스처럼 **클론해서 `story.narratorVoiceId`에 연결**하는 방식이다.
+> narration 기본 보이스 제공 방식은 **AI/TTS 파트가 제공할 내용을 받아 재정의 예정**(미확정). 아래 표는 이전 스펙(참고용).
+
+(이하 이전 스펙 — 현재 비활성)
 
 | 고정 voiceId | 이름 | voicePrompt(영문 의도) |
 |---|---|---|
@@ -104,8 +107,6 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
 | `voice_preset_narrator_bright_001` | 밝은 나레이션 | bright, friendly, cheerful narrator voice for children story |
 | `voice_preset_narrator_soft_001` | 부드러운 나레이션 | soft, cozy, gentle storytelling voice |
 | `voice_preset_narrator_serious_001` | 진지한 나레이션 | serious, calm, stable narrator voice |
-
-**AI/TTS 파트가 할 일**: 위 4개 voiceId 각각에 대해 ① 실제 클로닝(provider/model/status), ② **짧은 미리듣기 샘플(2~3초) 합성 후 `sampleAudioUrl` 채우기.** 채워지면 프론트 미리듣기 버튼이 활성화된다.
 
 ---
 
@@ -131,7 +132,8 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
       "voiceId": "voice_preset_narrator_calm_001",
       "voiceName": "차분한 나레이션",
       "voicePrompt": "calm, warm, gentle narrator voice",
-      "referenceAudioUrl": null,
+      "referenceAudioBase64": null,
+      "referenceAudioMime": null,
       "referenceText": null,
       "characterId": null,
       "characterName": null,
@@ -150,7 +152,8 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
       "voiceId": "voice_mock_003",
       "voiceName": "엄마가 연기한 어린왕자",
       "voicePrompt": "맑고 순수한 소년 목소리",
-      "referenceAudioUrl": "/storage/voices/voice_mock_003/reference.webm",
+      "referenceAudioBase64": "GkXfo...(reference.webm 파일 base64)",
+      "referenceAudioMime": "audio/webm",
       "referenceText": "사용자가 따라 읽은 문장",
       "characterId": "char_mock_001",
       "characterName": "어린왕자",
@@ -160,7 +163,7 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
 }
 ```
 
-> **합성 시 AI 처리(§0 재확인):** `voiceId` 캐시 있으면 그 `voice_clone_prompt` 사용, 없으면 `referenceAudioUrl`(다운로드) + `referenceText`로 재생성 후 `voiceId` 기준 재캐시. preset처럼 `referenceAudioUrl=null`이면 AI가 그 preset voiceId의 기본 speaker/prompt를 자체 사용.
+> **합성 시 AI 처리(§0 재확인):** `voiceId` 캐시 있으면 그 `voice_clone_prompt` 사용, 없으면 `referenceAudioBase64`(디코딩) + `referenceText`로 재생성 후 `voiceId` 기준 재캐시. preset처럼 `referenceAudioBase64=null`이면 AI가 그 preset voiceId의 기본 speaker/prompt를 자체 사용.
 >
 > **instruction 조합:** AI는 `voicePrompt`(목소리 의도) + `characterPrompt`(캐릭터 말투) + `emotionPrompt`(감정 지시문)를 조합해, **사용자 reference 목소리 특징은 유지하면서 캐릭터 분위기·감정에 맞게** `text`를 합성한다.
 
@@ -178,8 +181,16 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
 | friendly | Speak in a warm and friendly tone. |
 | serious | Speak in a serious and focused tone. |
 | curious | Speak in a curious and gentle tone. |
+| worried | Speak in a worried and careful tone. |
+| playful | Speak in a playful and lively tone. |
+| curt | Speak in a blunt and slightly cold tone. |
+| shy | Speak in a shy and hesitant tone. |
+| mysterious | Speak in a mysterious and quiet tone. |
+| disappointed | Speak in a disappointed and subdued tone. |
 
 알 수 없는 emotion → `Speak in a natural and neutral tone.`(neutral) fallback.
+
+> ⚠️ 감정은 **16종으로 확장**됨(우리 강점). **AI는 `emotion` enum 값에 의존하지 말고 반드시 `emotionPrompt`(자연어 문자열)를 합성 instruction으로 사용**할 것 — 그래야 확장 감정이 다 표현된다.
 
 ### 필드 의미
 | 필드 | 설명 |
@@ -191,16 +202,17 @@ Qwen3-TTS 0.6B-Base는 **`ref_audio` + `ref_text` 기반** voice clone이다. **
 | `voiceType` | `narrator`(내레이션) / `character`(대사) — 추천 태그(연결 제한 아님) |
 | `voiceId` | **§1의 보이스 자산 ID(캐시 키).** 없으면 null → `voiceType` 기준 기본 목소리. 출처: dialogue=매칭 캐릭터 `voiceId`, narration=story `narratorVoiceId` |
 | `voiceName` / `voicePrompt` | 보이스 이름 / 원하는 목소리 의도 |
-| `referenceAudioUrl` | **ref_audio (cache miss 시 prompt 재생성용).** `/storage/...` URL. preset/미연결이면 null |
+| `referenceAudioBase64` | **ref_audio (cache miss 시 prompt 재생성용).** reference 파일을 base64 인코딩한 문자열. preset/미연결이면 null. (AI가 다른 PC여도 되도록 URL 대신 base64 동봉) |
+| `referenceAudioMime` | reference 오디오 MIME (예: `audio/webm`, `audio/wav`). base64 디코딩 참고용. null 가능 |
 | `referenceText` | **ref_text (cache miss 시 재생성용).** preset/미연결이면 null |
 | `speaker` | 대사의 화자명 (narration이면 null) |
 | `characterId` | dialogue `speaker`로 매칭된 캐릭터 ID. narration/미매칭이면 null (매칭 키 = speaker == 캐릭터 name) |
 | `characterName` | 매칭 캐릭터 이름 (narration/미매칭이면 null) |
-| `characterPrompt` | **캐릭터 말투 prompt.** 백엔드 우선순위: `description` → `appearancePrompt` → name 기반 기본문. narration/미매칭이면 null |
+| `characterPrompt` | **캐릭터 말투 prompt.** 백엔드 우선순위: `appearancePrompt` → name 기반 기본문. (캐릭터 `description` 필드는 제거됨) narration/미매칭이면 null |
 | `itemIndex` | 원본 scene.items 인덱스 (참고용, 재번호 안 함) |
 
 ### enum 값
-- `emotion`: `neutral · calm · happy · sad · angry · scared · excited · friendly · serious` (+ story-parse가 내는 추가 키는 emotionPrompt에서 neutral fallback)
+- `emotion`: `neutral · calm · happy · sad · angry · scared · excited · friendly · serious · curious · worried · playful · curt · shy · mysterious · disappointed` (16종, 확장됨. 그 외 키는 emotionPrompt에서 neutral fallback)
 - `voiceType`: `narrator · character`
 
 ---
@@ -302,7 +314,7 @@ contract fields; only the shared PC adapter owns this ComfyUI-specific mapping.
 ## 6. 통합 테스트 체크리스트 (AI 서버 연결 후)
 
 ### 6.1 지금 당장(연결 전) 점검해두면 좋은 것
-- [ ] AI 서버가 백엔드의 `/storage/...` URL(`referenceAudioUrl`)에 **HTTP로 접근 가능한지** 확인. 불가하면 후속으로 TTS 요청도 multipart/base64 reference 동봉 방식으로 전환.
+- [x] (확정) reference는 **`referenceAudioBase64`로 동봉** — AI 서버가 백엔드 `/storage`에 접근 못 해도(다른 PC) cache miss 재생성 가능. AI는 base64 디코딩 후 `create_voice_clone_prompt`에 사용.
 - [ ] `AI_VOICE_CLONE_URL` / `AI_TTS_URL`을 `.env`로 주입(코드 하드코딩 금지).
 - [ ] AI 응답의 `audioId→audioUrl`이 `TTSAudio`에 저장되는지(이미 `apply_ai_result` 구현 — 응답 형식만 맞으면 됨).
 - [ ] AI 응답에 `durationSec`이 오면 → 추후 cueTiming/`audioDurationSec` 동기화에 활용 가능한지 검토.
@@ -313,5 +325,5 @@ contract fields; only the shared PC adapter owns this ComfyUI-specific mapping.
 3. **재생 UI(`/voice` 미리듣기 / TTS 재생)** — `sampleAudioUrl` / `audioUrl`이 실제로 재생되는지.
 
 ### 6.3 preset 나레이터(4개) 확인
-- preset voiceId는 `referenceAudioUrl/referenceText`가 **null**일 수 있다 → AI 서버가 그 preset voiceId의 기본 speaker/prompt를 **자체 보유**해야 정상 합성된다(§0).
+- preset voiceId는 `referenceAudioBase64/referenceText`가 **null**일 수 있다 → AI 서버가 그 preset voiceId의 기본 speaker/prompt를 **자체 보유**해야 정상 합성된다(§0).
 

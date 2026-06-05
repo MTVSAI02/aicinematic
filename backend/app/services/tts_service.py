@@ -1,8 +1,9 @@
+import base64
 import logging
 
 import httpx
 
-from ..core.config import AUDIO_STORAGE_DIR, storage_url
+from ..core.config import AUDIO_STORAGE_DIR, storage_path, storage_url
 from ..core.exceptions import (
     EmptySceneItemsError,
     SceneNotFoundError,
@@ -92,6 +93,51 @@ def _character_prompt(character: dict | None) -> str | None:
     if appearance:
         return appearance
     return f"{character.get('name') or '캐릭터'} 캐릭터의 말투로 말합니다."
+
+
+# reference 확장자 → mime (base64 동봉 시 AI 가 디코딩에 참고)
+_REFERENCE_MIME = {
+    "webm": "audio/webm",
+    "wav": "audio/wav",
+    "mp3": "audio/mpeg",
+    "m4a": "audio/mp4",
+    "ogg": "audio/ogg",
+}
+
+
+def _reference_base64(reference_url: str | None, cache: dict) -> tuple[str | None, str | None]:
+    """reference /storage URL → (base64, mime). URL/파일 없으면 (None, None).
+
+    AI 서버가 백엔드와 다른 PC 일 수 있어, cache miss 시 클론 재생성용 reference 를
+    URL 대신 base64 로 동봉한다(AI 가 백엔드 storage 에 접근 못 해도 됨).
+    같은 reference 는 호출당 한 번만 인코딩(파일 I/O 절약).
+    """
+    if not reference_url:
+        return (None, None)
+    if reference_url in cache:
+        return cache[reference_url]
+    path = storage_path(reference_url)
+    if path is None or not path.exists():
+        result: tuple[str | None, str | None] = (None, None)
+    else:
+        ext = path.suffix.lstrip(".").lower()
+        mime = _REFERENCE_MIME.get(ext, "application/octet-stream")
+        result = (base64.b64encode(path.read_bytes()).decode("ascii"), mime)
+    cache[reference_url] = result
+    return result
+
+
+def _to_ai_item(audio: dict, cache: dict) -> dict:
+    """AI 합성 요청용 item 변환: referenceAudioUrl → referenceAudioBase64(+ referenceAudioMime).
+
+    base64 는 DB 에 저장하지 않고 outbound payload 에만 싣는다(저장은 lean 유지).
+    """
+    b64, mime = _reference_base64(audio.get("referenceAudioUrl"), cache)
+    item = {k: v for k, v in audio.items() if k != "referenceAudioUrl"}
+    item["referenceAudioBase64"] = b64
+    item["referenceAudioMime"] = mime
+    return item
+
 
 class TTSService:
     """scene.items 기반 TTS 생성/조회/삭제 비즈니스 로직.
@@ -195,7 +241,11 @@ class TTSService:
         """
         if not saved_audios:
             return []
-        ai_payload = {"storyId": story_id, "sceneId": scene_id, "items": saved_audios}
+        # referenceAudioUrl → referenceAudioBase64 (AI가 다른 PC여도 cache miss 재생성 가능).
+        # 같은 reference 는 1회만 인코딩(ref_cache). base64 는 outbound payload 에만.
+        ref_cache: dict = {}
+        ai_items = [_to_ai_item(a, ref_cache) for a in saved_audios]
+        ai_payload = {"storyId": story_id, "sceneId": scene_id, "items": ai_items}
         ai_result = tts_ai_client.synthesize_scene(ai_payload)
         if ai_result and isinstance(ai_result.get("audios"), list):
             rehosted = [_rehost_audio_to_storage(a) for a in ai_result["audios"]]
