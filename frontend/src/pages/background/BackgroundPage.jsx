@@ -4,8 +4,6 @@ import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
 import { getApiErrorMessage } from '@/utils/apiError'
 import BackgroundPromptPanel from '@/components/backgrounds/BackgroundPromptPanel'
-import BackgroundCandidateGrid from '@/components/backgrounds/BackgroundCandidateGrid'
-import BackgroundSaveForm from '@/components/backgrounds/BackgroundSaveForm'
 import BackgroundLibrary from '@/components/backgrounds/BackgroundLibrary'
 import styles from './BackgroundPage.module.css'
 
@@ -32,27 +30,17 @@ export default function BackgroundPage() {
     <div className={styles.page}>
       <h1>배경</h1>
       <p className={styles.cardMeta}>
-        배경은 후보를 생성한 뒤 1장을 골라 라이브러리에 저장합니다. 저장한 배경을 특정 씬에 연결하는 것은 “씬 편집”에서 합니다.
+        프롬프트로 배경을 생성하면 <b>1장이 만들어져 곧바로 라이브러리에 저장</b>됩니다. 저장한 배경을 특정 씬에 연결하는 것은 “씬 편집”에서 합니다.
       </p>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>1. 프롬프트 & 후보 생성</h2>
+        <h2 className={styles.sectionTitle}>1. 프롬프트 & 배경 생성</h2>
         <BackgroundPromptPanel />
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>2. 생성된 후보</h2>
-        <BackgroundCandidateGrid />
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>3. 선택한 후보 저장</h2>
-        <BackgroundSaveForm />
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>4. 배경 라이브러리</h2>
-        <p className={styles.cardMeta}>씬에 배경을 연결하는 것은 “씬 편집”에서 합니다.</p>
+        <h2 className={styles.sectionTitle}>2. 배경 라이브러리</h2>
+        <p className={styles.cardMeta}>생성한 배경이 여기에 쌓입니다. 씬에 배경을 연결하는 것은 “씬 편집”에서 합니다.</p>
         {loadError && <p className={styles.error}>{loadError}</p>}
         <BackgroundLibrary />
       </section>
