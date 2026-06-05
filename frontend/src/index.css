@@ -110,7 +110,7 @@ body {
 
 #root {
   width: calc(100% - 128px); /* Enforces exactly 64px margin on both sides */
-  max-width: 1126px;
+  max-width: 1600px; /* 1400px에서 1600px로 추가 확대하여 책 프레임 비주얼을 한층 더 크게 노출 */
   margin: 0 auto;
   min-height: 100svh;
   display: flex;
