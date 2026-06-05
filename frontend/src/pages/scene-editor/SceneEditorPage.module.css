@@ -1,185 +1,601 @@
 .page {
-  padding: 40px 24px;
+  box-sizing: border-box;
+  padding: 8px 40px; /* 세로 공간을 위해 상하 패딩 추가 축소 */
+  width: 100%;
+  max-width: 1600px;
+  height: 100vh; /* 세로 높이를 100vh 로 잠가 스크롤 생성 원천 차단 */
+  margin: 0 auto;
+  font-family: "Hakgyoansim Dunggeunmiso TTF", "Inter", sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
 }
 
-.guide {
-  color: var(--text);
-  margin-bottom: 24px;
+/* ── 상단 헤더 영역 ── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px; /* 마진 추가 축소 */
+  gap: 20px;
+  flex-shrink: 0;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 240px 1fr;
+.headerLeft {
+  flex: 1;
+  padding-left: 0; /* 마스코트가 제거되었으므로 좌측 패딩 제거해 넓게 활용 */
+}
+
+.headerSubTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #A171DF;
+  margin-bottom: 2px;
+  letter-spacing: -0.5px;
+}
+
+.headerTitle {
+  font-family: 'KerisKedu', sans-serif;
+  font-size: 28px; /* 헤더 타이틀 더 슬림화 */
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 2px 0;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+}
+
+.headerDesc {
+  font-size: 13px;
+  color: #4B5563;
+  line-height: 1.4;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ── 편집 레이아웃 컨테이너 ── */
+.editorContainer {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 110px); /* 마스코트를 제거해 헤더 세로폭을 대폭 줄이고 씬 편집창에 35px 추가 배정 */
+  min-height: 440px;
+  max-height: calc(100vh - 110px);
+  overflow: visible;
+  display: flex;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.contentLayout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+}
+
+/* ── 3단 스튜디오 레이아웃 컬럼 분할 ── */
+.leftSidebar {
+  width: 300px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 16px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.03);
+  flex-shrink: 0;
+}
+
+.centerStage {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0; /* 중요: flex 자식이 가로 방향으로 축소 가능하도록 함 */
+}
+
+.rightInspector {
+  width: 340px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  min-height: 480px;
+  flex-shrink: 0;
 }
 
-.sidebar {
-  border: 1px solid var(--border);
+/* ── 좌측 씬 목록 ── */
+.sidebarHead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.sidebarLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #4B5563;
+}
+
+.selectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select {
+  height: 40px; /* 38px -> 40px 로 늘려 시원한 클릭 영역 확보 */
+  box-sizing: border-box;
+  padding: 0 28px 0 12px; /* 화살표 아이콘 영역 고려 우측 패딩 부여 */
+  border: 1px solid #D1D5DB;
   border-radius: 8px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 13px;
+  width: 100%;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+  /* 셀렉트 드롭다운 커스텀 화살표 배경 유지용 기본설정 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234B5563'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+
+.listHeader {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #4B5563;
+  margin-bottom: 12px;
+}
+
+.scrollArea {
+  flex: 1;
   overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* 씬용 스크롤바 */
+.scrollArea::-webkit-scrollbar {
+  width: 5px;
+}
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollArea::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.25);
+  border-radius: 99px;
+}
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.45);
 }
 
 .sceneList {
   list-style: none;
   padding: 0;
   margin: 0;
-}
-
-.sceneItem {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-}
-
-.sceneItem:hover {
-  background: var(--accent-bg);
-}
-
-.sceneOrder {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.sceneText {
-  font-size: 13px;
-  color: var(--text-h);
-  margin: 4px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.canvas {
-  border: 1px solid var(--border);
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
 }
 
+/* 씬 리스트 카드 디자인 */
+.sceneCard {
+  position: relative;
+  background: #FFFFFF;
+  border: 1.5px solid #F3E8FF;
+  border-radius: 12px;
+  padding: 16px 14px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 12px rgba(186, 174, 230, 0.03);
+}
+
+.sceneCard:hover {
+  border-color: #C084FC;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(186, 174, 230, 0.06);
+}
+
+.sceneCardActive {
+  border-color: #8B5CF6;
+  background: rgba(139, 92, 246, 0.02);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.05);
+}
+
+.sceneCardPill {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(139, 92, 246, 0.1);
+  color: #7C3AED;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.sceneCardText {
+  font-size: 13px;
+  color: #1F2937;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  WebkitLineClamp: 2;
+  WebkitBoxOrient: 'vertical';
+}
+
+.sceneCardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sceneCardTagBg {
+  padding: 4px 8px;
+  background: #EDE9FE;
+  color: #7C3AED;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sceneCardTagChar {
+  padding: 4px 8px;
+  background: #E0F2FE;
+  color: #0369A1;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── 우측 페이지 미리보기 & 편집 ── */
 .placeholder {
   flex: 1;
-  background: var(--code-bg);
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text);
-  font-size: 14px;
-  min-height: 320px;
+  color: #6B7280;
+  font-size: 15px;
+  font-weight: 600;
+  border: 2px dashed #E5E7EB;
 }
 
-.panel {
-  display: flex;
-  gap: 12px;
-}
-
-.panelItem {
-  flex: 1;
+.modeBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
-.panelLabel {
-  font-size: 14px;
-  color: var(--text);
-}
-
-.panelBtn {
-  padding: 6px 14px;
-  background: var(--accent-bg);
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.panelBtn:hover { background: var(--accent); color: #fff; }
-
-/* 씬↔배경 연결 (skeleton) 추가분 */
-.sidebarHead {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+.modeBtns {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text);
+  gap: 8px;
 }
 
-.select {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text-h);
-  font-size: 13px;
-  width: 100%;
+.modeBtn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #4B5563;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
 }
 
-.sceneItemActive { background: var(--accent-bg); }
-
-.bgBadge {
-  display: inline-block;
-  margin-top: 4px;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--accent-bg);
-  color: var(--accent);
+.modeBtnActive {
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border-color: #8B5CF6;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
 }
 
+.editorInfoText {
+  font-size: 14px;
+  font-weight: 700;
+  color: #7C3AED;
+}
+
+.canvasContainer {
+  flex: 1;
+  min-height: 0; /* 중요: flex 내부 축소 허용 */
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #FFFFFF;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px; /* 스테이지 주변 안정 마진 */
+  box-sizing: border-box;
+}
+
+.saveStatusMuted {
+  font-size: 11px;
+  color: #9CA3AF;
+  margin: 4px 0 6px;
+  min-height: 16px;
+  text-align: left;
+}
+
+/* ── 하단 3단 설정 카드 패널 ── */
+.panel {
+  display: flex;
+  gap: 16px; /* 카드 간 여백 확보 */
+  flex-shrink: 0;
+  height: 280px; /* 155px -> 280px 로 시원하게 대폭 확대하여 세로로 스크롤 없이 전부 노출 */
+  min-height: 280px;
+}
+
+/* 3단 카드 각각의 스타일 */
 .bgPanel {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 18px 20px; /* 널찍하고 눈이 편안한 카드 패딩 복구 */
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  box-sizing: border-box;
+  overflow: hidden; /* 카드 내부의 개별 리스트만 스크롤되도록 고정 */
+  max-height: 100%;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.04);
 }
 
-.muted { font-size: 13px; color: var(--text); }
+.bgPanel::-webkit-scrollbar {
+  width: 4px;
+}
+.bgPanel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.bgPanel::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 99px;
+}
 
-/* 자막 후보/편집 */
-.subtitleCandidate {
+.panelHeader {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 8px;
-  padding: 6px 0;
-  border-top: 1px solid var(--border);
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
-.subtitleCandText {
+
+.panelIcon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.panelLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.panelBody {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden; /* 삐져나온 스크롤 원천 차단 */
 }
-/* 씬 N-i 표시 라벨(저장 ID 아님, 프론트 계산) */
-.subtitleLabel {
+
+.panelInfoText {
+  font-size: 12px;
+  color: #4B5563;
+  margin: 0;
+}
+
+.highlightText {
+  color: #7C3AED;
+  font-weight: 700;
+}
+
+.dropdownWithBtn {
+  display: flex;
+  flex-direction: column; /* 세로 2층 배치로 환원하여 편안하고 직관적인 인풋 제공 */
+  gap: 10px;
+}
+
+.panelBtn {
+  height: 40px; /* 드롭다운 높이와 1:1 일치 */
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 16px;
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.panelBtn:disabled {
+  background: #E5E7EB;
+  color: #9CA3AF;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.panelBtn:not(:disabled):hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 12px rgba(124, 58, 237, 0.25);
+}
+
+.link {
+  color: #8B5CF6;
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
 }
-/* cue 그룹 박스 */
-.cueGroup {
+
+.muted {
+  font-size: 12px;
+  color: #6B7280;
+  line-height: 1.4;
+}
+
+.message {
+  font-size: 12px;
+  color: #10B981;
+  margin: 6px 0 0;
+  text-align: left;
+}
+
+.errorText {
+  font-size: 12px;
+  color: #EF4444;
+  margin: 6px 0 0;
+  text-align: left;
+}
+
+/* ── 2단 캐릭터 관련 스타일링 ── */
+.charListContainer {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+  /* 고정 max-height 대신 flex: 1을 이용해 카드의 남는 영역을 동적으로 활용 */
 }
+
+.connectedChar {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(243, 232, 255, 0.6);
+}
+
+.connectedCharRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.charNameText {
+  font-size: 12px;
+  color: #1F2937;
+  font-weight: 600;
+}
+
+.charActionGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.posePanelWrapper {
+  margin-top: 8px;
+  background: #F9FAFB;
+  border-radius: 8px;
+  padding: 8px;
+  border: 1px dashed #DDD6FE;
+}
+
+.addButtonSection {
+  display: flex;
+  flex-direction: column; /* 세로 2층 배치 환원 */
+  gap: 10px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+/* ── 3단 자막 관련 스타일링 ── */
+.panelSubLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4B5563;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.colorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.colorPalette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.colorChip {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #D1D5DB;
+  cursor: pointer;
+  padding: 0;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.colorChipSelected {
+  border: 2px solid #8B5CF6;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.cueGroupsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+  /* 고정 max-height 제거로 찌그러짐을 없애고 스크롤 영역 확보 */
+}
+
+.cueGroup {
+  border: 1.5px solid #F3E8FF;
+  border-radius: 8px;
+  padding: 8px;
+  background: #FFFFFF;
+  transition: all 0.2s;
+}
+
+.cueGroupActive {
+  border-color: #8B5CF6;
+  background: rgba(139, 92, 246, 0.01);
+}
+
 .cueGroupHead {
   display: flex;
   align-items: center;
@@ -187,168 +603,459 @@
   width: 100%;
   background: none;
   border: none;
-  padding: 2px 0;
+  padding: 0 0 6px 0;
+  border-bottom: 1px dashed rgba(139, 92, 246, 0.15);
   cursor: pointer;
+  font-family: inherit;
 }
-.cueGroupActive {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-bg);
+
+.subtitleLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #7C3AED;
 }
-/* 편집 모드 토글 바 */
-.modeBar {
+
+.alignGroupRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
+  margin: 6px 0;
 }
-.modeBtns {
-  display: inline-flex;
+
+.mutedSmall {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.alignBtns {
+  display: flex;
   gap: 6px;
 }
-.modeBtn {
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
-  font-size: 13px;
+
+.alignBtn {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #4B5563;
   cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-weight: 600;
 }
-.modeBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+
+.alignBtnActive {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7C3AED;
+  border-color: #8B5CF6;
 }
-.modeBtnActive {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-/* 그룹 안 개별 자막 항목(클릭=선택) */
-.subtitleUnit {
+
+.cueItemsList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  align-items: flex-start;
-  text-align: left;
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 3px 0;
-  cursor: pointer;
+  gap: 6px;
 }
-.subtitleUnitSel {
-  color: var(--accent);
-}
+
 .subtitleRow {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-}
-.cuePick {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text);
-  flex: 0 0 auto;
-}
-.cueSelect {
-  padding: 2px 6px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text-h);
-  font-size: 12px;
-}
-.candActions {
-  display: flex;
-  gap: 10px;
-  flex: 0 0 auto;
-}
-/* 이미 자막에 쓴 대본 줄(잠금 표시) */
-.usedLine {
-  text-decoration: line-through;
-  opacity: 0.5;
-}
-.subtitleEdit {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--accent-border);
-  border-radius: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.4);
 }
 
-.link {
-  color: var(--accent);
-  cursor: pointer;
-  text-decoration: underline;
+.subtitleUnit {
+  flex: 1;
   background: none;
   border: none;
+  text-align: left;
   padding: 0;
-  font-size: 13px;
-}
-
-.textarea {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text-h);
-  font-size: 13px;
-  width: 100%;
-  resize: vertical;
-  min-height: 64px;
+  cursor: pointer;
   font-family: inherit;
-  line-height: 1.5;
-  box-sizing: border-box;
 }
 
-.textarea::placeholder { color: var(--text); }
-.textarea:focus { outline: none; border-color: var(--accent); }
+.subtitleRowText {
+  font-size: 12px;
+  color: #4B5563;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  WebkitLineClamp: 2;
+  WebkitBoxOrient: 'vertical';
+}
 
-.panelBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.subtitleUnitSel .subtitleRowText {
+  color: #7C3AED;
+  font-weight: 700;
+}
 
-.message { font-size: 13px; color: var(--accent); margin-top: 8px; }
-.errorText { font-size: 13px; color: var(--danger); margin-top: 8px; }
-.pad { padding: 12px 16px; }
+.cuePick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #4B5563;
+  flex-shrink: 0;
+}
 
+.cueLabelText {
+  font-weight: 600;
+}
+
+.cueSelect {
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* ── 책 외부 하단 네비게이션 ── */
 .actions {
   display: flex;
   justify-content: space-between;
-  margin-top: 24px;
+  margin-top: 8px; /* 하단 네비게이션 마진 절약 */
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .btn {
-  padding: 10px 24px;
-  background: var(--accent);
-  color: #fff;
+  padding: 12px 28px;
+  background: #8B5CF6;
+  color: #FFFFFF;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
 }
 
-.btn:hover { opacity: 0.85; }
+.btn:hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
 
 .btnSecondary {
-  padding: 10px 24px;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 12px 24px;
+  background: #FFFFFF;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
   font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
 }
 
-.btnSecondary:hover { background: var(--code-bg); }
+.btnSecondary:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
 
-/* 연결된 캐릭터 1줄(이름 + 포즈/제거 + 인라인 포즈 패널) */
-.connectedChar {
+/* ── 반응형 모바일 ── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 32px 20px;
+  }
+
+  .headerLeft {
+    padding-left: 0;
+  }
+
+  .headerRight {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .headerTitle {
+    font-size: 40px;
+  }
+
+  .bookContainer {
+    aspect-ratio: auto;
+    height: auto;
+    border-radius: 0 !important;
+    box-shadow: none;
+    overflow: visible;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .bookBackground {
+    display: none;
+  }
+
+  .bookContentOverlay {
+    position: static;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .leftPage {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    padding-right: 0;
+    margin-bottom: 24px;
+  }
+
+  .rightPage {
+    width: 100%;
+    height: auto;
+    padding-left: 0;
+  }
+
+  .sidebarLabel,
+  .listHeader {
+    font-size: 18px;
+  }
+
+  .select {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .sceneCard {
+    padding: 16px 12px;
+    border-radius: 12px;
+  }
+
+  .sceneCardPill {
+    font-size: 12px;
+  }
+
+  .sceneCardText {
+    font-size: 14px;
+  }
+
+  .sceneCardTagBg,
+  .sceneCardTagChar {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .modeBtn {
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+
+  .editorInfoText {
+    font-size: 13px;
+  }
+
+  .placeholder {
+    font-size: 14px;
+    padding: 40px 20px;
+  }
+
+  .saveStatusMuted {
+    font-size: 11px;
+  }
+
+  .panel {
+    flex-direction: column;
+    height: auto;
+    gap: 16px;
+  }
+
+  .bgPanel {
+    padding: 16px;
+    border-radius: 12px;
+    max-height: none;
+  }
+
+  .panelLabel {
+    font-size: 16px;
+  }
+
+  .panelInfoText {
+    font-size: 13px;
+  }
+
+  .panelBtn {
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  .charNameText {
+    font-size: 13px;
+  }
+
+  .charListContainer {
+    max-height: none;
+  }
+
+  .subtitleLabel {
+    font-size: 13px;
+  }
+
+  .alignBtn {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  .subtitleRowText {
+    font-size: 13px;
+  }
+
+  .cueSelect {
+    font-size: 12px;
+    padding: 4px;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 24px 0 0;
+    gap: 12px;
+    background: transparent;
+  }
+
+  .btn,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ── 씬 목록 팝업 토글 관련 스타일 ── */
+.headerTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.toggleListBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 700;
+  color: #7C3AED;
+  background: #FFFFFF;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.05);
+}
+
+.toggleListBtn:hover {
+  background: rgba(139, 92, 246, 0.05);
+  border-color: #8B5CF6;
+  transform: translateY(-1px);
+}
+
+/* ── 우측 검사기 상세 요소 스타일 ── */
+.inspectorCard {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.03);
+  backdrop-filter: blur(10px);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+.inspectorTabs {
+  display: flex;
+  gap: 8px;
+  background: rgba(139, 92, 246, 0.05);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #4B5563;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.tabBtnActive {
+  background: #8B5CF6;
+  color: #FFFFFF;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.15);
+}
+
+.inspectorContent {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: #7C3AED;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.08);
+  transition: all 0.2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
-  padding: 2px 0;
+}
+
+.backBtn:hover {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+.removeBtn {
+  height: 40px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 16px;
+  background: #FEF2F2;
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.removeBtn:hover {
+  background: #FEE2E2;
+  border-color: #EF4444;
+}
+
+.divider {
+  border: none;
+  border-top: 1px dashed rgba(139, 92, 246, 0.15);
+  margin: 16px 0;
 }

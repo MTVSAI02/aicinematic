@@ -7,6 +7,9 @@ import CharacterCreateForm from '@/components/characters/CharacterCreateForm'
 import CharacterList from '@/components/characters/CharacterList'
 import styles from './CharacterPage.module.css'
 
+// 디자인 에셋 임포트
+import characterMascot from '@design/assets/figma-icons/Nav/nav_character.svg'
+
 export default function CharacterPage() {
   const navigate = useNavigate()
   const setCharacters = useCharacterStore((s) => s.setCharacters)
@@ -26,27 +29,53 @@ export default function CharacterPage() {
 
   return (
     <div className={styles.page}>
-      <h1>캐릭터</h1>
+      {/* ── 상단 헤더 영역 (마스코트 배치) ── */}
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerSubTitle}>동화 속 캐릭터를 설명해주세요</div>
+          <h1 className={styles.headerTitle}>동화 속<br />캐릭터 만들기</h1>
+          <p className={styles.headerDesc}>
+            캐릭터의 이름을 입력하고<br />
+            캐릭터의 외형을 소개해 주세요<br />
+            그럼 AI가 예쁘고 멋진 캐릭터를 만들어줘요
+          </p>
+        </div>
+        <div className={styles.headerRight}>
+          <img src={characterMascot} alt="캐릭터 마스코트" className={styles.headerMascot} />
+        </div>
+      </header>
 
-      <section className={styles.section}>
-        <h2>새 캐릭터 생성</h2>
-        <CharacterCreateForm />
-      </section>
+      {/* ── 내용 컨테이너 (Glassmorphism Card) ── */}
+      <div className={styles.bookContainer}>
+        <div className={styles.bookContentOverlay}>
+          <div className={styles.scrollArea}>
+            <CharacterCreateForm />
+          </div>
+        </div>
 
-      <section className={styles.section}>
-        <h2>캐릭터 라이브러리</h2>
+        {/* 하단 북마크 리본 데코레이션 */}
+        <div className={styles.bookmarkRibbon}>
+          <span className={styles.bookmarkStar}>★</span>
+        </div>
+      </div>
+
+      {/* ── 캐릭터 라이브러리 섹션 (카드 하단 배치) ── */}
+      <section className={styles.librarySection}>
+        <h2 className={styles.libraryTitle}>캐릭터 라이브러리</h2>
         {loadError && <p className={styles.error}>{loadError}</p>}
         <CharacterList />
       </section>
 
-      <div className={styles.actions}>
+      {/* ── 하단 네비게이션 고정 영역 ── */}
+      <div className={styles.fixedPageNav}>
         <button className={styles.btnSecondary} onClick={() => navigate('/scene-check')}>
-          씬 확인
+          ← 이전 단계
         </button>
-        <button className={styles.btn} onClick={() => navigate('/voice')}>
-          보이스 설정
+        <button className={styles.btnPrimary} onClick={() => navigate('/voice')}>
+          다음 단계 →
         </button>
       </div>
     </div>
   )
 }
+

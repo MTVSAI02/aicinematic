@@ -181,7 +181,7 @@ export default function SceneStage({
         <div className={styles.placeholder}>배경을 연결하면 합성 미리보기가 표시됩니다</div>
       )}
 
-      {/* 캐릭터 레이어 */}
+      {/* 캐릭터 레이어 (이미지 대신 보라색 점선 박스 플레이스홀더로 렌더링) */}
       {stage.w > 0 &&
         characters.map((c) => {
           const g = charGeom(c)
@@ -204,17 +204,12 @@ export default function SceneStage({
                 pointerEvents: charMode ? 'auto' : 'none',
               }}
             >
-              <img
-                src={c.imageUrl}
-                alt=""
-                draggable={false}
-                className={styles.charImg}
-                onLoad={(e) => {
-                  const ratio = e.currentTarget.naturalWidth / e.currentTarget.naturalHeight
-                  setAspects((prev) => ({ ...prev, [c.characterId]: ratio }))
-                }}
+              <div
+                className={styles.charPlaceholder}
                 style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
-              />
+              >
+                <span className={styles.charPlaceholderName}>{c.name || '캐릭터'}</span>
+              </div>
             </div>
           )
         })}

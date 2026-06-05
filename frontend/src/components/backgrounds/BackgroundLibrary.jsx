@@ -8,7 +8,15 @@ export default function BackgroundLibrary() {
   const backgrounds = useBackgroundStore((s) => s.backgrounds)
 
   if (backgrounds.length === 0) {
-    return <p className={styles.empty}>아직 저장된 배경이 없어요.</p>
+    return (
+      <div className={styles.emptyContainer}>
+        <div className={styles.emptyFrame}>
+          <span className={styles.emptyFrameIcon}>🖼️</span>
+        </div>
+        <p className={styles.emptyTitle}>아직 저장된 배경이 없어요.</p>
+        <p className={styles.emptyDesc}>배경 프롬프트를 입력하거나 추천을 받아 생성해 보세요!</p>
+      </div>
+    )
   }
 
   return (

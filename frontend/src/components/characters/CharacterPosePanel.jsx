@@ -82,49 +82,57 @@ export default function CharacterPosePanel({ characterId, currentPoseId = null, 
 
   return (
     <div className={styles.posePanel}>
-      <span className={styles.poseTitle}>{character?.name ?? characterId} · 포즈 생성</span>
-      <textarea
-        className={styles.textarea}
-        placeholder={'이 캐릭터의 새 포즈 (예: running in the snow / sitting and smiling)'}
-        value={posePrompt}
-        onChange={(e) => setPosePrompt(e.target.value)}
-        rows={2}
-      />
-      <button className={styles.btn} onClick={handleGenerate} disabled={!canSubmit}>
-        {loading ? '생성 중...' : '포즈 생성'}
-      </button>
-      {jobStatus && <p className={styles.status}>{JOB_STATUS_TEXT[jobStatus] ?? `상태: ${jobStatus}`}</p>}
-      {error && <p className={styles.error}>{error}</p>}
-
-      {/* 이 씬에 적용할 이미지 선택: 기본(원본) + 생성된 포즈들. 클릭=적용, 현재 선택은 강조 */}
+      {/* 1. 보유 중인 포즈 */}
       {onApplyPose && (
-        <div className={styles.poseGrid}>
-          <div
-            className={`${styles.poseCard} ${!currentPoseId ? styles.poseCardActive : ''}`}
-            onClick={() => onApplyPose(null)}
-            role="button"
-          >
-            {character?.imageUrl && (
-              <img className={styles.poseImg} src={character.imageUrl} alt="" draggable={false} />
-            )}
-            <span className={styles.posePrompt}>기본{!currentPoseId ? ' (적용됨)' : ''}</span>
-          </div>
-          {poses.map((p) => (
+        <div className={styles.posesSection}>
+          <span className={styles.sectionTitle}>보유 중인 포즈</span>
+          <div className={styles.poseGrid}>
             <div
-              key={p.poseId}
-              className={`${styles.poseCard} ${currentPoseId === p.poseId ? styles.poseCardActive : ''}`}
-              onClick={() => onApplyPose(p.poseId)}
+              className={`${styles.poseCard} ${!currentPoseId ? styles.poseCardActive : ''}`}
+              onClick={() => onApplyPose(null)}
               role="button"
             >
-              <img className={styles.poseImg} src={p.imageUrl} alt="" draggable={false} />
-              <span className={styles.posePrompt}>
-                {p.posePrompt}
-                {currentPoseId === p.poseId ? ' (적용됨)' : ''}
-              </span>
+              {character?.imageUrl && (
+                <img className={styles.poseImg} src={character.imageUrl} alt="" draggable={false} />
+              )}
+              <span className={styles.posePrompt}>기본 포즈</span>
             </div>
-          ))}
+            {poses.map((p) => (
+              <div
+                key={p.poseId}
+                className={`${styles.poseCard} ${currentPoseId === p.poseId ? styles.poseCardActive : ''}`}
+                onClick={() => onApplyPose(p.poseId)}
+                role="button"
+              >
+                <img className={styles.poseImg} src={p.imageUrl} alt="" draggable={false} />
+                <span className={styles.posePrompt} title={p.posePrompt}>
+                  {p.posePrompt}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
+
+      {/* 구분선 */}
+      <hr className={styles.divider} />
+
+      {/* 2. 포즈 생성 폼 */}
+      <div className={styles.generatorSection}>
+        <span className={styles.sectionTitle}>새 포즈 생성</span>
+        <textarea
+          className={styles.textarea}
+          placeholder={'이 캐릭터의 새 포즈 (예: running in the snow / sitting and smiling)'}
+          value={posePrompt}
+          onChange={(e) => setPosePrompt(e.target.value)}
+          rows={2}
+        />
+        <button className={styles.btn} onClick={handleGenerate} disabled={!canSubmit}>
+          {loading ? '생성 중...' : '포즈 생성'}
+        </button>
+        {jobStatus && <p className={styles.status}>{JOB_STATUS_TEXT[jobStatus] ?? `상태: ${jobStatus}`}</p>}
+        {error && <p className={styles.error}>{error}</p>}
+      </div>
     </div>
   )
 }

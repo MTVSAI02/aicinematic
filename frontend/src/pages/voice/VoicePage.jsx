@@ -10,13 +10,14 @@ import VoiceTargetPanel from '@/components/voices/VoiceTargetPanel'
 import VoiceLibrary from '@/components/voices/VoiceLibrary'
 import styles from './VoicePage.module.css'
 
-// 나레이션/캐릭터에 보이스를 연결하고 대상별로 잠그는 페이지.
-// 모든 필수 대상이 잠겨야 [배경 →] 이 활성화된다(잠금 시 그 대상 TTS가 백그라운드 생성).
-// 씬별 TTS 듣기·타이밍 조정은 /timeline 으로 이동했다(여기서는 연결+잠금만).
+// 디자인 에셋 임포트
+import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
+import voiceMascot from '@design/assets/figma-icons/Voice_input/VoiceInput_Rabbit.svg'
+import yarnIcon from '@design/assets/figma-icons/Nav/nav_voice.svg'
+
 export default function VoicePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  // 스토리 자동 이어받기: ?storyId= > 현재 작업 중 스토리(useStoryStore) > 수동 선택
   const queryStoryId = searchParams.get('storyId') || ''
   const currentStoryId = useStoryStore((s) => s.storyId)
 
@@ -45,14 +46,12 @@ export default function VoicePage() {
       .catch((e) => setLoadError(getApiErrorMessage(e)))
     getCharacters()
       .then(setCharacters)
-      // 캐릭터 매칭이 이 화면의 핵심이라, 실패를 "캐릭터 없음" 으로 숨기지 않고 표시한다
       .catch((e) =>
         setLoadError(`캐릭터 목록을 불러오지 못했습니다. ${getApiErrorMessage(e)}`)
       )
   }, [setVoices, setCharacters])
 
   // storyId 선택 시 해당 스토리를 store.story 로 설정.
-  // 목록 응답(StoryParseResponse)이 scenes/narratorVoiceId 를 포함하므로 단건 호출 없이 찾는다.
   useEffect(() => {
     if (!storyId) {
       setStory(null)
@@ -89,87 +88,120 @@ export default function VoicePage() {
 
   return (
     <div className={styles.page}>
-      <h1>보이스</h1>
-      <p className={styles.help}>
-        보이스 라이브러리에 저장된 목소리를 스토리의 <b>나레이션</b>이나 <b>캐릭터</b>에 연결하는 화면이에요.
-        새 목소리를 만들고 싶다면 먼저 음성 입력 페이지에서 목소리를 생성해 주세요.
-      </p>
+      {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerSubTitle}>스토리의 등장인물에게 목소리를 매칭해주세요</div>
+          <h1 className={styles.headerTitle}>보이스 연결</h1>
+          <p className={styles.headerDesc}>
+            나레이션과 캐릭터의 목소리를 골라 연결하고<br />
+            잠금 버튼을 눌러 음성을 생성해 보세요.
+          </p>
+        </div>
+        <div className={styles.headerRight}>
+          <img src={voiceMascot} alt="보이스 마스코트" className={styles.headerMascot} />
+        </div>
+      </header>
 
-      <div className={styles.infoBox}>
-        <span>1. 왼쪽에서 목소리를 적용할 <b>대상</b>(나레이션·캐릭터)을 선택합니다.</span>
-        <span>2. 오른쪽 보이스 라이브러리에서 사용할 <b>목소리</b>를 고릅니다.</span>
-        <span>3. 연결 버튼을 누르면 그 대상에 목소리가 적용됩니다. (ready 상태만 연결 가능)</span>
-      </div>
+      {/* ── 내용 컨테이너 (Glassmorphism Card) ── */}
+      <div className={styles.bookContainer}>
+        <div className={styles.bookContentOverlay}>
+          <div className={styles.scrollArea}>
+            
+            {/* 사용 방법 안내 */}
+            <div className={styles.infoBox}>
+              <div className={styles.infoIconWrapper}>
+                <img src={yarnIcon} alt="실타래 아이콘" className={styles.infoIcon} />
+              </div>
+              <div className={styles.infoText}>
+                <h3>보이스 매핑 가이드</h3>
+                <p>1. 왼쪽에서 목소리를 적용할 <b>대상</b>(나레이션·캐릭터)을 선택합니다.</p>
+                <p>2. 오른쪽 보이스 라이브러리에서 사용할 <b>목소리</b>를 고릅니다.</p>
+                <p>3. 연결 버튼을 누른 뒤, 잠금 버튼을 누르면 음성이 생성됩니다. (ready 상태만 연결 가능)</p>
+              </div>
+            </div>
 
-      <div className={styles.storyBar}>
-        <label className={styles.label}>
-          스토리
-          <select
-            className={styles.input}
-            value={storyId}
-            onChange={(e) => handleStoryChange(e.target.value)}
-          >
-            <option value="">스토리 선택</option>
-            {stories.map((s) => (
-              <option key={s.storyId} value={s.storyId}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className={styles.hint} style={{ marginTop: 6 }}>
-          나레이션 연결은 이 스토리에만 적용돼요. 캐릭터 목소리는 캐릭터에 저장되어 다른 스토리에서도 같이 쓰입니다.
-        </p>
-      </div>
+            {/* 스토리 선택 바 */}
+            <div className={styles.storyBar}>
+              <label className={styles.label}>
+                스토리 선택
+                <select
+                  className={styles.input}
+                  value={storyId}
+                  onChange={(e) => handleStoryChange(e.target.value)}
+                >
+                  <option value="">스토리 선택</option>
+                  {stories.map((s) => (
+                    <option key={s.storyId} value={s.storyId}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className={styles.storyHint}>
+                나레이션 연결은 이 스토리에만 적용돼요. 캐릭터 목소리는 캐릭터에 저장되어 다른 스토리에서도 같이 쓰입니다.
+              </p>
+            </div>
 
-      {loadError && <p className={styles.error}>{loadError}</p>}
-      {message && <p className={styles.message}>{message}</p>}
-      {error && <p className={styles.error}>{error}</p>}
+            {loadError && <p className={styles.error}>{loadError}</p>}
+            {message && <p className={styles.status}>{message}</p>}
+            {error && <p className={styles.error}>{error}</p>}
 
-      {storyId ? (
-        <>
-          <div className={styles.layout}>
-            <section className={styles.panel}>
-              <h2 className={styles.panelTitle}>목소리를 적용할 대상</h2>
-              <VoiceTargetPanel />
-            </section>
-            <section className={styles.panel}>
-              <h2 className={styles.panelTitle}>연결할 목소리 선택</h2>
-              <VoiceLibrary />
-            </section>
+            {storyId ? (
+              <>
+                <div className={styles.layout}>
+                  <section className={styles.panel}>
+                    <h2 className={styles.panelTitle}>목소리를 적용할 대상</h2>
+                    <VoiceTargetPanel />
+                  </section>
+                  <section className={styles.panel}>
+                    <h2 className={styles.panelTitle}>연결할 목소리 선택</h2>
+                    <VoiceLibrary />
+                  </section>
+                </div>
+
+                {voiceLocks.some((l) => l.ttsStatus === 'failed') ? (
+                  <p className={styles.error} style={{ marginTop: 20 }}>
+                    음성 생성에 실패한 대상이 있습니다. 다시 시도하거나 잠금을 해제한 뒤 다시 설정해주세요.
+                  </p>
+                ) : (
+                  <p className={styles.statusHint}>
+                    {nextStepEnabled
+                      ? '모든 목소리가 잠겼어요. 음성은 백그라운드에서 준비됩니다 — 배경 단계로 넘어가도 돼요.'
+                      : '나레이션과 모든 캐릭터의 목소리를 연결하고 잠가야 다음 단계로 이동할 수 있어요.'}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className={styles.empty}>
+                스토리를 선택하면 나레이션·등장 캐릭터에 보이스를 연결할 수 있습니다. 저장된 스토리가 없다면 먼저 “스토리 입력”에서 대본을 등록하세요.
+              </p>
+            )}
+
           </div>
+        </div>
 
-          {voiceLocks.some((l) => l.ttsStatus === 'failed') ? (
-            <p className={styles.error} style={{ marginTop: 16 }}>
-              음성 생성에 실패한 대상이 있습니다. 다시 시도하거나 잠금을 해제한 뒤 다시 설정해주세요.
-            </p>
-          ) : (
-            <p className={styles.hint} style={{ marginTop: 16 }}>
-              {nextStepEnabled
-                ? '모든 목소리가 잠겼어요. 음성은 백그라운드에서 준비됩니다 — 배경 단계로 넘어가도 돼요.'
-                : '나레이션과 모든 캐릭터의 목소리를 연결하고 잠가야 다음 단계로 이동할 수 있어요.'}
-            </p>
-          )}
-        </>
-      ) : (
-        <p className={styles.empty}>
-          스토리를 선택하면 나레이션·등장 캐릭터에 보이스를 연결할 수 있습니다. 저장된 스토리가 없다면 먼저 “스토리 입력”에서 대본을 등록하세요.
-        </p>
-      )}
+        {/* 하단 북마크 리본 데코레이션 */}
+        <div className={styles.bookmarkRibbon}>
+          <span className={styles.bookmarkStar}>★</span>
+        </div>
+      </div>
 
-      <div className={styles.pageNav}>
+      {/* ── 하단 네비게이션 고정 영역 ── */}
+      <div className={styles.fixedPageNav}>
         <button className={styles.btnSecondary} onClick={() => navigate('/character')}>
-          ← 캐릭터
+          ← 이전 단계
         </button>
         <button
-          className={styles.btn}
+          className={styles.btnPrimary}
           onClick={() => navigate('/background')}
           disabled={!storyId || !nextStepEnabled}
           title={!nextStepEnabled ? '모든 목소리를 잠가야 이동할 수 있어요' : undefined}
         >
-          배경 →
+          다음 단계 →
         </button>
       </div>
     </div>
   )
 }
+

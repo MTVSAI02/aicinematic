@@ -82,27 +82,54 @@ export default function CharacterCreateForm() {
 
   return (
     <div className={styles.form}>
-      <label className={styles.label}>
-        이름
-        <input
-          className={styles.input}
-          placeholder="어린왕자"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-      </label>
-      <label className={styles.label}>
-        외형 프롬프트
-        <textarea
-          className={styles.textarea}
-          placeholder={"blonde short hair, small boy, green coat, full body, white background\n자세할수록 더 정확하게 생성됩니다."}
-          value={appearancePrompt}
-          onChange={(e) => setAppearancePrompt(e.target.value)}
-        />
-      </label>
-      <button className={styles.btn} onClick={handleCreate} disabled={!canSubmit}>
-        {loading ? '생성 중...' : '캐릭터 생성'}
-      </button>
+      {/* 1. 캐릭터의 이름을 입력해주세요 */}
+      <div className={styles.section}>
+        <h2 className={styles.stepTitle}>
+          <span className={styles.stepBadge}>1</span>캐릭터의 이름을 입력해주세요
+        </h2>
+        <div className={styles.nameInputRow}>
+          <select className={styles.roleSelect}>
+            <option value="">역할</option>
+            <option value="protagonist">주인공</option>
+            <option value="supporting">조연</option>
+            <option value="extra">엑스트라</option>
+          </select>
+          <input
+            className={styles.input}
+            placeholder="텍스트 예시입니다. 입력해주세요..."
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* 2. 캐릭터가 어떻게 생겼나요? */}
+      <div className={styles.section}>
+        <h2 className={styles.stepTitle}>
+          <span className={styles.stepBadge}>2</span>캐릭터가 어떻게 생겼나요?
+        </h2>
+        <div className={styles.textareaWrapper}>
+          <textarea
+            className={styles.textarea}
+            placeholder="텍스트 예시입니다. 입력해주세요..."
+            value={appearancePrompt}
+            onChange={(e) => setAppearancePrompt(e.target.value)}
+          />
+        </div>
+        <div className={styles.formFooterRow}>
+          <span className={styles.formFooterHint}>자세할수록 좋아용</span>
+          
+          <button className={styles.generateBtn} onClick={handleCreate} disabled={!canSubmit || loading}>
+            {loading ? (
+              <>
+                <span className={styles.spinner} /> 생성 중...
+              </>
+            ) : (
+              '목소리 만들기 →'
+            )}
+          </button>
+        </div>
+      </div>
 
       {validationMessage && <p className={styles.validation}>{validationMessage}</p>}
       {jobStatus && (
