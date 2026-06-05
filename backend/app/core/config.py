@@ -12,8 +12,7 @@ CHARACTER_STORAGE_DIR = STORAGE_ROOT / "characters"
 # 포즈 결과는 원본 캐릭터와 분리 저장(원본 덮어쓰기 금지).
 CHARACTER_POSE_STORAGE_DIR = STORAGE_ROOT / "character_poses"
 BACKGROUND_STORAGE_DIR = STORAGE_ROOT / "backgrounds"
-BACKGROUND_CANDIDATE_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "candidates"
-# 라이브러리에 저장된(선택된) 배경 이미지. 후보 파일에 의존하지 않도록 여기로 복사한다.
+# 생성 즉시 라이브러리에 저장하는 배경 이미지. (/storage/backgrounds/library/{backgroundId}.png)
 BACKGROUND_LIBRARY_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "library"
 AUDIO_STORAGE_DIR = STORAGE_ROOT / "audio"
 # 보이스 클로닝 자산: reference/sample 오디오를 voiceId 별 폴더에 저장. (/storage/voices/{voiceId}/...)

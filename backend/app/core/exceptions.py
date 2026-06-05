@@ -39,11 +39,6 @@ class CharacterGenerationFailedError(AppException):
     detail = "Character generation failed"
 
 
-class BackgroundCandidateNotFoundError(AppException):
-    status_code = 404
-    detail = "Background candidate not found"
-
-
 class BackgroundNotFoundError(AppException):
     status_code = 404
     detail = "Background not found"

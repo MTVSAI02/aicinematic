@@ -1,18 +1,13 @@
-import shutil
-
 from ..core.config import (
-    BACKGROUND_CANDIDATE_STORAGE_DIR,
     BACKGROUND_LIBRARY_STORAGE_DIR,
     storage_url,
 )
 from ..core.exceptions import (
-    BackgroundCandidateNotFoundError,
     BackgroundNotFoundError,
     NoFieldsToUpdateError,
     SceneNotFoundError,
     StoryNotFoundError,
 )
-from ..repositories.background_candidate_repository import background_candidate_repository
 from ..repositories.background_repository import background_repository
 from ..repositories.story_repo import story_repository
 
@@ -47,9 +42,8 @@ def assemble_final_prompt(prompt: str) -> str:
 class BackgroundService:
     """배경 프롬프트 추천 / 라이브러리 CRUD / 씬-배경 연결 비즈니스 로직."""
 
-    def __init__(self, story_repo, candidate_repo, background_repo):
+    def __init__(self, story_repo, background_repo):
         self._story_repo = story_repo
-        self._candidate_repo = candidate_repo
         self._background_repo = background_repo
 
     # ── 프롬프트 추천 ────────────────────────────────────────
@@ -88,46 +82,27 @@ class BackgroundService:
 
     # ── 라이브러리 저장/조회/수정/삭제 ───────────────────────
 
-    def save_background(self, candidate_id: str, name: str) -> dict:
-        """후보 1장을 라이브러리에 저장한다.
+    def save_generated_background(
+        self, image_bytes: bytes, prompt: str, final_prompt: str, name: str
+    ) -> dict:
+        """생성된 배경 이미지 1장을 곧바로 라이브러리에 저장한다(후보 단계 없음).
 
-        저장본을 후보 파일에서 **독립**시킨다: 후보 이미지를 library 경로로 복사하고,
-        복사·record 저장이 성공한 뒤에만 선택된 후보(파일+record)를 삭제한다.
-        순서를 지켜 중간 실패 시에도 이미지가 사라지지 않게 한다
-        (library 복사 성공 → record 저장 성공 → 후보 파일 삭제 → 후보 record 삭제).
+        backgroundId 발급 → library 경로에 이미지 저장 → record 저장 순.
+        (background_job_runner 가 AI 생성 결과로 호출 — 사용자 선택/이름 입력 단계 제거)
         """
-        candidate = self._candidate_repo.get(candidate_id)
-        if candidate is None:
-            raise BackgroundCandidateNotFoundError()
-
-        # 후보 이미지 파일 확인 (record는 있는데 파일이 없으면 사용 불가)
-        candidate_path = BACKGROUND_CANDIDATE_STORAGE_DIR / f"{candidate_id}.png"
-        if not candidate_path.is_file():
-            raise BackgroundCandidateNotFoundError()
-
-        # 1) backgroundId 발급 → 후보 이미지를 library 경로로 복사
         background_id = self._background_repo.reserve_id()
         BACKGROUND_LIBRARY_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-        library_path = BACKGROUND_LIBRARY_STORAGE_DIR / f"{background_id}.png"
-        shutil.copyfile(candidate_path, library_path)
+        (BACKGROUND_LIBRARY_STORAGE_DIR / f"{background_id}.png").write_bytes(image_bytes)
         image_url = storage_url("backgrounds", "library", f"{background_id}.png")
-
-        # 2) 복사 성공 후에만 record 저장 (imageUrl은 library 경로 — 후보에 의존하지 않음)
-        saved = self._background_repo.create(
+        return self._background_repo.create(
             background_id,
             {
                 "name": name,
-                "prompt": candidate["prompt"],
-                "finalPrompt": candidate["finalPrompt"],
+                "prompt": prompt,
+                "finalPrompt": final_prompt,
                 "imageUrl": image_url,
             },
         )
-
-        # 3) 저장이 모두 성공한 뒤에만 선택된 후보 정리 (파일 → record 순)
-        candidate_path.unlink(missing_ok=True)
-        self._candidate_repo.delete(candidate_id)
-
-        return saved
 
     def list_backgrounds(self) -> list[dict]:
         return self._background_repo.list()
@@ -191,6 +166,5 @@ class BackgroundService:
 
 background_service = BackgroundService(
     story_repository,
-    background_candidate_repository,
     background_repository,
 )
