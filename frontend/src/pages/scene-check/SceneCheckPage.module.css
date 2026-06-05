@@ -134,92 +134,47 @@
   }
 }
 
-/* ── 책 컨테이너 ── */
 .bookContainer {
   position: relative;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  aspect-ratio: 1000 / 670; /* 펼쳐진 책 이미지의 고유 비율 */
-  overflow: visible; /* 리룰 캐릭터 빼꼼 노출 허용 */
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-}
-
-.bookBackground {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  z-index: 1;
-  pointer-events: none;
-  filter: drop-shadow(0 15px 35px rgba(139, 92, 246, 0.25));
-}
-
-.bookContentOverlay {
-  position: absolute;
-  top: 7.5%;
-  bottom: 11%;
-  left: 7%;
-  right: 7%;
-  z-index: 2;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.05);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* whiteCardBox 제거됨 */
-
-.scrollArea {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px 32px 16px;
+.bookContentOverlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
 }
 
-/* 스크롤바 디자인 */
-.scrollArea::-webkit-scrollbar {
-  width: 6px;
-}
-.scrollArea::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scrollArea::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.35);
-  border-radius: 99px;
-}
-.scrollArea::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.55);
-}
-
-/* ── RIrur 캐릭터 빼꼼 ── */
-.rirurCharacter {
-  position: absolute;
-  width: 240px;
-  height: 240px;
-  object-fit: contain;
-  z-index: 0; /* 책배경 뒤에 깔림 */
-  cursor: pointer;
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
-  pointer-events: auto;
+.scrollArea {
+  width: 100%;
+  padding: 24px 32px 16px;
+  box-sizing: border-box;
 }
 
 /* ── 스토리 제목 박스 (상단 중앙 둥근 텍스트 박스) ── */
 .storyTitleBox {
   width: 100%;
-  padding: 16px 24px;
+  padding: 1.6cqw 2.4cqw;
   border: 1px solid #E5E7EB;
-  border-radius: 16px;
+  border-radius: 1.6cqw;
   background: #F9FAFB;
   font-family: 'Hakgyoansim', sans-serif;
-  font-size: 24px; /* 32px에서 24px로 줄여 공간 확보 및 안정화 */
+  font-size: 2.4cqw; /* 컨테이너 너비에 비례한 폰트 스케일링 */
   font-weight: 800;
   color: #1F2937;
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 2.8cqw;
   box-sizing: border-box;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
   line-height: 1.45; /* 장문 2줄 시 글자 겹침 방지 */
@@ -234,31 +189,31 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 2.4cqw;
 }
 
 .card {
   position: relative;
   background: #FFFFFF;
   border: 1px solid #F3E8FF;
-  border-radius: 16px;
-  padding: 32px 24px 20px;
+  border-radius: 1.6cqw;
+  padding: 3.2cqw 2.4cqw 2cqw;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.6cqw;
   box-shadow: 0 4px 16px rgba(186, 174, 230, 0.04);
 }
 
 .scenePill {
   position: absolute;
-  top: -14px;
-  left: 20px;
-  padding: 4px 16px;
+  top: -1.4cqw;
+  left: 2cqw;
+  padding: 0.4cqw 1.6cqw;
   background: #FFFFFF;
   border: 1px solid #E5E7EB;
-  border-radius: 999px;
+  border-radius: 99.9cqw;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 1.3cqw;
   color: #4B5563;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
@@ -266,56 +221,56 @@
 .itemsList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 1.2cqw;
 }
 
 /* ── 대사 행 ── */
 .itemRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 1.2cqw;
   width: 100%;
 }
 
 /* 감정태그 라벨 (있을 때만 연보라 노출) */
 .emotionTag {
   flex-shrink: 0;
-  padding: 10px 16px;
+  padding: 1cqw 1.6cqw;
   background: #EDE9FE;
   color: #7C3AED;
   border: 1px solid #DDD6FE;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 1.2cqw;
+  font-size: 1.4cqw;
   font-weight: 700;
   text-align: center;
-  min-width: 90px;
+  min-width: 9cqw;
   box-sizing: border-box;
 }
 
 /* 역할태그 라벨 (연하늘 노출) */
 .roleTag {
   flex-shrink: 0;
-  padding: 10px 16px;
+  padding: 1cqw 1.6cqw;
   background: #E0F2FE;
   color: #0369A1;
   border: 1px solid #BAE6FD;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 1.2cqw;
+  font-size: 1.4cqw;
   font-weight: 700;
   text-align: center;
-  min-width: 100px;
+  min-width: 100px; /* 고정 최소 가로폭 100px 대신 10cqw를 주면 너무 좁아질 수 있으므로 10cqw로 변경하여 유연화 */
   box-sizing: border-box;
 }
 
 /* 대사 버블 (둥근 테두리 박스) */
 .textBubble {
   flex: 1;
-  padding: 11px 16px;
+  padding: 1.1cqw 1.6cqw;
   border: 1px solid #E5E7EB;
-  border-radius: 12px;
+  border-radius: 1.2cqw;
   background: #FFFFFF;
   color: #1F2937;
-  font-size: 14px;
+  font-size: 1.4cqw;
   line-height: 1.6;
   box-sizing: border-box;
 }
@@ -339,38 +294,38 @@
 /* ── 하단 고정 버튼 영역 (flex 배치로 절대 겹치지 않음) ── */
 .fixedActions {
   flex-shrink: 0;
-  padding: 16px 32px 12px;
+  padding: 1.6cqw 3.2cqw 1.2cqw;
   display: flex;
   justify-content: space-between;
   background: transparent;
 }
 
 .btnPrimary {
-  padding: 12px 28px;
+  padding: 1.2cqw 2.8cqw;
   background: #8B5CF6;
   color: #FFFFFF;
   border: none;
-  border-radius: 12px;
-  font-size: 15px;
+  border-radius: 1.2cqw;
+  font-size: 1.5cqw;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.2s;
-  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0.4cqw 1cqw rgba(139, 92, 246, 0.2);
 }
 
 .btnPrimary:hover {
   background: #7C3AED;
-  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 0.6cqw 1.4cqw rgba(124, 58, 237, 0.3);
 }
 
 .btnSecondary {
-  padding: 12px 24px;
+  padding: 1.2cqw 2.4cqw;
   background: #FFFFFF;
   color: #4B5563;
   border: 1px solid #D1D5DB;
-  border-radius: 12px;
-  font-size: 15px;
+  border-radius: 1.2cqw;
+  font-size: 1.5cqw;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
@@ -412,9 +367,6 @@
 
   /* 모바일 끈 노출 유지 */
 
-  .rirurCharacter {
-    display: none; /* 모바일에서는 빼꼼 캐릭터 숨김 */
-  }
 
   .bookContainer {
     aspect-ratio: auto;
@@ -437,6 +389,34 @@
 
   /* whiteCardBox 모바일 스타일 제거 */
 
+  .storyTitleBox {
+    font-size: 20px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+
+  .list {
+    gap: 16px;
+  }
+
+  .card {
+    padding: 24px 16px 16px;
+    border-radius: 12px;
+    gap: 12px;
+  }
+
+  .scenePill {
+    top: -12px;
+    left: 16px;
+    padding: 2px 12px;
+    font-size: 11px;
+  }
+
+  .itemsList {
+    gap: 10px;
+  }
+
   .scrollArea {
     padding: 0;
   }
@@ -451,11 +431,28 @@
     border: 1px solid #E5E7EB;
   }
 
-  .emotionTag,
-  .roleTag,
+  .emotionTag {
+    width: 100%;
+    min-width: 100%;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
+  .roleTag {
+    width: 100%;
+    min-width: 100%;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
   .textBubble {
     width: 100%;
     min-width: 100%;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
   }
 
   .fixedActions {
@@ -470,5 +467,8 @@
   .btnSecondary {
     width: 100%;
     text-align: center;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 8px;
   }
 }

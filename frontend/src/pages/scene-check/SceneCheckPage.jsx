@@ -7,16 +7,8 @@ import styles from './SceneCheckPage.module.css'
 
 import titleSvg from '@design/assets/figma-icons/Scene-_Check/title.svg'
 import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
-import bookBg from '@design/assets/figma-images/Book.png'
-import rirurChar from '@design/assets/figma-icons/RIrur.svg'
 
-const RIRUR_POSITIONS = [
-  { left: '-160px', top: '22%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-75deg)', origin: 'center right' },
-  { left: '-160px', top: '62%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-105deg)', origin: 'center right' },
-  { right: '-160px', top: '22%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(75deg)', origin: 'center left' },
-  { right: '-160px', top: '62%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(105deg)', origin: 'center left' },
-  { bottom: '-160px', left: '46%', transform: 'translateY(-200px) scale(0.1) rotate(180deg)', activeTransform: 'translateY(110px) scale(1) rotate(180deg)', origin: 'top center' },
-]
+
 
 export default function SceneCheckPage() {
   const navigate = useNavigate()
@@ -26,8 +18,7 @@ export default function SceneCheckPage() {
   const effectiveStoryId = searchParams.get('storyId') || storyId
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [rirurPos, setRirurPos] = useState(null)
-  const [rirurVisible, setRirurVisible] = useState(false)
+
 
   const titleRef = useRef(null)
 
@@ -45,28 +36,7 @@ export default function SceneCheckPage() {
       .finally(() => setLoading(false))
   }, [effectiveStoryId, scenes.length, setScenes, setStoryId, setStoryTitle])
 
-  useEffect(() => {
-    let timer
-    const scheduleNextPop = () => {
-      const delay = Math.random() * 4000 + 4000
-      timer = setTimeout(() => {
-        setRirurPos((prev) => {
-          let next
-          do { next = Math.floor(Math.random() * RIRUR_POSITIONS.length) }
-          while (next === prev && RIRUR_POSITIONS.length > 1)
-          return next
-        })
-        setRirurVisible(true)
-      }, delay)
-    }
-    if (!rirurVisible) scheduleNextPop()
-    return () => clearTimeout(timer)
-  }, [rirurVisible])
 
-  function handleRirurClick() {
-    setRirurVisible(false)
-    setTimeout(() => setRirurPos(null), 400)
-  }
 
   // 팻말 마우스 & 터치 드래그 & 탄성 흔들림 물리 연산
   useEffect(() => {
@@ -215,27 +185,10 @@ export default function SceneCheckPage() {
         </div>
       </header>
 
-      {/* ── 책 컨테이너 (책 배경 복구) ── */}
+      {/* ── 내용 컨테이너 ── */}
       <div className={styles.bookContainer}>
-        <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
 
-        {rirurPos !== null && (
-          <img
-            src={rirurChar}
-            alt="리룰 캐릭터"
-            className={styles.rirurCharacter}
-            onClick={handleRirurClick}
-            style={{
-              top: RIRUR_POSITIONS[rirurPos].top || 'auto',
-              bottom: RIRUR_POSITIONS[rirurPos].bottom || 'auto',
-              left: RIRUR_POSITIONS[rirurPos].left || 'auto',
-              right: RIRUR_POSITIONS[rirurPos].right || 'auto',
-              transform: rirurVisible ? RIRUR_POSITIONS[rirurPos].activeTransform : RIRUR_POSITIONS[rirurPos].transform,
-              transformOrigin: RIRUR_POSITIONS[rirurPos].origin,
-              opacity: rirurVisible ? 1 : 0,
-            }}
-          />
-        )}
+
 
         <div className={styles.bookContentOverlay}>
           <div className={styles.scrollArea}>
