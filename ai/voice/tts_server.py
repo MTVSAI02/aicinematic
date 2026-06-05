@@ -27,7 +27,7 @@ QWEN_ENV = "TTS_ADAPTER_QWEN"  # TTS_ADAPTER_QWEN=1 → /tts에서 Qwen 직접 �
 
 # voiceId별 reference 오디오 저장 기본 디렉토리 (clone endpoint 전용)
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-_CLONE_STORAGE_DIR = _PROJECT_ROOT / "backend" / "app" / "storage" / "voices"
+_CLONE_STORAGE_DIR = _PROJECT_ROOT / ".cache" / "qwen3_tts" / "voices"
 
 app = FastAPI(
     title="Mongsil TTS Adapter",
@@ -281,6 +281,7 @@ async def clone_voice_endpoint(
         mock_bytes = _mock_wav_bytes(f"clone_{voiceId}")
         return {
             "sampleAudioBase64": base64.b64encode(mock_bytes).decode("ascii"),
+            "mimeType": "audio/wav",
             "durationSec": 0.8,
             "provider": "mock",
             "model": "mock",
@@ -288,8 +289,6 @@ async def clone_voice_endpoint(
 
     from ai.voice.clone import build_voice_clone_prompt, generate_voice_clone
     from ai.voice.tts_contract import store_clone_cache
-    from ai.voice.qwen3_runtime import DEFAULT_OUTPUT_DIR
-
     # ── 1. reference 오디오 저장 ─────────────────────────────────────────
     audio_bytes = await audioFile.read()
     if not audio_bytes:
@@ -320,14 +319,11 @@ async def clone_voice_endpoint(
     store_clone_cache(voiceId, str(ref_path), referenceText, voice_clone_prompt)
 
     # ── 4. sampleText로 미리듣기 합성 (prompt 재사용 → 빠른 경로) ─────────
-    output_path = DEFAULT_OUTPUT_DIR / f"clone_sample_{voiceId}.wav"
-
     try:
         result = generate_voice_clone(
             sampleText,
             voice_clone_prompt=voice_clone_prompt,
             language=language,
-            output_path=output_path,
         )
     except Exception as exc:  # noqa: BLE001
         return {
@@ -339,15 +335,15 @@ async def clone_voice_endpoint(
         }
 
     # ── 4. sample audio base64 반환 ───────────────────────────────────────
-    audio_path = result["audio_path"]
-    sample_b64 = _wav_bytes_to_base64(audio_path)
-    duration = result.get("duration_sec") or _wav_duration_sec(audio_path)
+    sample_b64 = base64.b64encode(result["audio_bytes"]).decode("ascii")
+    duration = result.get("duration_sec")
 
     return {
         "sampleAudioBase64": sample_b64,
+        "mimeType": result.get("mime_type") or "audio/wav",
         "durationSec": duration,
-        "provider": provider,
-        "model": model,
+        "provider": result.get("provider") or provider,
+        "model": result.get("model") or model,
     }
 
 

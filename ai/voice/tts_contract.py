@@ -38,8 +38,9 @@ _STORAGE_ROOT = _PROJECT_ROOT / "backend" / "app" / "storage"
 # Internal helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _storage_url_for(path: str, public_base_url: str | None = None) -> str:
-    """절대 파일 경로 → /storage URL 또는 public 절대 URL 변환."""
+    """Convert generated local audio path to the current /storage URL contract."""
     audio_path = Path(path).resolve()
     try:
         relative = audio_path.relative_to(_STORAGE_ROOT)
@@ -223,6 +224,7 @@ def synthesize_scene_tts(
                     speaker=QWEN_SPEAKER_BY_VOICE_ID[voice_id],
                     language="Korean",
                     instruct=instruction,  # 0.6B 모델에서 내부적으로 None 처리
+                    output_path=DEFAULT_OUTPUT_DIR / f"tts_{uuid4().hex}.wav",
                 )
 
             else:
@@ -236,6 +238,7 @@ def synthesize_scene_tts(
                         text,
                         voice_clone_prompt=prompt,
                         language="Korean",
+                        output_path=DEFAULT_OUTPUT_DIR / f"clone_{uuid4().hex}.wav",
                     )
                 else:
                     # 레이어1 캐시 또는 payload에서 ref 정보 획득
@@ -246,6 +249,7 @@ def synthesize_scene_tts(
                         text,
                         voice_clone_prompt=prompt,
                         language="Korean",
+                        output_path=DEFAULT_OUTPUT_DIR / f"clone_{uuid4().hex}.wav",
                     )
 
             audios.append({

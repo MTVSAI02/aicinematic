@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -68,3 +69,9 @@ def save_wav(output_path: Path, wav, sample_rate: int) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(str(output_path), wav, sample_rate)
     return output_path
+
+
+def wav_to_bytes(wav, sample_rate: int) -> bytes:
+    buffer = io.BytesIO()
+    sf.write(buffer, wav, sample_rate, format="WAV")
+    return buffer.getvalue()

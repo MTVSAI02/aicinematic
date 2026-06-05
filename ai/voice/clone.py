@@ -4,14 +4,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
-from uuid import uuid4
 
 from ai.voice.qwen3_runtime import (
     DEFAULT_CLONE_MODEL,
-    DEFAULT_OUTPUT_DIR,
     load_qwen3_model,
     save_wav,
     select_device,
+    wav_to_bytes,
 )
 
 
@@ -87,14 +86,23 @@ def generate_voice_clone(
         )
 
     wav = wavs[0]
-    path = Path(output_path) if output_path else DEFAULT_OUTPUT_DIR / f"clone_{uuid4().hex}.wav"
-    save_wav(path, wav, sample_rate)
+    audio_bytes = wav_to_bytes(wav, sample_rate)
 
-    return {
-        "audio_path": str(path),
+    result = {
+        "audio_bytes": audio_bytes,
+        "mime_type": "audio/wav",
         "sample_rate": sample_rate,
         "duration_sec": round(len(wav) / sample_rate, 3),
+        "provider": "qwen",
+        "model": model_id,
         "language": language,
         "model_id": model_id,
         "ref_audio": ref_audio,
     }
+
+    if output_path:
+        path = Path(output_path)
+        save_wav(path, wav, sample_rate)
+        result["audio_path"] = str(path)
+
+    return result
