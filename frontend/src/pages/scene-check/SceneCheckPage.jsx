@@ -5,18 +5,30 @@ import { getStory } from '@/api/stories'
 import { getApiErrorMessage } from '@/utils/apiError'
 import styles from './SceneCheckPage.module.css'
 
+import titleSvg from '@design/assets/figma-icons/Scene-_Check/title.svg'
+import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
+import rirurChar from '@design/assets/figma-icons/RIrur.svg'
+
+const RIRUR_POSITIONS = [
+  { left: '-160px', top: '22%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-75deg)', origin: 'center right' },
+  { left: '-160px', top: '62%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-105deg)', origin: 'center right' },
+  { right: '-160px', top: '22%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(75deg)', origin: 'center left' },
+  { right: '-160px', top: '62%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(105deg)', origin: 'center left' },
+  { bottom: '-160px', left: '46%', transform: 'translateY(-200px) scale(0.1) rotate(180deg)', activeTransform: 'translateY(110px) scale(1) rotate(180deg)', origin: 'top center' },
+]
+
 export default function SceneCheckPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { scenes, storyId, setScenes, setStoryId, setStoryTitle } = useStoryStore()
+  const { scenes, storyId, storyTitle, setScenes, setStoryId, setStoryTitle } = useStoryStore()
 
-  // 새로고침 등으로 store가 비어도 URL의 storyId(또는 store storyId)로 백엔드에서 씬을 다시 불러온다.
   const effectiveStoryId = searchParams.get('storyId') || storyId
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [rirurPos, setRirurPos] = useState(null)
+  const [rirurVisible, setRirurVisible] = useState(false)
 
   useEffect(() => {
-    // 이미 씬이 있으면(파싱 직후 등) 다시 부르지 않는다. storyId가 없으면 부를 수 없다.
     if (scenes.length > 0 || !effectiveStoryId) return
     setLoading(true)
     setError('')
@@ -30,60 +42,134 @@ export default function SceneCheckPage() {
       .finally(() => setLoading(false))
   }, [effectiveStoryId, scenes.length, setScenes, setStoryId, setStoryTitle])
 
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <h1>씬 확인 · 수정</h1>
-        <p className={styles.guide}>씬을 불러오는 중...</p>
-      </div>
-    )
-  }
+  useEffect(() => {
+    let timer
+    const scheduleNextPop = () => {
+      const delay = Math.random() * 4000 + 4000
+      timer = setTimeout(() => {
+        setRirurPos((prev) => {
+          let next
+          do { next = Math.floor(Math.random() * RIRUR_POSITIONS.length) }
+          while (next === prev && RIRUR_POSITIONS.length > 1)
+          return next
+        })
+        setRirurVisible(true)
+      }, delay)
+    }
+    if (!rirurVisible) scheduleNextPop()
+    return () => clearTimeout(timer)
+  }, [rirurVisible])
 
-  if (scenes.length === 0) {
-    return (
-      <div className={styles.page}>
-        <h1>씬 확인 · 수정</h1>
-        <p className={styles.guide}>{error || '스토리를 먼저 입력해주세요.'}</p>
-        <div className={styles.actions}>
-          <button className={styles.btnSecondary} onClick={() => navigate('/story-input')}>
-            스토리 입력으로 돌아가기
-          </button>
-        </div>
-      </div>
-    )
+  function handleRirurClick() {
+    setRirurVisible(false)
+    setTimeout(() => setRirurPos(null), 400)
   }
 
   return (
     <div className={styles.page}>
-      <h1>씬 확인 · 수정</h1>
-      <p className={styles.guide}>파싱된 씬을 확인하고 수정하세요.</p>
+      {/* ── 상단 헤더 (밤하늘 배경 BACJ.png 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerSubTitle}>파싱된 씬을 확인하고 수정하세요.</div>
+          <h1 className={styles.headerTitle}>동화<br />씬 확인 · 수정</h1>
+          <p className={styles.headerDesc}>
+            다시 입력을 누르면 다시<br />
+            입력 할 수 있어요!
+          </p>
+        </div>
+        <div className={styles.headerRight}>
+          <div className={styles.titleFrame}>
+            <img src={titleSvg} alt="씬 확인 타이틀 액자" className={styles.titleFrameImg} />
+            <span className={styles.titleFrameText}>
+              {storyTitle || '제목 없음'}
+            </span>
+          </div>
+        </div>
+      </header>
 
-      <ul className={styles.list}>
-        {scenes.map((scene) => (
-          <li key={scene.sceneId} className={styles.card}>
-            <span className={styles.order}>씬 {scene.order}</span>
-            {scene.items.map((item, i) => (
-              <p key={i} className={styles.seg}>
-                <span className={`${styles.tag} ${styles[item.type]}`}>
-                  {item.type === 'dialogue' ? item.speaker : '내레이션'}
-                </span>
-                {item.emotionLabel && (
-                  <span className={styles.emotion}>🎭 {item.emotionLabel}</span>
-                )}
-                {item.text}
-              </p>
-            ))}
-          </li>
-        ))}
-      </ul>
+      {/* ── 둥근 카드 컨테이너 (기존 책 배경을 제거하고 둥근 흰색 카드로 전환) ── */}
+      <div className={styles.bookContainer}>
+        {rirurPos !== null && (
+          <img
+            src={rirurChar}
+            alt="리룰 캐릭터"
+            className={styles.rirurCharacter}
+            onClick={handleRirurClick}
+            style={{
+              top: RIRUR_POSITIONS[rirurPos].top || 'auto',
+              bottom: RIRUR_POSITIONS[rirurPos].bottom || 'auto',
+              left: RIRUR_POSITIONS[rirurPos].left || 'auto',
+              right: RIRUR_POSITIONS[rirurPos].right || 'auto',
+              transform: rirurVisible ? RIRUR_POSITIONS[rirurPos].activeTransform : RIRUR_POSITIONS[rirurPos].transform,
+              transformOrigin: RIRUR_POSITIONS[rirurPos].origin,
+              opacity: rirurVisible ? 1 : 0,
+            }}
+          />
+        )}
 
-      <div className={styles.actions}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/story-input')}>
-          ← 다시 입력
-        </button>
-        <button className={styles.btn} onClick={() => navigate('/character')}>
-          캐릭터 설정 →
-        </button>
+        <div className={styles.bookContentOverlay}>
+          <div className={styles.scrollArea}>
+            {/* 로딩 */}
+            {loading && <p className={styles.guide}>씬을 불러오는 중...</p>}
+
+            {/* 스토리 없음 */}
+            {!loading && scenes.length === 0 && (
+              <div className={styles.empty}>
+                <p>{error || '스토리를 먼저 입력해주세요.'}</p>
+              </div>
+            )}
+
+            {/* 씬 목록 */}
+            {!loading && scenes.length > 0 && (
+              <>
+                {/* 스토리 제목 박스 (피그마 목업 상단 중앙 둥근 텍스트 박스) */}
+                <div className={styles.storyTitleBox}>
+                  {storyTitle || '제목 없음'}
+                </div>
+
+                <ul className={styles.list}>
+                  {scenes.map((scene) => (
+                    <li key={scene.sceneId} className={styles.card}>
+                      <span className={styles.scenePill}>Scene {String(scene.order).padStart(2, '0')}</span>
+                      <div className={styles.itemsList}>
+                        {scene.items.map((item, i) => (
+                          <div key={i} className={styles.itemRow}>
+                            {/* 감정 라벨 (있을 때만 노출) */}
+                            {item.emotionLabel && (
+                              <span className={styles.emotionTag}>
+                                {item.emotionLabel}
+                              </span>
+                            )}
+                            
+                            {/* 역할 라벨 */}
+                            <span className={styles.roleTag}>
+                              {item.type === 'dialogue' ? item.speaker : '나레이션'}
+                            </span>
+                            
+                            {/* 대사 내용 말풍선 */}
+                            <div className={styles.textBubble}>
+                              {item.text}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+
+          {/* 하단 고정 버튼 (flex 레이아웃을 통해 겹치지 않고 하단 고정) */}
+          <div className={styles.fixedActions}>
+            <button className={styles.btnSecondary} onClick={() => navigate('/story-input')}>
+              ← 다시 입력
+            </button>
+            <button className={styles.btnPrimary} onClick={() => navigate('/character')}>
+              캐릭터 설정 →
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
