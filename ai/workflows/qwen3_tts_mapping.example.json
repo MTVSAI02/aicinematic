@@ -1,50 +1,50 @@
 {
-  "text": {
-    "nodeId": "REPLACE_TEXT_NODE_ID",
-    "path": ["inputs", "text"]
+  "_comment": "이 파일은 예시입니다. 실제 파일은 공유 PC(ComfyUI 설치 머신)에 별도 보관합니다.",
+  "_comment2": "preset/clone 워크플로우 분리 구조: 각각 별도 매핑 파일을 사용합니다.",
+
+  "_preset_mapping_example (COMFYUI_TTS_PRESET_MAPPING_PATH)": {
+    "text": {
+      "nodeId": "2",
+      "path": ["inputs", "text"]
+    },
+    "speaker": {
+      "nodeId": "2",
+      "path": ["inputs", "speaker"]
+    },
+    "emotionPrompt": {
+      "nodeId": "2",
+      "path": ["inputs", "instruct"]
+    },
+    "seed": {
+      "nodeId": "2",
+      "path": ["inputs", "seed"]
+    }
   },
-  "voicePrompt": {
-    "nodeId": "REPLACE_VOICE_PROMPT_NODE_ID",
-    "path": ["inputs", "text"]
-  },
-  "emotionPrompt": {
-    "nodeId": "REPLACE_EMOTION_PROMPT_NODE_ID",
-    "path": ["inputs", "text"]
-  },
-  "characterPrompt": {
-    "nodeId": "REPLACE_CHARACTER_PROMPT_NODE_ID",
-    "path": ["inputs", "text"]
-  },
-  "emotion": {
-    "nodeId": "REPLACE_EMOTION_NODE_ID",
-    "path": ["inputs", "text"]
-  },
-  "speaker": {
-    "nodeId": "REPLACE_SPEAKER_NODE_ID",
-    "path": ["inputs", "speaker"]
-  },
-  "referenceAudioUrl": {
-    "nodeId": "REPLACE_REFERENCE_AUDIO_NODE_ID",
-    "path": ["inputs", "audio"]
-  },
-  "referenceText": {
-    "nodeId": "REPLACE_REFERENCE_TEXT_NODE_ID",
-    "path": ["inputs", "text"]
-  },
-  "refAudio": {
-    "nodeId": "REPLACE_REFERENCE_AUDIO_NODE_ID",
-    "path": ["inputs", "audio"]
-  },
-  "refText": {
-    "nodeId": "REPLACE_REFERENCE_TEXT_NODE_ID",
-    "path": ["inputs", "text"]
-  },
-  "sceneSpeaker": {
-    "nodeId": "REPLACE_SCENE_SPEAKER_NODE_ID",
-    "path": ["inputs", "text"]
-  },
-  "seed": {
-    "nodeId": "REPLACE_SEED_NODE_ID",
-    "path": ["inputs", "seed"]
+
+  "_clone_mapping_example (COMFYUI_TTS_CLONE_MAPPING_PATH)": {
+    "text": {
+      "nodeId": "2",
+      "path": ["inputs", "text"]
+    },
+    "refText": {
+      "nodeId": "2",
+      "path": ["inputs", "ref_text"]
+    },
+    "refAudio": {
+      "nodeId": "5",
+      "path": ["inputs", "audio"]
+    },
+    "referenceAudioUrl": {
+      "nodeId": "5",
+      "path": ["inputs", "audio"]
+    },
+    "emotionPrompt": {
+      "nodeId": "2",
+      "path": ["inputs", "instruct"]
+    },
+    "seed": {
+      "nodeId": "2",
+      "path": ["inputs", "seed"]
+    }
   }
 }
