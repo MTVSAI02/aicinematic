@@ -15,8 +15,13 @@ from ..db.session import SessionLocal
 
 
 def _pose_to_dict(p: CharacterPose) -> dict:
-    # 포즈 dict 형태(character_pose_job_runner): {poseId, posePrompt, imageUrl}
-    return {"poseId": p.id, "posePrompt": p.prompt, "imageUrl": p.image_url}
+    # CharacterPoseResponse 와 동일 필드(characterId 필수). 누락 시 GET /poses 가 500.
+    return {
+        "poseId": p.id,
+        "characterId": p.character_id,
+        "posePrompt": p.prompt,
+        "imageUrl": p.image_url,
+    }
 
 
 def _char_to_dict(c: Character, poses: list[CharacterPose]) -> dict:
