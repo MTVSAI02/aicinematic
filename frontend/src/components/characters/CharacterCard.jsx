@@ -43,8 +43,9 @@ export default function CharacterCard({ character }) {
         <CharacterEditForm character={character} onDone={() => setEditing(false)} />
       ) : (
         <>
-          <span>{character.name}</span>
-          <span className={styles.cardMeta}>{character.appearancePrompt}</span>
+          <span className={styles.cardName}>{character.name}</span>
+          <span className={styles.cardDesc}>{character.appearancePrompt}</span>
+          <span className={styles.moreLink}>더보기</span>
           {isSelected && <span className={styles.selectedBadge}>선택됨</span>}
           {/* 임시 수정/삭제 버튼 (디자인 확정 전) */}
           <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
