@@ -18,6 +18,7 @@ def _to_dict(b: Background) -> dict:
         "prompt": b.prompt,
         "finalPrompt": b.final_prompt,
         "imageUrl": b.image_url,
+        "aiImagePath": b.ai_image_path,  # 내부 전용(BackgroundResponse 엔 미노출)
     }
 
 
@@ -33,6 +34,7 @@ class BackgroundRepository:
                 prompt=background_data.get("prompt"),
                 final_prompt=background_data.get("finalPrompt"),
                 image_url=background_data.get("imageUrl"),
+                ai_image_path=background_data.get("aiImagePath"),
                 legacy_id=background_data.get("legacyId"),
             ))
             db.commit()

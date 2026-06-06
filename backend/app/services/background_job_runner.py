@@ -1,6 +1,6 @@
 from ..core.exceptions import BackgroundGenerationFailedError
 from ..schemas.job import JobType
-from .ai_background_client import generate_background_images
+from .ai_background_client import generate_background_image
 from .background_service import assemble_final_prompt, background_service
 from .job_manager import job_manager
 
@@ -21,14 +21,16 @@ def create_background_generation_job(request_data: dict) -> dict:
         prompt = (request_data.get("prompt") or "").strip()
         final_prompt = assemble_final_prompt(prompt)  # prompt + 배경 suffix (내부 개념)
 
-        # 1. AI 서버 1회 호출 → 이미지 bytes 목록 (실패하면 예외 → Job failed, 저장 없음)
-        images = generate_background_images(final_prompt)  # AI 서버에는 {"prompt": final_prompt}
-        if not images:
-            raise BackgroundGenerationFailedError()
+        # 1. AI 서버 1회 호출 → 이미지 bytes + AI 서버 원본 경로 (실패하면 예외 → Job failed)
+        image_bytes, ai_image_path = generate_background_image(final_prompt)  # {"prompt": final_prompt}
 
-        # 2. 첫 장만 사용해 곧바로 라이브러리에 저장(이름=prompt 자동). 후보 단계 없음.
+        # 2. 곧바로 라이브러리에 저장(이름=prompt 자동). 후보 단계 없음. ai_image_path 도 보관(확장 대비).
         saved = background_service.save_generated_background(
-            images[0], prompt=prompt, final_prompt=final_prompt, name=prompt
+            image_bytes,
+            prompt=prompt,
+            final_prompt=final_prompt,
+            name=prompt,
+            ai_image_path=ai_image_path,
         )
 
         return {
