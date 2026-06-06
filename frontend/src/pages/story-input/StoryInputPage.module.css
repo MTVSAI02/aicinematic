@@ -15,7 +15,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  box-sizing: border-box;
   gap: 20px;
 }
 
@@ -86,7 +89,7 @@
 .bookContainer {
   position: relative;
   width: 100%;
-  max-width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.45);
   border-radius: 20px;
@@ -389,7 +392,7 @@
 /* ── 하단 네비게이션 고정 영역 (flex 배치로 절대 겹치지 않음) ── */
 .fixedPageNav {
   flex-shrink: 0;
-  padding: 12px 32px 0;
+  padding: 12px 32px 24px; /* 아래 여백 24px을 주어 카드 테두리와 겹치지 않게 함 */
   /* formScrollArea와 좌우 마진 통일 */
   display: flex;
   flex-direction: column;
@@ -405,12 +408,12 @@
 }
 
 .btnPrimary {
-  padding: 12px 28px;
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
   background: #8B5CF6;
   color: #FFFFFF;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
@@ -431,12 +434,12 @@
 }
 
 .btnSecondary {
-  padding: 12px 24px;
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
   background: #FFFFFF;
   color: #4B5563;
   border: 1px solid #D1D5DB;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
