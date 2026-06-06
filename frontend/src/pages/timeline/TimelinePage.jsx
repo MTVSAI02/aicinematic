@@ -255,9 +255,6 @@ export default function TimelinePage() {
               <button className={styles.btnPrimary} onClick={() => navigate('/story-input')}>스토리 입력하러 가기</button>
             </div>
           </div>
-          <div className={styles.bookmarkRibbon}>
-            <span className={styles.bookmarkStar}>★</span>
-          </div>
         </div>
       </div>
     )
@@ -351,25 +348,19 @@ export default function TimelinePage() {
                 />
               </>
             )}
-
             {error && <p className={styles.error}>{error} (다시 시도해 주세요)</p>}
+
+            {/* ── 하단 네비게이션 고정 영역 ── */}
+            <div className={styles.fixedPageNav}>
+              <button className={styles.btnSecondary} onClick={() => navigate('/scene-editor')}>
+                ← 씬 편집
+              </button>
+              <button className={styles.btnPrimary} onClick={() => navigate('/render')}>
+                영상 생성 →
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* 하단 북마크 리본 데코레이션 */}
-        <div className={styles.bookmarkRibbon}>
-          <span className={styles.bookmarkStar}>★</span>
-        </div>
-      </div>
-
-      {/* ── 하단 네비게이션 고정 영역 ── */}
-      <div className={styles.fixedPageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/scene-editor')}>
-          ← 씬 편집
-        </button>
-        <button className={styles.btnPrimary} onClick={() => navigate('/render')}>
-          영상 생성 →
-        </button>
       </div>
     </div>
   )

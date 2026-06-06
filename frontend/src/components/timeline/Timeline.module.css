@@ -8,20 +8,22 @@
   font-family: "Hakgyoansim Dunggeunmiso TTF", "Inter", sans-serif;
 }
 
-/* ── 상단 헤더 (밤하늘 배경 BACJ.png 적용) ── */
 .header {
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  box-sizing: border-box;
   gap: 20px;
   padding: 48px 64px;
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
   border-radius: 24px;
-  overflow: visible !important;
+  overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
@@ -87,7 +89,7 @@
 .bookContainer {
   position: relative;
   width: 100%;
-  max-width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.45);
   border-radius: 20px;
@@ -898,17 +900,17 @@
   width: 100%;
   display: flex;
   justify-content: space-between;
-  margin-top: 24px;
   box-sizing: border-box;
+  padding: 12px 48px 24px;
 }
 
 .btnPrimary {
-  padding: 12px 28px;
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
   background: #8B5CF6;
   color: #FFFFFF;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -922,6 +924,31 @@
 }
 
 .btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btnSecondary {
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #FFFFFF;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+.btnSecondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
@@ -944,8 +971,8 @@
     padding: 16px;
   }
 
-  .bookmarkRibbon {
-    display: none;
+  .fixedPageNav {
+    padding: 0 16px 24px;
   }
 }
 
