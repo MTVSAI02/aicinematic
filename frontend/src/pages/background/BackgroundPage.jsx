@@ -82,23 +82,17 @@ export default function BackgroundPage() {
               </div>
             </div>
 
+            {/* ── 하단 네비게이션 고정 영역 ── */}
+            <div className={styles.fixedPageNav}>
+              <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
+                ← 이전 단계
+              </button>
+              <button className={styles.btnPrimary} onClick={() => navigate('/scene-editor')}>
+                다음 단계 →
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* 하단 북마크 리본 데코레이션 */}
-        <div className={styles.bookmarkRibbon}>
-          <span className={styles.bookmarkStar}>★</span>
-        </div>
-      </div>
-
-      {/* ── 하단 네비게이션 고정 영역 ── */}
-      <div className={styles.fixedPageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
-          ← 이전 단계
-        </button>
-        <button className={styles.btnPrimary} onClick={() => navigate('/scene-editor')}>
-          다음 단계 →
-        </button>
       </div>
     </div>
   )
