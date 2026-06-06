@@ -125,7 +125,7 @@ export default function CharacterCreateForm() {
                 <span className={styles.spinner} /> 생성 중...
               </>
             ) : (
-              '목소리 만들기 →'
+              '캐릭터 만들기 →'
             )}
           </button>
         </div>

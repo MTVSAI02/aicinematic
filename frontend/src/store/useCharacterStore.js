@@ -7,9 +7,15 @@ function matchesCharacter(character, characterId) {
 const useCharacterStore = create((set) => ({
   characters: [],
   selectedCharacterId: null,
+  detailModalCharacter: null,
+  lightboxPose: null,
 
   setCharacters: (characters) =>
     set({ characters: Array.isArray(characters) ? characters : [] }),
+
+  setDetailModalCharacter: (character) => set({ detailModalCharacter: character }),
+
+  setLightboxPose: (pose) => set({ lightboxPose: pose }),
 
   addCharacter: (character) =>
     set((state) => ({
@@ -49,7 +55,13 @@ const useCharacterStore = create((set) => ({
       ),
     })),
 
-  reset: () => set({ characters: [], selectedCharacterId: null }),
+  reset: () =>
+    set({
+      characters: [],
+      selectedCharacterId: null,
+      detailModalCharacter: null,
+      lightboxPose: null,
+    }),
 }))
 
 export default useCharacterStore
