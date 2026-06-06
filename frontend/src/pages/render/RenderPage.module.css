@@ -15,14 +15,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  box-sizing: border-box;
   gap: 20px;
   padding: 48px 64px;
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
   border-radius: 24px;
-  overflow: visible !important;
+  overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
@@ -88,7 +91,7 @@
 .bookContainer {
   position: relative;
   width: 100%;
-  max-width: 1060px; /* 고유 비율의 너비 */
+  max-width: 1200px; /* 고유 비율의 너비 */
   aspect-ratio: 1000 / 670;
   margin: 0 auto;
   overflow: visible; /* 북마크 리본 노출용 */
@@ -295,9 +298,9 @@
 .btnPrimary,
 .btnOutline,
 .btnSecondary {
-  padding: 12px 24px;
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
@@ -305,6 +308,7 @@
 }
 
 .btnPrimary {
+  padding: 10px 24px; /* Primary 버튼은 가로폭을 좀 더 넓힘 */
   background: #8B5CF6;
   color: #FFFFFF;
   border-color: #8B5CF6;
@@ -383,8 +387,8 @@
   width: 100%;
   display: flex;
   justify-content: space-between;
-  margin-top: 24px;
   box-sizing: border-box;
+  padding: 12px 48px 24px;
 }
 
 /* ── 반응형 조정 (모바일에서 책 이미지 숨기고 카드 레이아웃으로 변경) ── */
@@ -424,8 +428,8 @@
     padding: 0;
   }
 
-  .bookmarkRibbon {
-    display: none;
+  .fixedPageNav {
+    padding: 0 16px 24px;
   }
 }
 

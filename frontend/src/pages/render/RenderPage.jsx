@@ -158,9 +158,6 @@ export default function RenderPage() {
               </div>
             </div>
           </div>
-          <div className={styles.bookmarkRibbon}>
-            <span className={styles.bookmarkStar}>★</span>
-          </div>
         </div>
       </div>
     )
@@ -258,20 +255,14 @@ export default function RenderPage() {
               </div>
             )}
 
+            {/* ── 하단 네비게이션 고정 영역 ── */}
+            <div className={styles.fixedPageNav}>
+              <button className={styles.btnSecondary} onClick={() => navigate('/timeline')}>
+                ← 타임라인
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* 하단 북마크 리본 데코레이션 */}
-        <div className={styles.bookmarkRibbon}>
-          <span className={styles.bookmarkStar}>★</span>
-        </div>
-      </div>
-
-      {/* ── 하단 네비게이션 고정 영역 ── */}
-      <div className={styles.fixedPageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/timeline')}>
-          ← 타임라인
-        </button>
       </div>
     </div>
   )
