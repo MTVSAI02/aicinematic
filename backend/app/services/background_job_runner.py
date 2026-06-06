@@ -19,17 +19,18 @@ def create_background_generation_job(request_data: dict) -> dict:
 
     def build_result() -> dict:
         prompt = (request_data.get("prompt") or "").strip()
+        name = (request_data.get("name") or "").strip() or prompt  # 사용자 제목(필수), 방어적 fallback
         final_prompt = assemble_final_prompt(prompt)  # prompt + 배경 suffix (내부 개념)
 
         # 1. AI 서버 1회 호출 → 이미지 bytes + AI 서버 원본 경로 (실패하면 예외 → Job failed)
         image_bytes, ai_image_path = generate_background_image(final_prompt)  # {"prompt": final_prompt}
 
-        # 2. 곧바로 라이브러리에 저장(이름=prompt 자동). 후보 단계 없음. ai_image_path 도 보관(확장 대비).
+        # 2. 곧바로 라이브러리에 저장(이름=사용자 제목). 후보 단계 없음. ai_image_path 도 보관(확장 대비).
         saved = background_service.save_generated_background(
             image_bytes,
             prompt=prompt,
             final_prompt=final_prompt,
-            name=prompt,
+            name=name,
             ai_image_path=ai_image_path,
         )
 
