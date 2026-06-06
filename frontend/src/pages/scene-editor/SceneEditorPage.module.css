@@ -1,65 +1,134 @@
 .page {
   box-sizing: border-box;
-  padding: 8px 40px; /* 세로 공간을 위해 상하 패딩 추가 축소 */
+  padding: 16px 40px;
   width: 100%;
   max-width: 1600px;
-  height: 100vh; /* 세로 높이를 100vh 로 잠가 스크롤 생성 원천 차단 */
+  min-height: 100vh;
   margin: 0 auto;
-  font-family: "Hakgyoansim Dunggeunmiso TTF", "Inter", sans-serif;
+  font-family: 'Hakgyoansim', "Inter", sans-serif;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden;
 }
 
-/* ── 상단 헤더 영역 ── */
+/* ── 상단 헤더 (밤하늘 배경 배너 적용) ── */
 .header {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px; /* 마진 추가 축소 */
+  margin-bottom: 20px;
   gap: 20px;
+  padding: 24px 48px; /* 씬 편집실에서는 세로 공간 최적화를 위해 패딩을 약간 슬림하게 적용 */
+  height: 500px; /* 세로폭 고정 */
+  box-sizing: border-box;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 24px;
+  overflow: visible; /* 캐릭터가 헤더 경계를 살짝 벗어나 3D 입체감을 주도록 visible 설정 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
 }
 
 .headerLeft {
   flex: 1;
-  padding-left: 0; /* 마스코트가 제거되었으므로 좌측 패딩 제거해 넓게 활용 */
 }
 
 .headerSubTitle {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: #A171DF;
-  margin-bottom: 2px;
+  color: #C084FC; /* 밝은 연보라 */
+  margin-bottom: 4px;
   letter-spacing: -0.5px;
 }
 
 .headerTitle {
   font-family: 'KerisKedu', sans-serif;
-  font-size: 28px; /* 헤더 타이틀 더 슬림화 */
+  font-size: 60px;
   font-weight: 700;
-  color: #1F2937;
-  margin: 0 0 2px 0;
+  color: #FFFFFF; /* 흰색 글자 */
+  margin: 0 0 10px 0; /* 아래 마진 추가 */
   letter-spacing: -1.5px;
   line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+
 .headerDesc {
-  font-size: 13px;
-  color: #4B5563;
+  font-size: 14px;
+  color: #E5E7EB; /* 밝은 회색 */
   line-height: 1.4;
   margin: 0;
   font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.headerRight {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 570px; /* 음성입력 팻말 크기로 통일 + 50px 확대 */
+}
+
+/* ── 캐릭터 액자 + 제목 오버레이 ── */
+.titleFrame {
+  position: relative;
+  display: block;
+  animation: titleFloat 3.5s ease-in-out infinite alternate;
+  margin-right: -10px; /* 우측 밀착 */
+  margin-top: 40px; /* 80px 아래로 이동 (-40px -> 40px) */
+  width: 100%;
+  aspect-ratio: 1470 / 1129;
+}
+
+.titleFrameImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+}
+
+.titleFrameText {
+  position: absolute;
+  top: 56%; /* 캐릭터 팻말 디자인 내 흰색 영역 중앙 */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'KerisKedu', sans-serif;
+  font-size: clamp(14px, 1.8vw, 22px);
+  font-weight: 700;
+  color: #1F2937;
+  white-space: normal;
+  word-break: keep-all;
+  text-align: center;
+  pointer-events: none;
+  width: 58%;
+  max-width: 65%;
+  max-height: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+@keyframes titleFloat {
+  0% {
+    transform: translateY(0px) rotate(-0.5deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
 }
 
 /* ── 편집 레이아웃 컨테이너 ── */
 .editorContainer {
   position: relative;
   width: 100%;
-  height: calc(100vh - 110px); /* 마스코트를 제거해 헤더 세로폭을 대폭 줄이고 씬 편집창에 35px 추가 배정 */
-  min-height: 440px;
-  max-height: calc(100vh - 110px);
+  height: calc(100vh - 570px); /* 헤더 크기 500px 증가에 대응하여 계산 높이 조절 */
+  min-height: 400px;
+  max-height: calc(100vh - 570px);
   overflow: visible;
   display: flex;
   flex-grow: 1;
@@ -967,12 +1036,6 @@
 }
 
 /* ── 씬 목록 팝업 토글 관련 스타일 ── */
-.headerTitleRow {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
 .toggleListBtn {
   display: inline-flex;
   align-items: center;
@@ -988,6 +1051,7 @@
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.05);
+  margin-bottom: 12px; /* 설명문과의 거리를 위해 아래 마진 추가 */
 }
 
 .toggleListBtn:hover {
