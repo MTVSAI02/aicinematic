@@ -96,7 +96,7 @@ export default function CharacterCreateForm() {
           </select>
           <input
             className={styles.input}
-            placeholder="텍스트 예시입니다. 입력해주세요..."
+            placeholder="어린왕자"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -111,13 +111,13 @@ export default function CharacterCreateForm() {
         <div className={styles.textareaWrapper}>
           <textarea
             className={styles.textarea}
-            placeholder="텍스트 예시입니다. 입력해주세요..."
+            placeholder="노란색의 짧고 곱슬거리는 머리카락, 맑고 순수한 얼굴, 초록색 코트(소매와 장식 부분에 붉은색 포인트), 검은 장화, 긴 노란색 머플러, 흰색 점프수트를 입은 소년 "
             value={appearancePrompt}
             onChange={(e) => setAppearancePrompt(e.target.value)}
           />
         </div>
         <div className={styles.formFooterRow}>
-          <span className={styles.formFooterHint}>자세할수록 좋아용</span>
+          <span className={styles.formFooterHint}>캐릭터의 머리, 눈색, 입은 옷, 장신구등을 지정해서 써 줄 수록 비슷한 캐릭터가 완성이 됩니다</span>
           
           <button className={styles.generateBtn} onClick={handleCreate} disabled={!canSubmit || loading}>
             {loading ? (

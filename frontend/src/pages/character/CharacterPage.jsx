@@ -50,32 +50,26 @@ export default function CharacterPage() {
         <div className={styles.bookContentOverlay}>
           <div className={styles.scrollArea}>
             <CharacterCreateForm />
+
+            {/* ── 캐릭터 라이브러리 섹션 (카드 안쪽 배치) ── */}
+            <section className={styles.librarySection}>
+              <h2 className={styles.libraryTitle}>캐릭터 라이브러리</h2>
+              {loadError && <p className={styles.error}>{loadError}</p>}
+              <CharacterList />
+            </section>
+            {/* ── 하단 네비게이션 고정 영역 ── */}
+            <div className={styles.fixedPageNav}>
+              <button className={styles.btnSecondary} onClick={() => navigate('/scene-check')}>
+                ← 이전 단계
+              </button>
+              <button className={styles.btnPrimary} onClick={() => navigate('/voice')}>
+                다음 단계 →
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* 하단 북마크 리본 데코레이션 */}
-        <div className={styles.bookmarkRibbon}>
-          <span className={styles.bookmarkStar}>★</span>
-        </div>
-      </div>
-
-      {/* ── 캐릭터 라이브러리 섹션 (카드 하단 배치) ── */}
-      <section className={styles.librarySection}>
-        <h2 className={styles.libraryTitle}>캐릭터 라이브러리</h2>
-        {loadError && <p className={styles.error}>{loadError}</p>}
-        <CharacterList />
-      </section>
-
-      {/* ── 하단 네비게이션 고정 영역 ── */}
-      <div className={styles.fixedPageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/scene-check')}>
-          ← 이전 단계
-        </button>
-        <button className={styles.btnPrimary} onClick={() => navigate('/voice')}>
-          다음 단계 →
-        </button>
       </div>
     </div>
   )
 }
-

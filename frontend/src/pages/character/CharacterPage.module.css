@@ -15,7 +15,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  box-sizing: border-box;
   gap: 20px;
   padding: 0 24px;
 }
@@ -79,7 +82,7 @@
 .bookContainer {
   position: relative;
   width: 100%;
-  max-width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.45);
   border-radius: 20px;
@@ -108,23 +111,34 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 0;
 }
 
 .section {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 236, 250, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(186, 174, 230, 0.04);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
 }
 
 .stepTitle {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1F2937;
   display: flex;
   align-items: center;
+  gap: 12px;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 25px; /* 음성입력의 25px 크기 적용 */
+  font-weight: 700;
+  color: #1F2937;
   margin: 0;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.8px; /* 음성입력의 자간 적용 */
 }
 
 .stepBadge {
@@ -134,10 +148,11 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #E9D5FF; /* 연보라 */
-  color: #7C3AED;      /* 진보라 */
-  font-size: 14px;
+  background: #C084FC; /* 음성입력과 동일하게 부드러운 보라빛 동그라미로 변경 */
+  color: #FFFFFF;      /* 흰색 글자 적용 */
+  font-size: 15px;      /* 15px 적용 */
   font-weight: 700;
+  flex-shrink: 0;
   margin-right: 12px;
 }
 
@@ -150,8 +165,8 @@
 }
 
 .roleSelect {
-  width: 100px;
-  padding: 12px 14px;
+  width: 115px; /* 폭을 100px에서 115px로 늘려 '엑스트라' 등 긴 단어 잘림 방지 */
+  padding: 12px 32px 12px 14px; /* 화살표 아이콘 영역을 고려해 우측 패딩 부여 */
   border: 1px solid #BAE6FD;
   border-radius: 12px;
   background: #E0F2FE; /* 연하늘 */
@@ -163,10 +178,23 @@
   font-family: inherit;
   transition: all 0.2s;
   box-sizing: border-box;
+  /* 셀렉트 드롭다운 기본 브라우저 화살표 제거 및 프리미엄 커스텀 화살표 설정 */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%230369A1'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
 }
 
 .roleSelect:hover {
-  background: #BAE6FD;
+  background-color: #BAE6FD;
+}
+
+.roleSelect:focus {
+  border-color: #0284C7;
+  box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
 }
 
 .input {
@@ -303,16 +331,25 @@
 
 /* ── 캐릭터 라이브러리 섹션 ── */
 .librarySection {
-  margin-top: 64px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 236, 250, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
   width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(186, 174, 230, 0.04);
 }
 
 .libraryTitle {
-  font-size: 24px;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 25px; /* "캐릭터의 이름을 입력해주세요" (.stepTitle) 크기와 동일 */
   font-weight: 700;
   color: #1F2937;
   margin: 0 0 24px 0;
-  padding-left: 24px;
+  letter-spacing: -0.8px; /* "캐릭터의 이름을 입력해주세요" (.stepTitle) 자간과 동일 */
+  padding-left: 0; /* 라이브러리 섹션 패딩 24px에 정렬되도록 조정 */
 }
 
 .grid {
@@ -499,17 +536,17 @@
   width: 100%;
   display: flex;
   justify-content: space-between;
-  margin-top: 24px;
   box-sizing: border-box;
+  padding: 12px 48px 24px;
 }
 
 .btnPrimary {
-  padding: 12px 28px;
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
   background: #8B5CF6;
   color: #FFFFFF;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -523,12 +560,12 @@
 }
 
 .btnSecondary {
-  padding: 12px 24px;
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
   background: #FFFFFF;
   color: #4B5563;
   border: 1px solid #D1D5DB;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -573,5 +610,15 @@
 
   .bookmarkRibbon {
     display: none;
+  }
+
+  .section,
+  .librarySection {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .fixedPageNav {
+    padding: 0 16px 24px;
   }
 }
