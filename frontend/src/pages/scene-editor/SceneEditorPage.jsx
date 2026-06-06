@@ -18,6 +18,7 @@ import styles from './SceneEditorPage.module.css'
 
 // 디자인 자산 임포트
 import navBackgroundIcon from '@design/assets/figma-icons/Nav/nav_background.svg'
+import navSceneEditorIcon from '@design/assets/figma-icons/Nav/nav_scene_editor.svg'
 
 function sceneText(scene) {
   const items = scene.items ?? []
@@ -403,12 +404,21 @@ export default function SceneEditorPage() {
           <div className={styles.centerStage}>
             {!selectedScene ? (
               <div className={styles.placeholder}>
-                <p>편집할 씬을 선택하세요.</p>
+                <img
+                  src={navSceneEditorIcon}
+                  alt="씬 편집 마스코트"
+                  className={styles.placeholderIcon}
+                />
+                <h3 className={styles.placeholderTitle}>편집할 씬을 선택해주세요</h3>
+                <p className={styles.placeholderDesc}>
+                  좌측 목록에서 편집할 씬을 클릭하거나,<br />
+                  아래 버튼을 눌러 목록을 펼치세요.
+                </p>
                 <button
                   type="button"
                   className={styles.panelBtn}
                   onClick={() => setShowSceneList(true)}
-                  style={{ marginTop: '12px', width: 'auto' }}
+                  style={{ width: 'auto', padding: '10px 24px' }}
                 >
                   🎬 씬 목록 열기
                 </button>
