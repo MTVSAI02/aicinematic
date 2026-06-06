@@ -64,7 +64,8 @@ class Background(Base):
     name: Mapped[str | None] = mapped_column(Text)
     prompt: Mapped[str | None] = mapped_column(Text)
     final_prompt: Mapped[str | None] = mapped_column(Text)
-    image_url: Mapped[str | None] = mapped_column(Text)  # storage path
+    image_url: Mapped[str | None] = mapped_column(Text)  # storage path (우리 저장본)
+    ai_image_path: Mapped[str | None] = mapped_column(Text)  # AI 서버 원본 경로(확장 대비, 내부 전용)
     created_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
 

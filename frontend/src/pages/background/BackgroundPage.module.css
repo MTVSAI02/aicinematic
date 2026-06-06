@@ -267,6 +267,26 @@
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
 }
 
+/* 배경 제목 입력(기능용 최소 스타일 — 디자인은 추후 다듬기) */
+.titleInput {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  font-size: 15px;
+  background: #FFFFFF;
+  color: #1F2937;
+  box-sizing: border-box;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
 .charCounter {
   position: absolute;
   bottom: 12px;

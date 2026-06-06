@@ -27,6 +27,7 @@ export default function BackgroundPromptPanel() {
   useEffect(() => () => abortRef.current?.abort(), [])
 
   const [savedMessage, setSavedMessage] = useState('')
+  const [name, setName] = useState('') // 배경 제목(필수)
 
   // finalPrompt 미리보기는 항상 현재 promptInput 기준으로 실시간 계산한다 (stale 방지).
   // suffix(배경 규칙)는 추천 응답에서 추출해 보관한 값. 추천을 안 받았으면 미리보기는 표시하지 않는다.
@@ -54,22 +55,24 @@ export default function BackgroundPromptPanel() {
   }
 
   async function handleGenerate() {
-    if (!promptInput.trim() || loading) return
+    if (!name.trim() || !promptInput.trim() || loading) return
     setError(null)
     setSavedMessage('')
     setLoading(true)
     try {
-      // 사용자 prompt만 보낸다(finalPrompt 조립). 비동기: 즉시 jobId → completed/failed 폴링.
+      // 제목(name) + prompt 전송(finalPrompt 조립은 백엔드). 비동기: 즉시 jobId → completed/failed 폴링.
       const job = await backgroundApi.generateBackground({
+        name: name.trim(),
         prompt: promptInput.trim(),
       })
       setCurrentJobId(job.jobId)
 
       abortRef.current = new AbortController()
       await pollJob(job.jobId, { signal: abortRef.current.signal })
-      // 1장 생성 즉시 백엔드가 라이브러리에 저장 → 목록 갱신(아래 라이브러리에 바로 표시)
+      // 1장 생성 즉시 백엔드가 라이브러리에 저장(name=제목) → 목록 갱신(아래 라이브러리에 바로 표시)
       const list = await backgroundApi.getBackgrounds()
       setBackgrounds(list)
+      setName('')
       setSavedMessage('배경이 생성되어 라이브러리에 저장되었습니다.')
     } catch (e) {
       if (e.aborted) return // 언마운트 취소 → 무시
@@ -84,7 +87,7 @@ export default function BackgroundPromptPanel() {
   }
 
   const canSuggest = !!storyId.trim() && !!sceneId.trim() && !loading
-  const canGenerate = !!promptInput.trim() && !loading
+  const canGenerate = !!name.trim() && !!promptInput.trim() && !loading
 
   return (
     <div className={styles.form}>
@@ -101,6 +104,18 @@ export default function BackgroundPromptPanel() {
       {sourceText && (
         <p className={styles.validation}>참고 문장: {sourceText}</p>
       )}
+
+      {/* 배경 제목 (필수) */}
+      <div className={styles.fieldSection}>
+        <label className={styles.fieldLabel}>배경 제목</label>
+        <input
+          className={styles.titleInput}
+          placeholder="예) 별빛 사막"
+          value={name}
+          maxLength={40}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
 
       {/* 프롬프트 입력/수정 */}
       <div className={styles.fieldSection}>
@@ -129,8 +144,10 @@ export default function BackgroundPromptPanel() {
         </button>
       </div>
 
-      {!promptInput.trim() && !loading && (
-        <p className={styles.validation}>배경 프롬프트를 입력하거나 추천을 받아주세요.</p>
+      {!loading && (!name.trim() || !promptInput.trim()) && (
+        <p className={styles.validation}>
+          {!name.trim() ? '배경 제목을 입력해주세요.' : '배경 프롬프트를 입력하거나 추천을 받아주세요.'}
+        </p>
       )}
       {savedMessage && <p className={styles.status}>{savedMessage}</p>}
       {error && <p className={styles.error}>{error}</p>}

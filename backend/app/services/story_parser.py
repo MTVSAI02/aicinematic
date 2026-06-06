@@ -50,6 +50,15 @@ DEFAULT_EMOTION = {
     "dialogue": ("neutral", "기본"),
 }
 
+# 화자(speaker)에 이 값이 들어오면 빈 값과 동일하게 narration 으로 취급한다.
+# (역할 칸에 "나레이션"이라 적어도 dialogue 가 되어 따옴표가 붙는 문제 방지 — narration 은 따옴표 없음.)
+_NARRATION_SPEAKER_ALIASES = {"나레이션", "내레이션", "narration"}
+
+
+def _is_narration_speaker(speaker: str) -> bool:
+    """speaker 가 비었거나 나레이션 별칭이면 narration 으로 본다."""
+    return (speaker or "").strip().casefold() in {"", *_NARRATION_SPEAKER_ALIASES}
+
 # emotion 키 → 한글 라벨 (키워드 추정 결과에 라벨을 붙일 때 사용)
 EMOTION_TO_LABEL = {emotion: label for label, emotion in EMOTION_MAP.items()}
 
@@ -131,8 +140,9 @@ def _parse_line(line: str) -> dict | None:
         return None
 
     # 2. dialogue / narration 판정
+    #    화자: "대사" 형식이라도 화자가 비거나 "나레이션" 별칭이면 narration(따옴표 없음)으로 본다.
     dialogue = _DIALOGUE_RE.match(line)
-    if dialogue:
+    if dialogue and not _is_narration_speaker(dialogue.group(1)):
         item = {
             "type": "dialogue",
             "speaker": dialogue.group(1).strip(),
@@ -142,7 +152,8 @@ def _parse_line(line: str) -> dict | None:
         item = {
             "type": "narration",
             "speaker": None,
-            "text": line,
+            # dialogue 형식이었으면 따옴표 안 본문만 사용, 아니면 줄 전체.
+            "text": dialogue.group(2).strip() if dialogue else line,
         }
 
     # 3. emotion 결정 (우선순위)
@@ -191,6 +202,9 @@ def parse_structured_story(scenes: list[dict]) -> list[dict]:
             if not text:
                 raise ValueError("빈 대사/나레이션은 저장할 수 없습니다.")
             speaker = (raw.get("speaker") or "").strip()
+            # 역할이 비거나 "나레이션" 별칭이면 narration(따옴표 없음)으로 정규화.
+            if _is_narration_speaker(speaker):
+                speaker = ""
             label = (raw.get("emotionLabel") or "").strip()
             item_type = "dialogue" if speaker else "narration"
             emotion = EMOTION_MAP.get(label) or raw.get("emotion") or DEFAULT_EMOTION[item_type][0]

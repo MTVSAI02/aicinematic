@@ -11,12 +11,12 @@ export function suggestBackgroundPrompt({ storyId, sceneId }) {
   })
 }
 
-// POST /api/backgrounds/generate — 배경 후보 생성 Job
-// 사용자 prompt만 보낸다. finalPrompt 조립·negativePrompt는 백엔드/AI 서버가 담당.
-// 1장 생성 → 라이브러리 자동 저장. Job 완료 시 result.background 가 저장된 배경.
-export function generateBackground({ prompt }) {
+// POST /api/backgrounds/generate — 배경 생성 Job
+// 제목(name, 필수) + prompt 를 보낸다. finalPrompt 조립·negativePrompt는 백엔드/AI 서버가 담당.
+// 1장 생성 → 라이브러리 자동 저장(name=제목). Job 완료 시 result.background 가 저장된 배경.
+export function generateBackground({ name, prompt }) {
   return request('/api/backgrounds/generate', {
-    ...jsonBody({ prompt }),
+    ...jsonBody({ name, prompt }),
     method: 'POST',
   })
 }

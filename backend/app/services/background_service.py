@@ -83,11 +83,17 @@ class BackgroundService:
     # ── 라이브러리 저장/조회/수정/삭제 ───────────────────────
 
     def save_generated_background(
-        self, image_bytes: bytes, prompt: str, final_prompt: str, name: str
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        final_prompt: str,
+        name: str,
+        ai_image_path: str | None = None,
     ) -> dict:
         """생성된 배경 이미지 1장을 곧바로 라이브러리에 저장한다(후보 단계 없음).
 
         backgroundId 발급 → library 경로에 이미지 저장 → record 저장 순.
+        ai_image_path: AI 서버 원본 경로(확장 대비 보관, 배경엔 현재 미사용·내부 전용).
         (background_job_runner 가 AI 생성 결과로 호출 — 사용자 선택/이름 입력 단계 제거)
         """
         background_id = self._background_repo.reserve_id()
@@ -101,6 +107,7 @@ class BackgroundService:
                 "prompt": prompt,
                 "finalPrompt": final_prompt,
                 "imageUrl": image_url,
+                "aiImagePath": ai_image_path,
             },
         )
 
