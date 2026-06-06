@@ -7,10 +7,11 @@ import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
 import styles from './RenderPage.module.css'
 
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+
 // 디자인 에셋 임포트
-import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
-import exportMascot from '@design/assets/figma-icons/Nav/nav_export.svg'
-import bookBg from '@design/assets/figma-images/Book.png'
+import headerBg from '@design/assets/figma-icons/Base/Base_render.png'
+import characterRenderSvg from '@design/assets/figma-icons/character/character_render.svg'
 
 // /render — 최종 영상 생성·확인 페이지. (타임라인 자막 + 잠근 보이스 TTS 음성을 합성한 mp4)
 // 상태: loading | idle(생성 전) | rendering(생성 중) | done(완료) | error(실패).
@@ -37,6 +38,7 @@ export default function RenderPage() {
   const navigate = useNavigate()
   const storyId = useStoryStore((s) => s.storyId)
   const storyTitle = useStoryStore((s) => s.storyTitle)
+  const { titleRef, frameHeight } = useSwingingSignboard(1108 / 1470)
 
   const [status, setStatus] = useState('loading') // loading | idle | rendering | done | error
   const [jobStatus, setJobStatus] = useState('')
@@ -134,20 +136,39 @@ export default function RenderPage() {
   if (!storyId) {
     return (
       <div className={styles.page}>
-        {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 및 Mascot 적용) ── */}
+        {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
         <div className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
           <div className={styles.headerLeft}>
             <div className={styles.headerSubTitle}>스토리의 최종 합성 영상 생성 및 내려받기</div>
-            <h1 className={styles.headerTitle}>영상 생성</h1>
+            <h1 className={styles.headerTitle}>동화책<br />묶어내기</h1>
           </div>
           <div className={styles.headerRight}>
-            <img src={exportMascot} alt="영상 생성 마스코트" className={styles.headerMascot} />
+            <div 
+              className={styles.titleFrame} 
+              ref={titleRef}
+              style={{
+                display: 'block',
+                width: '100%',
+                height: frameHeight ? `${frameHeight}px` : 'auto',
+                position: 'relative'
+              }}
+            >
+              <img 
+                src={characterRenderSvg} 
+                alt="영상 생성 타이틀 액자" 
+                className={styles.titleFrameImg} 
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block'
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* ── 내용 컨테이너 (BOOK 배경 이미지 적용) ── */}
+        {/* ── 내용 컨테이너 (Glassmorphism Card) ── */}
         <div className={styles.bookContainer}>
-          <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
           <div className={styles.bookContentOverlay}>
             <div className={styles.scrollArea}>
               <div className={styles.stateContent}>
@@ -165,24 +186,44 @@ export default function RenderPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 및 Mascot 적용) ── */}
+      {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
       <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>스토리의 최종 합성 영상 생성 및 내려받기</div>
-          <h1 className={styles.headerTitle}>영상 생성</h1>
+          <h1 className={styles.headerTitle}>동화책<br />묶어내기</h1>
           <p className={styles.headerDesc}>
             타임라인에서 설정한 자막과 씬 재생 길이,<br />
-            그리고 보이스 목소리를 합쳐서 한 편의 비디오로 합성합니다.
+            그리고 보이스 목소리를 합쳐서<br />
+            한 편의 비디오로 합성합니다.
           </p>
         </div>
         <div className={styles.headerRight}>
-          <img src={exportMascot} alt="영상 생성 마스코트" className={styles.headerMascot} />
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterRenderSvg} 
+              alt="영상 생성 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 
-      {/* ── 내용 컨테이너 (BOOK 배경 이미지 적용) ── */}
+      {/* ── 내용 컨테이너 (Glassmorphism Card) ── */}
       <div className={styles.bookContainer}>
-        <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
         <div className={styles.bookContentOverlay}>
           <div className={styles.scrollArea}>
 
@@ -255,12 +296,12 @@ export default function RenderPage() {
               </div>
             )}
 
-            {/* ── 하단 네비게이션 고정 영역 ── */}
-            <div className={styles.fixedPageNav}>
-              <button className={styles.btnSecondary} onClick={() => navigate('/timeline')}>
-                ← 타임라인
-              </button>
-            </div>
+          </div>
+          {/* ── 하단 네비게이션 고정 영역 ── */}
+          <div className={styles.fixedPageNav}>
+            <button className={styles.btnSecondary} onClick={() => navigate('/timeline')}>
+              ← 타임라인
+            </button>
           </div>
         </div>
       </div>
