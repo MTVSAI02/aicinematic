@@ -16,7 +16,11 @@ import SubtitleCuePanel from '@/components/scene-editor/SubtitleCuePanel'
 import SceneCharacterPanel from '@/components/scene-editor/SceneCharacterPanel'
 import styles from './SceneEditorPage.module.css'
 
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+
 // 디자인 자산 임포트
+import headerBg from '@design/assets/figma-icons/Base/Base_Scene_edit.png'
+import characterSceneEditSvg from '@design/assets/figma-icons/character/character_Scene-edit.svg'
 import navBackgroundIcon from '@design/assets/figma-icons/Nav/nav_background.svg'
 import navSceneEditorIcon from '@design/assets/figma-icons/Nav/nav_scene_editor.svg'
 
@@ -31,6 +35,8 @@ export default function SceneEditorPage() {
   const { characters, setCharacters } = useCharacterStore()
 
   const globalStoryId = useStoryStore((s) => s.storyId)
+  const storyTitle = useStoryStore((s) => s.storyTitle)
+  const { titleRef, frameHeight } = useSwingingSignboard(1129 / 1470)
   const setGlobalStoryId = useStoryStore((s) => s.setStoryId)
   const setGlobalStoryTitle = useStoryStore((s) => s.setStoryTitle)
   const setGlobalScenes = useStoryStore((s) => s.setScenes)
@@ -319,24 +325,45 @@ export default function SceneEditorPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 영역 ── */}
-      <header className={styles.header}>
+      {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>씬을 선택해 배경과 캐릭터를 설정하세요.</div>
-          <div className={styles.headerTitleRow}>
-            <h1 className={styles.headerTitle}>씬 편집</h1>
-            <button
-              type="button"
-              className={styles.toggleListBtn}
-              onClick={() => setShowSceneList(!showSceneList)}
-              aria-expanded={showSceneList}
-            >
-              🎬 씬 목록 {showSceneList ? '접기' : '펼치기'}
-            </button>
-          </div>
+          <h1 className={styles.headerTitle}>씬 편집</h1>
+          <button
+            type="button"
+            className={styles.toggleListBtn}
+            onClick={() => setShowSceneList(!showSceneList)}
+            aria-expanded={showSceneList}
+          >
+            🎬 씬 목록 {showSceneList ? '접기' : '펼치기'}
+          </button>
           <p className={styles.headerDesc}>
             자막과 cue를 배치해 이야기를 완성할 수 있어요. (단축키: Esc)
           </p>
+        </div>
+        <div className={styles.headerRight}>
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterSceneEditSvg} 
+              alt="씬 편집 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 
