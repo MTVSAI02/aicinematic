@@ -20,7 +20,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..core.ids import new_id
-from ..db.models import RenderResult, Scene, SceneCharacter, Story
+from ..db.models import RenderResult, Scene, SceneCharacter, Story, TtsAudio
 from ..db.session import SessionLocal
 
 _SCENE_ID_RE = re.compile(r"(\d+)")
@@ -157,6 +157,33 @@ class StoryRepository:
         with SessionLocal() as db:
             stories = db.execute(select(Story).order_by(Story.created_at)).scalars().all()
             return [_story_to_dict(db, s) for s in stories]
+
+    def delete(self, story_id: str) -> dict | None:
+        """스토리 삭제. 없으면 None.
+
+        FK CASCADE 로 scenes/scene_characters/tts_audios/render_results 가 함께 삭제된다.
+        삭제 전, 정리해야 할 storage 파일 URL(TTS 오디오 + 렌더 mp4)을 모아 반환한다.
+        (characters/backgrounds 는 공용 라이브러리라 건드리지 않는다 — story FK 없음.)
+        """
+        with SessionLocal() as db:
+            story = db.get(Story, story_id)
+            if story is None:
+                return None
+            audio_urls = db.execute(
+                select(TtsAudio.audio_url).where(
+                    TtsAudio.story_id == story_id, TtsAudio.audio_url.is_not(None)
+                )
+            ).scalars().all()
+            video_urls = db.execute(
+                select(RenderResult.video_url).where(RenderResult.story_id == story_id)
+            ).scalars().all()
+            db.delete(story)  # CASCADE: scenes/scene_characters/tts_audios/render_results
+            db.commit()
+            return {
+                "storyId": story_id,
+                "audioUrls": list(audio_urls),
+                "videoUrls": list(video_urls),
+            }
 
     def resolve_scene_pk(self, story_id: str, local_scene_id: str) -> str | None:
         """API 노출 sceneId(scene_001) → 실제 scenes.id(ULID). 없으면 None. (tts repo 등에서 사용)"""
