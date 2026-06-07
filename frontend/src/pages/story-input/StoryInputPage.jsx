@@ -4,8 +4,9 @@ import useStoryStore from '@/store/useStoryStore'
 import { getEmotions, parseStory } from '@/api/stories'
 import styles from './StoryInputPage.module.css'
 
-// 디자인 자산 임포트
-import storyChar from '@design/assets/figma-icons/Story_Input/Character.svg'
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+import headerBg from '@design/assets/figma-icons/Base/Base_Stoty_input.png'
+import characterStoryInputSvg from '@design/assets/figma-icons/character/character_story_input.svg'
 
 // 작성 중 데이터는 DB에 저장하지 않고 이 컴포넌트 state 에서만 다룬다.
 // 제출(씬 분해하기) 시에만 structured payload 로 백엔드에 새 story 를 생성한다.
@@ -29,6 +30,7 @@ export default function StoryInputPage() {
   const { setStoryId, setStoryTitle, setScenes } = useStoryStore()
 
   const [title, setTitle] = useState('')
+  const { titleRef, frameHeight } = useSwingingSignboard(1088 / 1470)
   const [scenes, setLocalScenes] = useState(initialScenes)
   const [emotions, setEmotions] = useState(EMOTION_SEED)
   const [loading, setLoading] = useState(false)
@@ -141,8 +143,8 @@ export default function StoryInputPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 영역 ── */}
-      <header className={styles.header}>
+      {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>이번엔 동화 속으로 들어가볼까요?</div>
           <h1 className={styles.headerTitle}>동화<br />스토리 만들기</h1>
@@ -153,7 +155,27 @@ export default function StoryInputPage() {
           </p>
         </div>
         <div className={styles.headerRight}>
-          <img src={storyChar} alt="토끼 마스코트" className={styles.headerMascot} />
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterStoryInputSvg} 
+              alt="스토리 입력 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 

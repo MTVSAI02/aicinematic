@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import useNotifications from '@/hooks/useNotifications'
+import navBellIcon from '@design/assets/figma-icons/Nav/nav_bell.svg'
 
 import styles from './NotificationBell.module.css'
 
@@ -86,7 +87,7 @@ export default function NotificationBell() {
         aria-label={`알림${unreadCount > 0 ? ` ${unreadCount}건` : ''}`}
       >
         <span className={styles.bellIcon} aria-hidden="true">
-          🔔
+          <img src={navBellIcon} alt="알림" className={styles.bellImg} />
         </span>
         {unreadCount > 0 && (
           <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>

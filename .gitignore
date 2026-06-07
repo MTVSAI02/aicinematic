@@ -53,6 +53,7 @@ lerna-debug.log*
 # ===== 생성 결과물 (이미지·영상·JSON 덤프) =====
 backend/app/storage/*
 !backend/app/storage/.gitkeep
+outputs/
 
 # ===== Editor / OS =====
 .vscode/

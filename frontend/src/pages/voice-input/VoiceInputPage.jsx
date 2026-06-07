@@ -6,7 +6,10 @@ import { getApiErrorMessage } from '@/utils/apiError'
 import useVoiceStore from '@/store/useVoiceStore'
 import styles from './VoiceInputPage.module.css'
 
-// 디자인 자산 임포트
+import useStoryStore from '@/store/useStoryStore'
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+import headerBg from '@design/assets/figma-icons/Base/Base_Voice-input.png'
+import characterVoiceInputSvg from '@design/assets/figma-icons/character/character_voice-input.svg'
 import voiceRabbit from '@design/assets/figma-icons/Voice_input/VoiceInput_Rabbit.svg'
 import voiceAdult from '@design/assets/figma-icons/Voice_input/VoiceInput_Adult.svg'
 import voiceKid from '@design/assets/figma-icons/Voice_input/VoiceInput_Kid.svg'
@@ -63,6 +66,8 @@ function extOf(name) {
 export default function VoiceInputPage() {
   const navigate = useNavigate()
   const addVoice = useVoiceStore((s) => s.addVoice)
+  const storyTitle = useStoryStore((s) => s.storyTitle)
+  const { titleRef, frameHeight } = useSwingingSignboard(1142 / 1473)
 
   // 입력
   const [speaker, setSpeaker] = useState(null) // mom | child | custom
@@ -241,8 +246,8 @@ export default function VoiceInputPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 영역 ── */}
-      <header className={styles.header}>
+      {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>동화 속 캐릭터에게 생생한 목소리를 입혀주세요</div>
           <h1 className={styles.headerTitle}>동화 속<br />목소리 만들기</h1>
@@ -253,7 +258,27 @@ export default function VoiceInputPage() {
           </p>
         </div>
         <div className={styles.headerRight}>
-          <img src={voiceRabbit} alt="토끼 마스코트" className={styles.headerMascot} />
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterVoiceInputSvg} 
+              alt="보이스 클로닝 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 
