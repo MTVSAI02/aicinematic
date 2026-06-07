@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import styles from './HomePage.module.css'
 import { getStories, deleteStory } from '@/api/stories'
 import ConfirmModal from '@/components/common/ConfirmModal'
+import useStoryStore from '@/store/useStoryStore'
 
 import homeLogoAnim from '@design/assets/figma-icons/Home/Home_logo_anim.svg'
 import homeBook from '@design/assets/figma-icons/Home/Home_book.svg'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const setStoryId = useStoryStore((s) => s.setStoryId)
+  const setStoryTitle = useStoryStore((s) => s.setStoryTitle)
   const logoRef = useRef(null)
   const [stories, setStories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -48,6 +51,17 @@ export default function HomePage() {
       alert('스토리 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  // 카드 클릭: 완성된 책은 영상 보기(출력 페이지), 미완성은 기존처럼 이어서 만들기(scene-check)
+  const openStory = (story) => {
+    if (story.isCompleted) {
+      setStoryId(story.storyId)
+      setStoryTitle(story.title || '')
+      navigate('/render')
+    } else {
+      navigate(`/scene-check?storyId=${story.storyId}`)
     }
   }
 
@@ -308,8 +322,8 @@ export default function HomePage() {
                       <div
                         key={story.storyId}
                         className={styles.bookCard}
-                        onClick={() => navigate(`/scene-check?storyId=${story.storyId}`)}
-                        title={`${story.title} 이어서 편집하기`}
+                        onClick={() => openStory(story)}
+                        title={story.isCompleted ? `${story.title} 완성된 영상 보기` : `${story.title} 이어서 편집하기`}
                       >
                         <div className={styles.cardMenu}>
                           <button
@@ -341,12 +355,17 @@ export default function HomePage() {
                         </div>
                         <div className={styles.bookCover} style={{ background: bg }}>
                           <div className={styles.bookSpine} />
+                          <span className={story.isCompleted ? styles.doneBadge : styles.progressBadge}>
+                            {story.isCompleted ? '✓ 완성' : '작업 중'}
+                          </span>
                           <div className={styles.bookTitle}>{story.title || '제목 없음'}</div>
                           <div className={styles.bookAuthor}>몽실 작가</div>
                         </div>
                         <div className={styles.bookInfo}>
                           <h4 className={styles.bookName}>{story.title || '제목 없음'}</h4>
-                          <span className={styles.bookBtn}>이어서 만들기 →</span>
+                          <span className={styles.bookBtn}>
+                            {story.isCompleted ? '영상 보기 →' : '이어서 만들기 →'}
+                          </span>
                         </div>
                       </div>
                     )
