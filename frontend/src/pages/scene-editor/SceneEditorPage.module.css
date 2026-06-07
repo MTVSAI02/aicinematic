@@ -127,8 +127,7 @@
   position: relative;
   width: 100%;
   height: calc(100vh - 570px); /* 헤더 크기 500px 증가에 대응하여 계산 높이 조절 */
-  min-height: 400px;
-  max-height: calc(100vh - 570px);
+  min-height: 680px; /* 세로 찌그러짐 및 캐릭터 설정 잘림 방지를 위해 최소 높이 보장 */
   overflow: visible;
   display: flex;
   flex-grow: 1;
@@ -1159,4 +1158,36 @@
   border: none;
   border-top: 1px dashed rgba(139, 92, 246, 0.15);
   margin: 16px 0;
+}
+
+.bgOptionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.bgOptionBtn {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #4B5563;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.bgOptionBtn:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+.bgOptionBtnActive {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7C3AED;
+  border-color: #8B5CF6;
 }

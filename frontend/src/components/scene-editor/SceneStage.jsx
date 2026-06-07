@@ -204,12 +204,29 @@ export default function SceneStage({
                 pointerEvents: charMode ? 'auto' : 'none',
               }}
             >
-              <div
-                className={styles.charPlaceholder}
-                style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
-              >
-                <span className={styles.charPlaceholderName}>{c.name || '캐릭터'}</span>
-              </div>
+              {c.imageUrl ? (
+                <img
+                  src={c.imageUrl}
+                  alt={c.name}
+                  className={styles.charImg}
+                  style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
+                  onLoad={(e) => {
+                    const { naturalWidth, naturalHeight } = e.currentTarget
+                    setAspects((prev) => ({
+                      ...prev,
+                      [c.characterId]: naturalWidth / naturalHeight,
+                    }))
+                  }}
+                  draggable={false}
+                />
+              ) : (
+                <div
+                  className={styles.charPlaceholder}
+                  style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
+                >
+                  <span className={styles.charPlaceholderName}>{c.name || '캐릭터'}</span>
+                </div>
+              )}
             </div>
           )
         })}
