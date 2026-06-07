@@ -81,6 +81,14 @@ def root():
 
 
 @app.on_event("startup")
+def _seed_preset_narrator_voices():
+    # 기본 나레이션 preset 4종 보장(DB 초기화/팀원 환경에서도 항상 나레이션 선택 가능).
+    from .services.preset_voice_seed import seed_preset_narrator_voices
+
+    seed_preset_narrator_voices()
+
+
+@app.on_event("startup")
 def _resume_unfinished_tts_jobs():
     from .services.tts_service import tts_service
 
