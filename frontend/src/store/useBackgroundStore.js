@@ -3,22 +3,20 @@ import { create } from 'zustand'
 /**
  * 배경 전역 상태 (캐릭터와 별도 store).
  *
- * 배경은 2단계 구조다:
- *   candidates(임시, candidateId) → 1장 선택 저장 → backgrounds(라이브러리, backgroundId)
- * 씬에는 candidateId 가 아니라 저장된 backgroundId 만 연결한다.
+ * 배경은 **1장 생성 → 라이브러리 자동 저장** 구조다(후보/선택 단계 없음).
+ *   generateBackground → Job 완료 시 백엔드가 라이브러리에 저장 → 목록(backgrounds) 갱신.
+ * 씬에는 저장된 backgroundId 만 연결한다.
  *
  * 중요: promptInput 과 finalPromptPreview 는 분리한다.
  *   - generateBackground 에 보내는 값은 promptInput (사용자가 수정한 원본 프롬프트)
  *   - finalPromptPreview 는 백엔드가 조립한 finalPrompt 의 화면 표시용 (전송하지 않음)
  */
 const useBackgroundStore = create((set) => ({
-  // 라이브러리 / 후보
+  // 라이브러리
   backgrounds: [],
-  candidates: [],
 
   // 선택 상태
   selectedBackgroundId: null,
-  selectedCandidateId: null,
 
   // Job
   currentJobId: null,
@@ -39,9 +37,7 @@ const useBackgroundStore = create((set) => ({
 
   // ── setters ──────────────────────────────────
   setBackgrounds: (backgrounds) => set({ backgrounds }),
-  setCandidates: (candidates) => set({ candidates }),
   setSelectedBackgroundId: (selectedBackgroundId) => set({ selectedBackgroundId }),
-  setSelectedCandidateId: (selectedCandidateId) => set({ selectedCandidateId }),
   setCurrentJobId: (currentJobId) => set({ currentJobId }),
   setPromptInput: (promptInput) => set({ promptInput }),
   setPromptSuffix: (promptSuffix) => set({ promptSuffix }),
@@ -69,23 +65,11 @@ const useBackgroundStore = create((set) => ({
         state.selectedBackgroundId === backgroundId ? null : state.selectedBackgroundId,
     })),
 
-  // 저장 성공한 후보를 그리드에서 제거 (백엔드에서 이미 삭제됨 → 재저장 시 404 방지).
-  removeCandidate: (candidateId) =>
-    set((state) => ({
-      candidates: state.candidates.filter((c) => c.candidateId !== candidateId),
-      selectedCandidateId:
-        state.selectedCandidateId === candidateId ? null : state.selectedCandidateId,
-    })),
-
   // ── resets ───────────────────────────────────
-  resetCandidates: () => set({ candidates: [], selectedCandidateId: null }),
-
   reset: () =>
     set({
       backgrounds: [],
-      candidates: [],
       selectedBackgroundId: null,
-      selectedCandidateId: null,
       currentJobId: null,
       promptInput: '',
       promptSuffix: '',

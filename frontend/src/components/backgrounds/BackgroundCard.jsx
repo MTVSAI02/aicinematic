@@ -75,7 +75,6 @@ export default function BackgroundCard({ background }) {
         <>
           <span className={styles.cardName}>{background.name}</span>
           <span className={styles.cardDesc}>{background.prompt}</span>
-          <span className={styles.cardMeta}>{background.backgroundId}</span>
           {isSelected && <span className={styles.selectedBadge}>선택됨</span>}
           <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
             <button className={styles.cardBtn} onClick={() => setEditing(true)}>수정</button>

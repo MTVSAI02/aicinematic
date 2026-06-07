@@ -14,8 +14,6 @@ import voiceEdit from '@design/assets/figma-icons/Voice_input/VoiceInput_Edit.sv
 import navVoice from '@design/assets/figma-icons/Nav/nav_voice.svg'
 import navCharacter from '@design/assets/figma-icons/Nav/nav_character.svg'
 import navVoiceInput from '@design/assets/figma-icons/Nav/nav_voice_input.svg'
-import bookBg from '@design/assets/figma-images/Book.png'
-import rirurChar from '@design/assets/figma-icons/RIrur.svg'
 
 const MIN_SECONDS = 20
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -42,19 +40,7 @@ const VOICE_TYPES = [
   { id: 'character', label: '캐릭터', desc: '등장인물의 대사 목소리', icon: navCharacter },
 ]
 
-// 책 뒤에서 빼꼼 튀어나올 RIrur 캐릭터 위치 정보 (캐릭터 얼굴이 완벽하게 식별되도록 돌출 범위와 은닉 거리를 대폭 확대한 튜닝)
-const RIRUR_POSITIONS = [
-  // 1. 책 왼쪽 위에서 왼쪽으로 빼꼼
-  { left: '-160px', top: '22%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-75deg)', origin: 'center right' },
-  // 2. 책 왼쪽 아래에서 왼쪽으로 빼꼼
-  { left: '-160px', top: '62%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-105deg)', origin: 'center right' },
-  // 3. 책 오른쪽 위에서 오른쪽으로 빼꼼
-  { right: '-160px', top: '22%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(75deg)', origin: 'center left' },
-  // 4. 책 오른쪽 아래에서 오른쪽으로 빼꼼
-  { right: '-160px', top: '62%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(105deg)', origin: 'center left' },
-  // 5. 책 아래쪽 중앙에서 아래로 빼꼼 (거꾸로 매달린 형태)
-  { bottom: '-160px', left: '46%', transform: 'translateY(-200px) scale(0.1) rotate(180deg)', activeTransform: 'translateY(110px) scale(1) rotate(180deg)', origin: 'top center' },
-]
+
 
 function formatTime(sec) {
   const m = String(Math.floor(sec / 60)).padStart(2, '0')
@@ -98,9 +84,7 @@ export default function VoiceInputPage() {
   const [resultVoice, setResultVoice] = useState(null)
   const [error, setError] = useState('')
 
-  // RIrur 캐릭터 인터랙티브 상태
-  const [rirurPos, setRirurPos] = useState(null)
-  const [rirurVisible, setRirurVisible] = useState(false)
+
 
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
@@ -129,44 +113,7 @@ export default function VoiceInputPage() {
   const canSubmit =
     !!speakerLabel && !!voiceType && !!name.trim() && !!audioBlob && isDurationOk
 
-  // RIrur 캐릭터 뿅 튀어나오는 타이머 설정
-  useEffect(() => {
-    if (phase !== 'form') {
-      setRirurVisible(false)
-      setRirurPos(null)
-      return
-    }
 
-    let timer
-    const scheduleNextPop = () => {
-      // 4초 ~ 8초 사이의 랜덤 대기 시간 후에 튀어나옴
-      const delay = Math.random() * 4000 + 4000
-      timer = setTimeout(() => {
-        setRirurPos((prev) => {
-          let next
-          do {
-            next = Math.floor(Math.random() * RIRUR_POSITIONS.length)
-          } while (next === prev && RIRUR_POSITIONS.length > 1)
-          return next
-        })
-        setRirurVisible(true)
-      }, delay)
-    }
-
-    if (!rirurVisible) {
-      scheduleNextPop()
-    }
-
-    return () => clearTimeout(timer)
-  }, [rirurVisible, phase])
-
-  function handleRirurClick() {
-    setRirurVisible(false)
-    // 쏙 들어가는 애니메이션(400ms) 완료 후 상태 초기화
-    setTimeout(() => {
-      setRirurPos(null)
-    }, 400)
-  }
 
   useEffect(() => {
     return () => {
@@ -362,29 +309,11 @@ export default function VoiceInputPage() {
           </div>
         </section>
       )}
-
       {/* ── 입력 폼 ── */}
       {phase === 'form' && (
         <div className={styles.bookContainer}>
-          <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
           
-          {rirurPos !== null && (
-            <img
-              src={rirurChar}
-              alt="리룰 캐릭터"
-              className={styles.rirurCharacter}
-              onClick={handleRirurClick}
-              style={{
-                top: RIRUR_POSITIONS[rirurPos].top || 'auto',
-                bottom: RIRUR_POSITIONS[rirurPos].bottom || 'auto',
-                left: RIRUR_POSITIONS[rirurPos].left || 'auto',
-                right: RIRUR_POSITIONS[rirurPos].right || 'auto',
-                transform: rirurVisible ? RIRUR_POSITIONS[rirurPos].activeTransform : RIRUR_POSITIONS[rirurPos].transform,
-                transformOrigin: RIRUR_POSITIONS[rirurPos].origin,
-                opacity: rirurVisible ? 1 : 0,
-              }}
-            />
-          )}
+
 
           <div className={styles.bookContentOverlay}>
             <div className={styles.formScrollArea}>

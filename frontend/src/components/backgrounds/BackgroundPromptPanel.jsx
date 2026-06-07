@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
 import { pollJob } from '@/utils/pollJob'
@@ -18,13 +18,16 @@ export default function BackgroundPromptPanel() {
     storyId, sceneId, promptInput, sourceText,
     promptSuffix, loading, error,
     setPromptInput, setPromptSuffix,
-    setSourceText, setCandidates, setCurrentJobId, setSelectedCandidateId,
-    setLoading, setError, resetCandidates,
+    setSourceText, setCurrentJobId, setBackgrounds,
+    setLoading, setError,
   } = useBackgroundStore()
 
   // 언마운트 시 진행 중 폴링 취소 (페이지 이동 후 늦게 끝난 Job이 store를 갱신하는 것 방지)
   const abortRef = useRef(null)
   useEffect(() => () => abortRef.current?.abort(), [])
+
+  const [savedMessage, setSavedMessage] = useState('')
+  const [name, setName] = useState('') // 배경 제목(필수)
 
   // finalPrompt 미리보기는 항상 현재 promptInput 기준으로 실시간 계산한다 (stale 방지).
   // suffix(배경 규칙)는 추천 응답에서 추출해 보관한 값. 추천을 안 받았으면 미리보기는 표시하지 않는다.
@@ -52,26 +55,29 @@ export default function BackgroundPromptPanel() {
   }
 
   async function handleGenerate() {
-    if (!promptInput.trim() || loading) return
+    if (!name.trim() || !promptInput.trim() || loading) return
     setError(null)
+    setSavedMessage('')
     setLoading(true)
-    resetCandidates()
     try {
-      // 사용자 prompt만 보낸다(finalPrompt 조립)
-      // 비동기: 즉시 jobId 반환 → completed/failed 까지 폴링
+      // 제목(name) + prompt 전송(finalPrompt 조립은 백엔드). 비동기: 즉시 jobId → completed/failed 폴링.
       const job = await backgroundApi.generateBackground({
+        name: name.trim(),
         prompt: promptInput.trim(),
       })
       setCurrentJobId(job.jobId)
 
       abortRef.current = new AbortController()
-      const finished = await pollJob(job.jobId, { signal: abortRef.current.signal })
-      setCandidates(finished.result?.candidates ?? [])
-      setSelectedCandidateId(null)
+      await pollJob(job.jobId, { signal: abortRef.current.signal })
+      // 1장 생성 즉시 백엔드가 라이브러리에 저장(name=제목) → 목록 갱신(아래 라이브러리에 바로 표시)
+      const list = await backgroundApi.getBackgrounds()
+      setBackgrounds(list)
+      setName('')
+      setSavedMessage('배경이 생성되어 라이브러리에 저장되었습니다.')
     } catch (e) {
       if (e.aborted) return // 언마운트 취소 → 무시
       if (e.timedOut) {
-        setError('배경 생성이 오래 걸리고 있어요. 잠시 후 다시 시도해주세요.')
+        setError('배경 생성이 오래 걸리고 있어요. 잠시 후 라이브러리를 새로고침해 확인해주세요.')
       } else {
         setError(getApiErrorMessage(e))
       }
@@ -81,64 +87,69 @@ export default function BackgroundPromptPanel() {
   }
 
   const canSuggest = !!storyId.trim() && !!sceneId.trim() && !loading
-  const canGenerate = !!promptInput.trim() && !loading
+  const canGenerate = !!name.trim() && !!promptInput.trim() && !loading
 
   return (
     <div className={styles.form}>
-      {/* 사용법 안내: 씬 선택은 선택사항, 핵심은 배경 프롬프트 */}
-      <p className={styles.help}>
-        <strong>배경 프롬프트만 있으면 후보를 만들 수 있어요.</strong> 아래 “배경 프롬프트”에 원하는 배경을
-        직접 적고 <strong>[배경 후보 생성]</strong>을 누르면 됩니다.
-        <br />
-        어떤 배경을 넣을지 막막하면, <strong>(선택)</strong> 스토리·씬을 골라 그 장면에 어울리는 프롬프트를
-        자동으로 추천받을 수 있어요. <strong>스토리·씬 선택은 필수가 아닙니다.</strong>
-      </p>
-
-      {/* (선택) 씬 기반 추천 */}
-      <p className={styles.stepLabel}>① (선택) 씬에서 프롬프트 추천받기</p>
-      <p className={styles.hint}>
-        스토리와 씬을 고르면 그 장면 내용으로 배경 프롬프트가 아래에 자동으로 채워집니다.
-        건너뛰고 바로 직접 입력해도 됩니다.
-      </p>
+      
+      {/* 씬 기반 추천 드롭다운 */}
       <StorySceneSelect />
-      <button className={styles.btnSecondary} onClick={handleSuggest} disabled={!canSuggest}>
-        씬에서 배경 프롬프트 추천받기
-      </button>
+      
+      <div className={styles.centerBtnRow}>
+        <button className={styles.recommendBtn} onClick={handleSuggest} disabled={!canSuggest}>
+          🪄 씬에서 배경 프롬프트 추천받기
+        </button>
+      </div>
 
       {sourceText && (
         <p className={styles.validation}>참고 문장: {sourceText}</p>
       )}
 
-      <p className={styles.divider}>— 또는 직접 입력 —</p>
-
-      {/* 프롬프트 입력/수정 (실제로 생성에 쓰이는 값) */}
-      <p className={styles.stepLabel}>② 배경 프롬프트 (필수)</p>
-      <p className={styles.hint}>
-        이 내용으로 후보가 생성됩니다. 추천받은 문장을 수정해도 되고, 처음부터 직접 써도 됩니다.
-      </p>
-      <label className={styles.label}>
-        <textarea
-          className={styles.textarea}
-          placeholder="예) 별빛이 비치는 조용한 사막, 따뜻한 동화풍 배경"
-          value={promptInput}
-          onChange={(e) => setPromptInput(e.target.value)}
+      {/* 배경 제목 (필수) */}
+      <div className={styles.fieldSection}>
+        <label className={styles.fieldLabel}>배경 제목</label>
+        <input
+          className={styles.titleInput}
+          placeholder="예) 별빛 사막"
+          value={name}
+          maxLength={40}
+          onChange={(e) => setName(e.target.value)}
         />
-      </label>
+      </div>
 
-      {finalPromptPreview && (
-        <div className={styles.label}>
-          finalPrompt 미리보기 (현재 프롬프트 기준 · 전송되지 않음 · 실제 조립은 백엔드)
-          <div className={styles.preview}>{finalPromptPreview}</div>
+      {/* 프롬프트 입력/수정 */}
+      <div className={styles.fieldSection}>
+        <label className={styles.fieldLabel}>배경 프롬프트</label>
+        <div className={styles.textareaWrapper}>
+          <textarea
+            className={styles.textarea}
+            placeholder="예) 별빛이 비치는 조용한 숲속, 따뜻한 동화풍 배경"
+            value={promptInput}
+            maxLength={500}
+            onChange={(e) => setPromptInput(e.target.value)}
+          />
+          <span className={styles.charCounter}>{promptInput.length} / 500</span>
         </div>
-      )}
+      </div>
 
-      <button className={styles.btn} onClick={handleGenerate} disabled={!canGenerate}>
-        {loading ? '처리 중...' : '배경 후보 생성'}
-      </button>
+      <div className={styles.centerBtnRow}>
+        <button className={styles.generateBtn} onClick={handleGenerate} disabled={!canGenerate || loading}>
+          {loading ? (
+            <>
+              <span className={styles.spinner} /> 생성 중...
+            </>
+          ) : (
+            '✨ 배경 생성'
+          )}
+        </button>
+      </div>
 
-      {!promptInput.trim() && !loading && (
-        <p className={styles.validation}>배경 프롬프트를 입력하거나 추천을 받아주세요.</p>
+      {!loading && (!name.trim() || !promptInput.trim()) && (
+        <p className={styles.validation}>
+          {!name.trim() ? '배경 제목을 입력해주세요.' : '배경 프롬프트를 입력하거나 추천을 받아주세요.'}
+        </p>
       )}
+      {savedMessage && <p className={styles.status}>{savedMessage}</p>}
       {error && <p className={styles.error}>{error}</p>}
     </div>
   )

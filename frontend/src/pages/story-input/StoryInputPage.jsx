@@ -6,8 +6,6 @@ import styles from './StoryInputPage.module.css'
 
 // 디자인 자산 임포트
 import storyChar from '@design/assets/figma-icons/Story_Input/Character.svg'
-import bookBg from '@design/assets/figma-images/Book.png'
-import rirurChar from '@design/assets/figma-icons/RIrur.svg'
 
 // 작성 중 데이터는 DB에 저장하지 않고 이 컴포넌트 state 에서만 다룬다.
 // 제출(씬 분해하기) 시에만 structured payload 로 백엔드에 새 story 를 생성한다.
@@ -24,14 +22,7 @@ const makeItem = () => ({ id: uid(), emotionLabel: DEFAULT_EMOTION_LABEL, speake
 const makeScene = () => ({ id: uid(), items: [makeItem()] })
 const initialScenes = () => [makeScene()]
 
-// 책 뒤에서 빼꼼 튀어나올 RIrur 캐릭터 위치 정보 (스토리 입력 페이지에도 완벽히 동일 적용)
-const RIRUR_POSITIONS = [
-  { left: '-160px', top: '22%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-75deg)', origin: 'center right' },
-  { left: '-160px', top: '62%', transform: 'translateX(200px) scale(0.1)', activeTransform: 'translateX(-100px) scale(1) rotate(-105deg)', origin: 'center right' },
-  { right: '-160px', top: '22%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(75deg)', origin: 'center left' },
-  { right: '-160px', top: '62%', transform: 'translateX(-200px) scale(0.1)', activeTransform: 'translateX(100px) scale(1) rotate(105deg)', origin: 'center left' },
-  { bottom: '-160px', left: '46%', transform: 'translateY(-200px) scale(0.1) rotate(180deg)', activeTransform: 'translateY(110px) scale(1) rotate(180deg)', origin: 'top center' },
-]
+
 
 export default function StoryInputPage() {
   const navigate = useNavigate()
@@ -45,9 +36,7 @@ export default function StoryInputPage() {
   const [showCancel, setShowCancel] = useState(false)
   const titleInputRef = useRef(null)
 
-  // RIrur 캐릭터 인터랙티브 상태
-  const [rirurPos, setRirurPos] = useState(null)
-  const [rirurVisible, setRirurVisible] = useState(false)
+
 
   // 감정 옵션 로드(실패해도 시드로 동작)
   useEffect(() => {
@@ -90,36 +79,7 @@ export default function StoryInputPage() {
       ),
     )
 
-  // RIrur 캐릭터 팝업 타이머 설정
-  useEffect(() => {
-    let timer
-    const scheduleNextPop = () => {
-      const delay = Math.random() * 4000 + 4000
-      timer = setTimeout(() => {
-        setRirurPos((prev) => {
-          let next
-          do {
-            next = Math.floor(Math.random() * RIRUR_POSITIONS.length)
-          } while (next === prev && RIRUR_POSITIONS.length > 1)
-          return next
-        })
-        setRirurVisible(true)
-      }, delay)
-    }
 
-    if (!rirurVisible) {
-      scheduleNextPop()
-    }
-
-    return () => clearTimeout(timer)
-  }, [rirurVisible])
-
-  function handleRirurClick() {
-    setRirurVisible(false)
-    setTimeout(() => {
-      setRirurPos(null)
-    }, 400)
-  }
 
   // 취소 확인 알림용 초기화
   const isDirty =
@@ -197,27 +157,10 @@ export default function StoryInputPage() {
         </div>
       </header>
 
-      {/* ── 책 컨테이너 ── */}
+      {/* ── 내용 컨테이너 ── */}
       <div className={styles.bookContainer}>
-        <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
 
-        {rirurPos !== null && (
-          <img
-            src={rirurChar}
-            alt="리룰 캐릭터"
-            className={styles.rirurCharacter}
-            onClick={handleRirurClick}
-            style={{
-              top: RIRUR_POSITIONS[rirurPos].top || 'auto',
-              bottom: RIRUR_POSITIONS[rirurPos].bottom || 'auto',
-              left: RIRUR_POSITIONS[rirurPos].left || 'auto',
-              right: RIRUR_POSITIONS[rirurPos].right || 'auto',
-              transform: rirurVisible ? RIRUR_POSITIONS[rirurPos].activeTransform : RIRUR_POSITIONS[rirurPos].transform,
-              transformOrigin: RIRUR_POSITIONS[rirurPos].origin,
-              opacity: rirurVisible ? 1 : 0,
-            }}
-          />
-        )}
+
 
         <div className={styles.bookContentOverlay}>
           <div className={styles.formScrollArea}>

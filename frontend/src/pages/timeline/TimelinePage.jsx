@@ -10,6 +10,10 @@ import { clampDuration } from '@/components/timeline/DurationControl'
 import { sceneOffsets, resolvePlayback } from '@/components/timeline/previewPlayback'
 import styles from '@/components/timeline/Timeline.module.css'
 
+// 디자인 에셋 임포트
+import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
+import timelineMascot from '@design/assets/figma-icons/Nav/nav_timeline.svg'
+
 // /timeline — 스토리보드 기반 타임라인. 순서는 스토리 원본 고정(재배치 없음).
 // 역할: 씬 재생 길이(duration) + 자막 cue 그룹 타이밍(startSec/durationSec) 조절. 변경 시 자동 저장.
 // (자막 텍스트/위치/cueOrder는 scene-editor 소유 — 여기선 "시간"만. 멀티트랙/오디오/렌더 없음)
@@ -234,88 +238,140 @@ export default function TimelinePage() {
   if (!storyId) {
     return (
       <div className={styles.page}>
-        <h1 className={styles.title}>타임라인</h1>
-        <p className={styles.empty}>스토리를 먼저 입력해 주세요.</p>
-        <button className={styles.btn} onClick={() => navigate('/story-input')}>스토리 입력하러 가기</button>
+        <div className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
+          <div className={styles.headerLeft}>
+            <div className={styles.headerSubTitle}>각 씬의 자막 타이밍과 길이를 조절하세요</div>
+            <h1 className={styles.headerTitle}>타임라인 설정</h1>
+          </div>
+          <div className={styles.headerRight}>
+            <img src={timelineMascot} alt="타임라인 마스코트" className={styles.headerMascot} />
+          </div>
+        </div>
+
+        <div className={styles.bookContainer}>
+          <div className={styles.bookContentOverlay}>
+            <div className={styles.scrollArea}>
+              <p className={styles.empty}>스토리를 먼저 입력해 주세요.</p>
+              <button className={styles.btnPrimary} onClick={() => navigate('/story-input')}>스토리 입력하러 가기</button>
+            </div>
+          </div>
+          <div className={styles.bookmarkRibbon}>
+            <span className={styles.bookmarkStar}>★</span>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>타임라인</h1>
-        <span className={styles.summary}>
-          총 <b>{scenes.length}</b>개 씬 · 총 <b>{totalDuration.toFixed(1)}</b>초
-          {' · '}
-          <span
-            className={`${styles.saveStatus} ${
-              saveStatus === 'saving'
-                ? styles.saveSaving
-                : saveStatus === 'failed'
-                  ? styles.saveFailed
-                  : styles.saveSaved
-            }`}
-          >
-            {saveStatus === 'saving' && '저장 중…'}
-            {saveStatus === 'saved' && '저장 완료'}
-            {saveStatus === 'failed' && '저장 실패'}
-            {saveStatus === 'idle' && '자동 저장'}
-          </span>
-        </span>
-      </div>
-      <p className={styles.guide}>
-        씬 순서는 스토리 원본 그대로입니다. 카드를 <b>클릭</b>해 아래에서 <b>재생 길이</b>와 <b>자막 타이밍</b>을 조절하세요. (변경 시 자동 저장)
-      </p>
-
-      {!voiceReady && (
-        <div className={styles.voiceGuard}>
-          <span>
-            보이스 설정이 완료되지 않았습니다. 보이스 페이지에서 나레이션과 모든 캐릭터의 목소리를 확정해주세요.
-          </span>
-          <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
-            보이스 페이지로 이동
-          </button>
+      {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerSubTitle}>각 씬의 자막 타이밍과 길이를 조절하세요</div>
+          <h1 className={styles.headerTitle}>타임라인 설정</h1>
+          <p className={styles.headerDesc}>
+            씬 순서는 대본 순서로 고정되며,<br />
+            여기서 영상의 구체적인 재생 시간을 완성합니다.
+          </p>
         </div>
-      )}
+        <div className={styles.headerRight}>
+          <img src={timelineMascot} alt="타임라인 마스코트" className={styles.headerMascot} />
+        </div>
+      </header>
 
-      {loading && scenes.length === 0 ? (
-        <p className={styles.empty}>불러오는 중…</p>
-      ) : scenes.length === 0 ? (
-        <p className={styles.empty}>씬이 없습니다. 스토리를 먼저 입력해 주세요.</p>
-      ) : (
-        <>
-          <div className={styles.track}>
-            {scenes.map((scene) => (
-              <TimelineSceneCard
-                key={scene.sceneId}
-                scene={scene}
-                selected={scene.sceneId === selectedId}
-                playing={playback.scene?.sceneId === scene.sceneId}
-                onSelect={setSelectedId}
-              />
-            ))}
+      {/* ── 내용 컨테이너 (Glassmorphism Card) ── */}
+      <div className={styles.bookContainer}>
+        <div className={styles.bookContentOverlay}>
+          <div className={styles.scrollArea}>
+            <div className={styles.panelHeader}>
+              <h2 className={styles.panelTitle}>타임라인 정보</h2>
+              <span className={styles.summary}>
+                총 <b>{scenes.length}</b>개 씬 · 총 <b>{totalDuration.toFixed(1)}</b>초
+                {' · '}
+                <span
+                  className={`${styles.saveStatus} ${
+                    saveStatus === 'saving'
+                      ? styles.saveSaving
+                      : saveStatus === 'failed'
+                        ? styles.saveFailed
+                        : styles.saveSaved
+                  }`}
+                >
+                  {saveStatus === 'saving' && '저장 중…'}
+                  {saveStatus === 'saved' && '저장 완료'}
+                  {saveStatus === 'failed' && '저장 실패'}
+                  {saveStatus === 'idle' && '자동 저장'}
+                </span>
+              </span>
+            </div>
+
+            <p className={styles.guide}>
+              씬 순서는 스토리 원본 그대로입니다. 카드를 <b>클릭</b>해 아래에서 <b>재생 길이</b>와 <b>자막 타이밍</b>을 조절하세요. (변경 시 자동 저장)
+            </p>
+
+            {!voiceReady && (
+              <div className={styles.voiceGuard}>
+                <span>
+                  보이스 설정이 완료되지 않았습니다. 보이스 페이지에서 나레이션과 모든 캐릭터의 목소리를 확정해주세요.
+                </span>
+                <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
+                  보이스 페이지로 이동
+                </button>
+              </div>
+            )}
+
+            {loading && scenes.length === 0 ? (
+              <p className={styles.empty}>불러오는 중…</p>
+            ) : scenes.length === 0 ? (
+              <p className={styles.empty}>씬이 없습니다. 스토리를 먼저 입력해 주세요.</p>
+            ) : (
+              <>
+                <div className={styles.track}>
+                  {scenes.map((scene) => (
+                    <TimelineSceneCard
+                      key={scene.sceneId}
+                      scene={scene}
+                      selected={scene.sceneId === selectedId}
+                      playing={playback.scene?.sceneId === scene.sceneId}
+                      onSelect={setSelectedId}
+                    />
+                  ))}
+                </div>
+
+                <TimelineSceneDetail
+                  scene={selectedScene}
+                  allScenes={scenes}
+                  saveStatus={saveStatus}
+                  playback={playback}
+                  onDurationChange={handleDurationChange}
+                  onCueTimingChange={handleCueTimingChange}
+                  onAutoSplitCues={handleAutoSplitCues}
+                  onFitToAudio={handleFitToAudio}
+                />
+              </>
+            )}
+
+            {error && <p className={styles.error}>{error} (다시 시도해 주세요)</p>}
           </div>
+        </div>
 
-          <TimelineSceneDetail
-            scene={selectedScene}
-            allScenes={scenes}
-            saveStatus={saveStatus}
-            playback={playback}
-            onDurationChange={handleDurationChange}
-            onCueTimingChange={handleCueTimingChange}
-            onAutoSplitCues={handleAutoSplitCues}
-            onFitToAudio={handleFitToAudio}
-          />
-        </>
-      )}
+        {/* 하단 북마크 리본 데코레이션 */}
+        <div className={styles.bookmarkRibbon}>
+          <span className={styles.bookmarkStar}>★</span>
+        </div>
+      </div>
 
-      {error && <p className={styles.error}>{error} (다시 시도해 주세요)</p>}
-
-      <div className={styles.actions}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/scene-editor')}>← 씬 편집</button>
-        <button className={styles.btn} onClick={() => navigate('/render')}>영상 생성 →</button>
+      {/* ── 하단 네비게이션 고정 영역 ── */}
+      <div className={styles.fixedPageNav}>
+        <button className={styles.btnSecondary} onClick={() => navigate('/scene-editor')}>
+          ← 씬 편집
+        </button>
+        <button className={styles.btnPrimary} onClick={() => navigate('/render')}>
+          영상 생성 →
+        </button>
       </div>
     </div>
   )
 }
+

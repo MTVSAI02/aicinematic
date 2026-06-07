@@ -7,6 +7,11 @@ import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
 import styles from './RenderPage.module.css'
 
+// 디자인 에셋 임포트
+import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
+import exportMascot from '@design/assets/figma-icons/Nav/nav_export.svg'
+import bookBg from '@design/assets/figma-images/Book.png'
+
 // /render — 최종 영상 생성·확인 페이지. (타임라인 자막 + 잠근 보이스 TTS 음성을 합성한 mp4)
 // 상태: loading | idle(생성 전) | rendering(생성 중) | done(완료) | error(실패).
 // 기능 로직(POST/GET render, polling, lastRender 복원, 다운로드)은 그대로. UI 구성만 정리.
@@ -129,14 +134,33 @@ export default function RenderPage() {
   if (!storyId) {
     return (
       <div className={styles.page}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>영상 생성</h1>
-        </header>
-        <div className={styles.card}>
-          <div className={styles.emptyIcon}>🎬</div>
-          <h2 className={styles.cardTitle}>스토리를 먼저 입력해 주세요</h2>
-          <p className={styles.cardDesc}>영상을 생성하려면 먼저 스토리가 필요합니다.</p>
-          <button className={styles.btnPrimary} onClick={() => navigate('/story-input')}>스토리 입력하러 가기</button>
+        {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 및 Mascot 적용) ── */}
+        <div className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
+          <div className={styles.headerLeft}>
+            <div className={styles.headerSubTitle}>스토리의 최종 합성 영상 생성 및 내려받기</div>
+            <h1 className={styles.headerTitle}>영상 생성</h1>
+          </div>
+          <div className={styles.headerRight}>
+            <img src={exportMascot} alt="영상 생성 마스코트" className={styles.headerMascot} />
+          </div>
+        </div>
+
+        {/* ── 내용 컨테이너 (BOOK 배경 이미지 적용) ── */}
+        <div className={styles.bookContainer}>
+          <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
+          <div className={styles.bookContentOverlay}>
+            <div className={styles.scrollArea}>
+              <div className={styles.stateContent}>
+                <div className={styles.emptyIcon}>🎬</div>
+                <h2 className={styles.cardTitle}>스토리를 먼저 입력해 주세요</h2>
+                <p className={styles.cardDesc}>영상을 생성하려면 먼저 스토리가 필요합니다.</p>
+                <button className={styles.btnPrimary} onClick={() => navigate('/story-input')}>스토리 입력하러 가기</button>
+              </div>
+            </div>
+          </div>
+          <div className={styles.bookmarkRibbon}>
+            <span className={styles.bookmarkStar}>★</span>
+          </div>
         </div>
       </div>
     )
@@ -144,96 +168,110 @@ export default function RenderPage() {
 
   return (
     <div className={styles.page}>
-      {/* 헤더 카드: 제목 + 스토리 + 설명 + 요약 배지 */}
-      <header className={styles.header}>
-        <div className={styles.headTop}>
-          <h1 className={styles.title}>영상 생성</h1>
-          {storyTitle && <span className={styles.storyTitle}>{storyTitle}</span>}
+      {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 및 Mascot 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerSubTitle}>스토리의 최종 합성 영상 생성 및 내려받기</div>
+          <h1 className={styles.headerTitle}>영상 생성</h1>
+          <p className={styles.headerDesc}>
+            타임라인에서 설정한 자막과 씬 재생 길이,<br />
+            그리고 보이스 목소리를 합쳐서 한 편의 비디오로 합성합니다.
+          </p>
         </div>
-        <p className={styles.lead}>
-          타임라인에서 설정한 씬 순서, 배경, 캐릭터, 자막 타이밍에 잠근 보이스의 TTS 음성까지 합성해 MP4 영상을 생성합니다.
-        </p>
-        <div className={styles.badges}>
-          {summary && <span className={styles.badge}>총 {summary.sceneCount}개 씬</span>}
-          {summary && <span className={styles.badge}>총 {summary.totalDuration.toFixed(1)}초</span>}
-          <span className={styles.badge}>음성 포함</span>
-          <span className={styles.badge}>MP4</span>
+        <div className={styles.headerRight}>
+          <img src={exportMascot} alt="영상 생성 마스코트" className={styles.headerMascot} />
         </div>
       </header>
 
-      {/* 상태별 본문 카드 */}
-      {status === 'loading' && (
-        <div className={styles.card}>
-          <p className={styles.muted}>불러오는 중…</p>
-        </div>
-      )}
+      {/* ── 내용 컨테이너 (BOOK 배경 이미지 적용) ── */}
+      <div className={styles.bookContainer}>
+        <img src={bookBg} alt="책 배경" className={styles.bookBackground} />
+        <div className={styles.bookContentOverlay}>
+          <div className={styles.scrollArea}>
 
-      {status === 'idle' && (
-        <div className={styles.card}>
-          <div className={styles.emptyIcon}>🎬</div>
-          <h2 className={styles.cardTitle}>아직 생성된 영상이 없습니다</h2>
-          <p className={styles.cardDesc}>
-            현재 타임라인 설정과 잠근 보이스의 TTS 음성을 합성해 영상을 생성합니다.
-          </p>
-          <button className={styles.btnPrimary} onClick={handleRender}>▶ 음성 포함 영상 생성</button>
-        </div>
-      )}
+            {status === 'loading' && (
+              <div className={styles.stateContent}>
+                <p className={styles.muted}>불러오는 중…</p>
+              </div>
+            )}
 
-      {status === 'rendering' && (
-        <div className={styles.card}>
-          <div className={styles.spinner} aria-hidden="true" />
-          <h2 className={styles.cardTitle}>영상 생성 중</h2>
-          <p className={styles.cardDesc}>
-            현재 타임라인을 영상으로 합성하고 있습니다. 배경·캐릭터·자막·음성을 MP4로 변환 중입니다.
-          </p>
-          <ul className={styles.steps}>
-            {RENDER_STEPS.map((s, i) => (
-              <li key={s} className={`${styles.step} ${i <= renderStep ? styles.stepActive : ''}`}>
-                {i < renderStep ? '✓ ' : i === renderStep ? '· ' : ''}{s}
-              </li>
-            ))}
-          </ul>
-          <p className={styles.muted}>
-            {jobStatus === 'pending' ? '대기열에서 작업을 준비하고 있습니다…' : '렌더링 중입니다…'}
-          </p>
-        </div>
-      )}
+            {status === 'idle' && (
+              <div className={styles.stateContent}>
+                <div className={styles.emptyIcon}>🎬</div>
+                <h2 className={styles.cardTitle}>아직 생성된 영상이 없습니다</h2>
+                <p className={styles.cardDesc}>
+                  현재 타임라인 설정과 잠근 보이스의 TTS 음성을 합성해 영상을 생성합니다.
+                </p>
+                <button className={styles.btnPrimary} onClick={handleRender}>▶ 음성 포함 영상 생성</button>
+              </div>
+            )}
 
-      {status === 'done' && video && (
-        <div className={styles.card}>
-          <div className={styles.resultHead}>
-            <h2 className={styles.cardTitle}>최종 영상 미리보기</h2>
-            {storyTitle && <span className={styles.muted}>{storyTitle}</span>}
+            {status === 'rendering' && (
+              <div className={styles.stateContent}>
+                <div className={styles.spinner} aria-hidden="true" />
+                <h2 className={styles.cardTitle}>영상 생성 중</h2>
+                <p className={styles.cardDesc}>
+                  현재 타임라인을 영상으로 합성하고 있습니다. 배경·캐릭터·자막·음성을 MP4로 변환 중입니다.
+                </p>
+                <ul className={styles.steps}>
+                  {RENDER_STEPS.map((s, i) => (
+                    <li key={s} className={`${styles.step} ${i <= renderStep ? styles.stepActive : ''}`}>
+                      {i < renderStep ? '✓ ' : i === renderStep ? '· ' : ''}{s}
+                    </li>
+                  ))}
+                </ul>
+                <p className={styles.muted}>
+                  {jobStatus === 'pending' ? '대기열에서 작업을 준비하고 있습니다…' : '렌더링 중입니다…'}
+                </p>
+              </div>
+            )}
+
+            {status === 'done' && video && (
+              <div className={styles.stateContent}>
+                <div className={styles.resultHead}>
+                  <h2 className={styles.cardTitle}>최종 영상 미리보기</h2>
+                  {storyTitle && <span className={styles.storyTitleBadge}>{storyTitle}</span>}
+                </div>
+                <div className={styles.videoWrap}>
+                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                  <video className={styles.video} controls src={`${BASE_URL}${video.videoUrl}`} />
+                </div>
+                <div className={styles.metaRow}>
+                  <span className={styles.badge}>음성 포함</span>
+                  <span className={styles.meta}>길이 {Number(video.duration).toFixed(1)}초</span>
+                  {video.createdAt && <span className={styles.meta}>생성일 {fmtDate(video.createdAt)}</span>}
+                </div>
+                <p className={styles.note}>타임라인에 잠근 보이스의 TTS 음성이 합성된 MP4입니다.</p>
+                <div className={styles.actions}>
+                  <button className={styles.btnPrimary} onClick={handleDownload}>다운로드</button>
+                  <button className={styles.btnOutline} onClick={handleRender}>다시 생성</button>
+                </div>
+              </div>
+            )}
+
+            {status === 'error' && (
+              <div className={`${styles.stateContent} ${styles.errorState}`}>
+                <div className={styles.emptyIcon}>⚠️</div>
+                <h2 className={styles.cardTitle}>영상 생성에 실패했습니다</h2>
+                <p className={styles.cardDesc}>{error}</p>
+                <button className={styles.btnPrimary} onClick={handleRender}>다시 시도</button>
+              </div>
+            )}
+
           </div>
-          <div className={styles.videoWrap}>
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <video className={styles.video} controls src={`${BASE_URL}${video.videoUrl}`} />
-          </div>
-          <div className={styles.metaRow}>
-            <span className={styles.badge}>음성 포함</span>
-            <span className={styles.meta}>길이 {Number(video.duration).toFixed(1)}초</span>
-            {video.createdAt && <span className={styles.meta}>생성일 {fmtDate(video.createdAt)}</span>}
-          </div>
-          <p className={styles.note}>타임라인에 잠근 보이스의 TTS 음성이 합성된 MP4입니다.</p>
-          <div className={styles.actions}>
-            <button className={styles.btnPrimary} onClick={handleDownload}>다운로드</button>
-            <button className={styles.btnOutline} onClick={handleRender}>다시 생성</button>
-          </div>
         </div>
-      )}
 
-      {status === 'error' && (
-        <div className={`${styles.card} ${styles.errorCard}`}>
-          <div className={styles.emptyIcon}>⚠️</div>
-          <h2 className={styles.cardTitle}>영상 생성에 실패했습니다</h2>
-          <p className={styles.cardDesc}>{error}</p>
-          <button className={styles.btnPrimary} onClick={handleRender}>다시 시도</button>
+        {/* 하단 북마크 리본 데코레이션 */}
+        <div className={styles.bookmarkRibbon}>
+          <span className={styles.bookmarkStar}>★</span>
         </div>
-      )}
+      </div>
 
-      {/* 하단: 타임라인으로 */}
-      <div className={styles.footer}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/timeline')}>← 타임라인</button>
+      {/* ── 하단 네비게이션 고정 영역 ── */}
+      <div className={styles.fixedPageNav}>
+        <button className={styles.btnSecondary} onClick={() => navigate('/timeline')}>
+          ← 타임라인
+        </button>
       </div>
     </div>
   )

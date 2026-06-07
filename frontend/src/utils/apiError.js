@@ -11,7 +11,6 @@ export function getApiErrorMessage(error) {
     if (detail === 'No fields to update') return '수정할 내용을 입력해주세요.'
     if (detail === 'Character generation failed') return '캐릭터 생성에 실패했습니다.'
     // 배경/씬 관련
-    if (detail === 'Background candidate not found') return '배경 후보를 찾을 수 없습니다.'
     if (detail === 'Background not found') return '저장된 배경을 찾을 수 없습니다.'
     if (detail === 'Background generation failed') return '배경 생성에 실패했습니다.'
     if (detail === 'Story not found') return '스토리를 찾을 수 없습니다.'

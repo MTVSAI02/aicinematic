@@ -3,11 +3,15 @@
 
 .stage {
   position: relative;
-  width: 100%;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
   background: var(--code-bg); /* 비어있는 영역 배경 토큰 */
   border-radius: 12px;
   overflow: hidden; /* 캐릭터를 프레임 안으로 클리핑 (Moveable 핸들은 rootContainer로 body에 렌더) */
   touch-action: none;
+  flex-shrink: 0;
 }
 
 .placeholder {
@@ -66,4 +70,24 @@
 }
 .textOverlaySelected {
   outline: 1px solid var(--accent);
+}
+
+.charPlaceholder {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed #8B5CF6; /* 보라색 점선 */
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.1); /* 연한 보라빛 투명 배경 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: #7C3AED;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.charPlaceholderName {
+  font-family: "Hakgyoansim", sans-serif;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }

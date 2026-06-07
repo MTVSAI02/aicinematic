@@ -24,38 +24,22 @@ class BackgroundPromptSuggestionResponse(BaseModel):
     finalPrompt: str
 
 
-# ── 후보 생성 Job ─────────────────────────────────────────────
+# ── 배경 생성 Job ─────────────────────────────────────────────
 
 
 class BackgroundGenerateRequest(BaseModel):
-    # 프론트는 사용자 prompt만 보낸다. negativePrompt는 받지 않는다(AI 서버/워크플로 내부 고정값).
-    # 후보 개수도 요청으로 받지 않는다(AI/ComfyUI batch 결과 개수만큼 저장).
+    # 프론트는 제목(name) + prompt 를 보낸다. negativePrompt 는 받지 않음(AI 서버/워크플로 내부 고정값).
+    # name: 라이브러리·씬편집에 표시될 배경 제목(사용자 입력, 필수).
+    name: str = Field(min_length=1, examples=["별빛 사막"])
     prompt: str = Field(min_length=1, examples=["별빛이 비치는 조용한 사막, 따뜻한 동화풍 배경"])
 
-    @field_validator("prompt")
+    @field_validator("name", "prompt")
     @classmethod
-    def prompt_not_blank(cls, value: str) -> str:
+    def not_blank(cls, value: str) -> str:
         return _not_blank(value)
-
-
-class BackgroundCandidate(BaseModel):
-    candidateId: str
-    prompt: str
-    finalPrompt: str
-    imageUrl: str | None = None
 
 
 # ── 배경 라이브러리 ───────────────────────────────────────────
-
-
-class BackgroundCreateRequest(BaseModel):
-    candidateId: str
-    name: str = Field(min_length=1, examples=["별빛 사막 배경"])
-
-    @field_validator("name")
-    @classmethod
-    def name_not_blank(cls, value: str) -> str:
-        return _not_blank(value)
 
 
 class BackgroundResponse(BaseModel):
