@@ -17,6 +17,9 @@ BACKGROUND_LIBRARY_STORAGE_DIR = STORAGE_ROOT / "backgrounds" / "library"
 AUDIO_STORAGE_DIR = STORAGE_ROOT / "audio"
 # 보이스 클로닝 자산: reference/sample 오디오를 voiceId 별 폴더에 저장. (/storage/voices/{voiceId}/...)
 VOICE_STORAGE_DIR = STORAGE_ROOT / "voices"
+# 클론 reference 변환 기준 sample rate. 브라우저 녹음(webm/opus)을 이 값의 wav(pcm_s16le/mono)로 변환해
+# AI clone/TTS 에 전달한다. Qwen3-TTS / 이후 IndexTTS2 권장값 확인되면 여기만 바꾼다.
+VOICE_REFERENCE_SAMPLE_RATE = 16000
 RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
 # 렌더 중 프레임 PNG 임시 폴더. 완료/실패 후 정리한다. (jobId가 아니라 renderId 기준)
 RENDER_TMP_DIR = STORAGE_ROOT / "tmp" / "renders"
