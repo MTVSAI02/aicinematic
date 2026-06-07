@@ -14,6 +14,14 @@ _DEFAULT_X = 0.5
 _DEFAULT_WIDTH = 0.75
 _DEFAULT_FONT = 0.06
 
+# 자막 배경 박스 불투명도(고정). 추후 사용자 조절 기능 추가 시 이 상수만 분리/대체.
+SUBTITLE_BACKGROUND_OPACITY = 0.3
+# subtitleBackground(none/black/white) → style.backgroundColor 변환. none/미선택이면 미포함.
+_SUBTITLE_BACKGROUND_COLORS = {
+    "black": f"rgba(0, 0, 0, {SUBTITLE_BACKGROUND_OPACITY})",
+    "white": f"rgba(255, 255, 255, {SUBTITLE_BACKGROUND_OPACITY})",
+}
+
 
 def _display_text(item_type: str, text: str) -> str:
     """표시용 자막 텍스트. dialogue 면 "..." 로 감싼다(나레이션은 그대로).
@@ -51,6 +59,8 @@ def build_text_overlays(scene: dict) -> list[dict]:
     scene_id = scene.get("sceneId")
     # 글자색은 씬 단위(sceneTextColor). 미선택이면 기본 검정(#111111) — 모든 자막 style.color 동일.
     scene_color = scene.get("sceneTextColor") or "#111111"
+    # 자막 배경 박스도 씬 단위(subtitleBackground: none/black/white). none/미선택이면 backgroundColor 미포함.
+    scene_bg = _SUBTITLE_BACKGROUND_COLORS.get(scene.get("subtitleBackground"))
     result = []
     for i, it in enumerate(items):
         text = (it.get("text") or "").strip()
@@ -67,8 +77,13 @@ def build_text_overlays(scene: dict) -> list[dict]:
                 "speaker": it.get("speaker"),
                 "text": _display_text(item_type, text),  # dialogue → "..." (표시용, 원본 미수정)
                 "layout": s.get("layout") or _default_layout(i),
-                # 모든 자막에 씬 글자색 동일 적용(미선택이면 #111111). 타임라인/렌더가 style.color 읽음.
-                "style": {"color": scene_color},
+                # 모든 자막에 씬 글자색/배경 동일 적용. 타임라인/렌더/씬편집이 style.color·backgroundColor 읽음.
+                # backgroundColor 는 있을 때만 넣어, none 이면 기존처럼 투명(키 자체 없음).
+                "style": (
+                    {"color": scene_color, "backgroundColor": scene_bg}
+                    if scene_bg
+                    else {"color": scene_color}
+                ),
             }
         )
     result.sort(key=lambda o: (o["cueOrder"], o["sourceItemIndex"]))
@@ -89,16 +104,23 @@ class TextOverlayService:
         raise SceneNotFoundError()
 
     def update_subtitles(
-        self, story_id: str, scene_id: str, overlays: list, scene_text_color: str | None = None
+        self,
+        story_id: str,
+        scene_id: str,
+        overlays: list,
+        scene_text_color: str | None = None,
+        subtitle_background: str | None = None,
     ) -> dict:
-        """자막 줄별 설정(cueOrder+layout) + 씬 글자색(sceneTextColor)을 저장한다(전체 교체).
+        """자막 줄별 설정(cueOrder+layout) + 씬 글자색/배경을 저장한다(전체 교체).
 
         overlays: [{itemIndex, cueOrder, layout}] — itemIndex 는 items 범위 안만 반영.
-        scene_text_color: 씬 전체 자막 글자색(None 이면 자동 색). 반환: 조립한 자막 목록.
+        scene_text_color: 씬 전체 자막 글자색(None 이면 자동 색).
+        subtitle_background: 씬 전체 자막 배경(none/black/white, None 이면 none). 반환: 조립한 자막 목록.
         """
         story, scene = self._find_story_scene(story_id, scene_id)
         item_count = len(scene.get("items") or [])
         scene["sceneTextColor"] = scene_text_color  # 씬 단위 글자색(None=자동)
+        scene["subtitleBackground"] = subtitle_background  # 씬 단위 배경(None/none=투명)
         scene["subtitleSettings"] = {
             str(o.itemIndex): {
                 "cueOrder": o.cueOrder,

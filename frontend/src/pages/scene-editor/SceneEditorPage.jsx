@@ -24,6 +24,17 @@ import characterSceneEditSvg from '@design/assets/figma-icons/character/characte
 import navBackgroundIcon from '@design/assets/figma-icons/Nav/nav_background.svg'
 import navSceneEditorIcon from '@design/assets/figma-icons/Nav/nav_scene_editor.svg'
 
+// 자막 배경(씬 단위) 옵션 ↔ style.backgroundColor 매핑. 백엔드와 동일(불투명도 0.3 고정).
+const SUBTITLE_BG_TO_CSS = {
+  black: 'rgba(0, 0, 0, 0.3)',
+  white: 'rgba(255, 255, 255, 0.3)',
+}
+// style.backgroundColor → 옵션값(none/black/white) 역매핑. 없으면 none.
+function bgOptionFromStyle(bgColor) {
+  if (!bgColor) return 'none'
+  return bgColor.replace(/\s/g, '').startsWith('rgba(255') ? 'white' : 'black'
+}
+
 function sceneText(scene) {
   const items = scene.items ?? []
   const narration = items.find((i) => i.type === 'narration')
@@ -256,6 +267,9 @@ export default function SceneEditorPage() {
       const res = await updateSceneSubtitles(sceneId, {
         storyId,
         sceneTextColor: nextOverlays.find((o) => o.style?.color)?.style?.color ?? null,
+        subtitleBackground: bgOptionFromStyle(
+          nextOverlays.find((o) => o.style?.backgroundColor)?.style?.backgroundColor,
+        ),
         overlays: nextOverlays.map((o) => ({
           itemIndex: o.sourceItemIndex,
           cueOrder: o.cueOrder,
@@ -296,6 +310,18 @@ export default function SceneEditorPage() {
 
   function handleSetSceneColor(color) {
     const next = sceneTextOverlays.map((o) => ({ ...o, style: { ...(o.style || {}), color } }))
+    persistOverlays(next)
+  }
+
+  // 씬 단위 자막 배경(none/black/white). none 이면 backgroundColor 제거(투명).
+  function handleSetSceneBackground(option) {
+    const css = SUBTITLE_BG_TO_CSS[option]
+    const next = sceneTextOverlays.map((o) => {
+      const style = { ...(o.style || {}) }
+      if (css) style.backgroundColor = css
+      else delete style.backgroundColor
+      return { ...o, style }
+    })
     persistOverlays(next)
   }
 
@@ -570,6 +596,10 @@ export default function SceneEditorPage() {
                     onSetCueAlign={handleSetCueAlign}
                     sceneTextColor={sceneTextOverlays.find((o) => o.style?.color)?.style?.color ?? null}
                     onSetSceneColor={handleSetSceneColor}
+                    subtitleBackground={bgOptionFromStyle(
+                      sceneTextOverlays.find((o) => o.style?.backgroundColor)?.style?.backgroundColor,
+                    )}
+                    onSetSceneBackground={handleSetSceneBackground}
                   />
                 )}
               </div>

@@ -1,3 +1,4 @@
+from ..core.config import storage_path
 from ..core.exceptions import (
     StoryNotFoundError,
     VoiceNotFoundError,
@@ -66,6 +67,21 @@ class StoryService:
         if story is None:
             raise StoryNotFoundError()
         return _serialize_story(story)
+
+    def delete_story(self, story_id: str) -> dict:
+        """스토리 + 하위 산출물(씬/음성/영상) 삭제. 없으면 404.
+
+        DB 는 FK CASCADE 로 정리되고, 여기선 storage 파일(TTS 오디오 + 렌더 mp4)을 정리한다.
+        캐릭터/배경은 공용 라이브러리라 삭제하지 않는다.
+        """
+        removed = self._story_repo.delete(story_id)
+        if removed is None:
+            raise StoryNotFoundError()
+        for url in [*removed.get("audioUrls", []), *removed.get("videoUrls", [])]:
+            path = storage_path(url)
+            if path is not None:
+                path.unlink(missing_ok=True)
+        return {"deleted": True, "storyId": story_id}
 
     def update_narrator_voice(self, story_id: str, voice_id: str | None) -> dict:
         """나레이션 보이스를 연결/해제한다.

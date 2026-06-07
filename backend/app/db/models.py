@@ -125,6 +125,7 @@ class Scene(Base):
         Text, ForeignKey("backgrounds.id", ondelete="SET NULL")
     )
     scene_text_color: Mapped[str | None] = mapped_column(Text)  # null=자동(렌더 기본 검정)
+    subtitle_background: Mapped[str | None] = mapped_column(Text)  # none/black/white (null=none)
     items: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     cue_timings: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     subtitle_settings: Mapped[dict] = mapped_column(

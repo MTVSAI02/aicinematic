@@ -112,5 +112,9 @@ def update_scene_subtitles(scene_id: str, request: SceneSubtitleSettingsRequest)
     - 반환: items + 저장 설정으로 조립한 자막 목록.
     """
     return text_overlay_service.update_subtitles(
-        request.storyId, scene_id, request.overlays, request.sceneTextColor
+        request.storyId,
+        scene_id,
+        request.overlays,
+        request.sceneTextColor,
+        request.subtitleBackground,
     )

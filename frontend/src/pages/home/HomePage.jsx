@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styles from './HomePage.module.css'
-import { getStories } from '@/api/stories'
+import { getStories, deleteStory } from '@/api/stories'
+import ConfirmModal from '@/components/common/ConfirmModal'
 
 import homeLogoAnim from '@design/assets/figma-icons/Home/Home_logo_anim.svg'
 import homeBook from '@design/assets/figma-icons/Home/Home_book.svg'
@@ -12,6 +13,43 @@ export default function HomePage() {
   const [stories, setStories] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [menuOpenId, setMenuOpenId] = useState(null) // ⋯ 메뉴가 열린 카드의 storyId
+  const [confirmTarget, setConfirmTarget] = useState(null) // 삭제 확인 중인 스토리 {storyId, title}
+  const [deleting, setDeleting] = useState(false)
+
+  // 바깥 클릭/ESC 로 카드 ⋯ 메뉴 닫기
+  useEffect(() => {
+    if (!menuOpenId) return undefined
+    const close = () => setMenuOpenId(null)
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMenuOpenId(null)
+    }
+    document.addEventListener('click', close)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('click', close)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpenId])
+
+  const handleDelete = async () => {
+    if (!confirmTarget || deleting) return
+    setDeleting(true)
+    try {
+      await deleteStory(confirmTarget.storyId)
+      setStories((prev) => {
+        const next = prev.filter((s) => s.storyId !== confirmTarget.storyId)
+        // 캐러셀 인덱스가 목록 끝을 넘지 않도록 보정
+        setCurrentIndex((idx) => Math.min(idx, Math.max(0, next.length - 5)))
+        return next
+      })
+      setConfirmTarget(null)
+    } catch {
+      alert('스토리 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     getStories()
@@ -267,12 +305,40 @@ export default function HomePage() {
                     ]
                     const bg = coverColors[index % coverColors.length]
                     return (
-                      <div 
-                        key={story.storyId} 
+                      <div
+                        key={story.storyId}
                         className={styles.bookCard}
                         onClick={() => navigate(`/scene-check?storyId=${story.storyId}`)}
                         title={`${story.title} 이어서 편집하기`}
                       >
+                        <div className={styles.cardMenu}>
+                          <button
+                            type="button"
+                            className={styles.menuBtn}
+                            aria-label="더보기"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setMenuOpenId((id) => (id === story.storyId ? null : story.storyId))
+                            }}
+                          >
+                            ⋯
+                          </button>
+                          {menuOpenId === story.storyId && (
+                            <div className={styles.menuDropdown} role="menu">
+                              <button
+                                type="button"
+                                className={styles.menuItemDanger}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setMenuOpenId(null)
+                                  setConfirmTarget({ storyId: story.storyId, title: story.title })
+                                }}
+                              >
+                                삭제하기
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         <div className={styles.bookCover} style={{ background: bg }}>
                           <div className={styles.bookSpine} />
                           <div className={styles.bookTitle}>{story.title || '제목 없음'}</div>
@@ -312,6 +378,22 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      <ConfirmModal
+        open={confirmTarget !== null}
+        title="스토리를 삭제할까요?"
+        message={
+          '삭제하면 이 스토리의 씬, 음성, 영상이 함께 삭제됩니다.\n캐릭터와 배경은 공용 보관함에 남아 있습니다.'
+        }
+        confirmText={deleting ? '삭제 중…' : '삭제하기'}
+        cancelText="취소"
+        variant="danger"
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => {
+          if (!deleting) setConfirmTarget(null)
+        }}
+      />
     </div>
   )
 }

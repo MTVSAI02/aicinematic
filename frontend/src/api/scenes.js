@@ -3,7 +3,7 @@
 import { request, jsonBody } from '@/utils/request'
 
 // PATCH /api/scenes/{sceneId}/subtitles — 자막 cue 그룹/배치 저장(전체 교체).
-// payload: { storyId, overlays: [{ itemIndex, cueOrder, layout }] }
+// payload: { storyId, sceneTextColor, subtitleBackground('none'|'black'|'white'), overlays: [{ itemIndex, cueOrder, layout }] }
 export function updateSceneSubtitles(sceneId, payload) {
   return request(`/api/scenes/${sceneId}/subtitles`, {
     ...jsonBody(payload),
