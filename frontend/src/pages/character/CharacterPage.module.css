@@ -6,28 +6,39 @@
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  font-family: "Hakgyoansim Dunggeunmiso TTF", "Inter", sans-serif;
+  font-family: 'Hakgyoansim', "Inter", sans-serif;
 }
 
-/* ── 상단 헤더 영역 ── */
+/* ── 상단 헤더 (밤하늘 배경 배너 적용) ── */
 .header {
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  height: 500px; /* 세로폭 고정 */
+  box-sizing: border-box;
   gap: 20px;
-  padding: 0 24px;
+  padding: 48px 64px;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 24px;
+  overflow: visible; /* 캐릭터가 헤더 경계를 살짝 벗어나 3D 입체감을 주도록 visible 설정 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
 .headerLeft {
   flex: 1;
+  padding-left: 20px;
 }
 
 .headerSubTitle {
   font-size: 15px;
   font-weight: 700;
-  color: #A171DF; /* 보라색 계열 */
+  color: #C084FC; /* 밝은 연보라 */
   margin-bottom: 8px;
   letter-spacing: -0.5px;
 }
@@ -36,18 +47,20 @@
   font-family: 'KerisKedu', sans-serif;
   font-size: 60px;
   font-weight: 700;
-  color: #1F2937;
+  color: #FFFFFF; /* 흰색 글자 */
   margin: 0 0 16px 0;
   letter-spacing: -1.5px;
   line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .headerDesc {
   font-size: 20px;
-  color: #4B5563;
+  color: #E5E7EB; /* 밝은 회색 */
   line-height: 1.6;
   margin: 0;
   font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .headerRight {
@@ -56,22 +69,55 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  width: 380px;
+  width: 570px; /* 음성입력 팻말 크기로 통일 + 50px 확대 */
 }
 
-.headerMascot {
+/* ── 캐릭터 액자 + 제목 오버레이 ── */
+.titleFrame {
+  position: relative;
+  display: block;
+  animation: titleFloat 3.5s ease-in-out infinite alternate;
+  margin-right: -10px; /* 우측 밀착 */
+  margin-top: 40px; /* 80px 아래로 이동 (-40px -> 40px) */
+  width: 100%;
+  aspect-ratio: 1470 / 1125;
+}
+
+.titleFrameImg {
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.08));
-  animation: mascotFloat 4s ease-in-out infinite alternate;
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
 }
 
-@keyframes mascotFloat {
+.titleFrameText {
+  position: absolute;
+  top: 56%; /* 캐릭터 팻말 디자인 내 흰색 영역 중앙 */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'KerisKedu', sans-serif;
+  font-size: clamp(16px, 2.2vw, 25px);
+  font-weight: 700;
+  color: #1F2937;
+  white-space: normal;
+  word-break: keep-all;
+  text-align: center;
+  pointer-events: none;
+  width: 58%;
+  max-width: 65%;
+  max-height: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+@keyframes titleFloat {
   0% {
-    transform: translateY(0px) rotate(0deg);
+    transform: translateY(0px) rotate(-0.5deg);
   }
   100% {
-    transform: translateY(-8px) rotate(2deg);
+    transform: translateY(-8px) rotate(0.5deg);
   }
 }
 
@@ -79,7 +125,7 @@
 .bookContainer {
   position: relative;
   width: 100%;
-  max-width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.45);
   border-radius: 20px;
@@ -108,23 +154,34 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 0;
 }
 
 .section {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 236, 250, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(186, 174, 230, 0.04);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
 }
 
 .stepTitle {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1F2937;
   display: flex;
   align-items: center;
+  gap: 12px;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 25px; /* 음성입력의 25px 크기 적용 */
+  font-weight: 700;
+  color: #1F2937;
   margin: 0;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.8px; /* 음성입력의 자간 적용 */
 }
 
 .stepBadge {
@@ -134,10 +191,11 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #E9D5FF; /* 연보라 */
-  color: #7C3AED;      /* 진보라 */
-  font-size: 14px;
+  background: #C084FC; /* 음성입력과 동일하게 부드러운 보라빛 동그라미로 변경 */
+  color: #FFFFFF;      /* 흰색 글자 적용 */
+  font-size: 15px;      /* 15px 적용 */
   font-weight: 700;
+  flex-shrink: 0;
   margin-right: 12px;
 }
 
@@ -150,8 +208,8 @@
 }
 
 .roleSelect {
-  width: 100px;
-  padding: 12px 14px;
+  width: 115px; /* 폭을 100px에서 115px로 늘려 '엑스트라' 등 긴 단어 잘림 방지 */
+  padding: 12px 32px 12px 14px; /* 화살표 아이콘 영역을 고려해 우측 패딩 부여 */
   border: 1px solid #BAE6FD;
   border-radius: 12px;
   background: #E0F2FE; /* 연하늘 */
@@ -163,10 +221,23 @@
   font-family: inherit;
   transition: all 0.2s;
   box-sizing: border-box;
+  /* 셀렉트 드롭다운 기본 브라우저 화살표 제거 및 프리미엄 커스텀 화살표 설정 */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%230369A1'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
 }
 
 .roleSelect:hover {
-  background: #BAE6FD;
+  background-color: #BAE6FD;
+}
+
+.roleSelect:focus {
+  border-color: #0284C7;
+  box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
 }
 
 .input {
@@ -303,16 +374,25 @@
 
 /* ── 캐릭터 라이브러리 섹션 ── */
 .librarySection {
-  margin-top: 64px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 236, 250, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
   width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(186, 174, 230, 0.04);
 }
 
 .libraryTitle {
-  font-size: 24px;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 25px; /* "캐릭터의 이름을 입력해주세요" (.stepTitle) 크기와 동일 */
   font-weight: 700;
   color: #1F2937;
   margin: 0 0 24px 0;
-  padding-left: 24px;
+  letter-spacing: -0.8px; /* "캐릭터의 이름을 입력해주세요" (.stepTitle) 자간과 동일 */
+  padding-left: 0; /* 라이브러리 섹션 패딩 24px에 정렬되도록 조정 */
 }
 
 .grid {
@@ -499,17 +579,17 @@
   width: 100%;
   display: flex;
   justify-content: space-between;
-  margin-top: 24px;
   box-sizing: border-box;
+  padding: 12px 48px 24px;
 }
 
 .btnPrimary {
-  padding: 12px 28px;
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
   background: #8B5CF6;
   color: #FFFFFF;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -523,12 +603,12 @@
 }
 
 .btnSecondary {
-  padding: 12px 24px;
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
   background: #FFFFFF;
   color: #4B5563;
   border: 1px solid #D1D5DB;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -574,4 +654,417 @@
   .bookmarkRibbon {
     display: none;
   }
+
+  .section,
+  .librarySection {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .fixedPageNav {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 24px 0 0;
+    gap: 12px;
+    background: transparent;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 8px;
+  }
 }
+
+/* ── 캐릭터 상세 모달 (Enlarged view & Prompt detail) ── */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modalContent {
+  position: relative;
+  background: #FFFFFF;
+  border-radius: 24px;
+  width: 720px;
+  max-width: 90vw;
+  max-height: 85vh;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  overflow: hidden;
+  animation: modalScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes modalScaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 32px;
+  line-height: 1;
+  color: #9CA3AF;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.2s;
+  font-family: var(--mono);
+}
+
+.closeBtn:hover {
+  color: #1F2937;
+}
+
+.modalBody {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modalLeft {
+  width: 320px;
+  background: #F9FAFB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #E5E7EB;
+  flex-shrink: 0;
+}
+
+.modalImg {
+  width: 100%;
+  height: 320px;
+  object-fit: contain;
+  display: block;
+}
+
+.modalRight {
+  flex: 1;
+  padding: 32px 32px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.modalName {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.8px;
+}
+
+.modalPromptSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  min-height: 0;
+}
+
+.modalPromptLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: #8B5CF6;
+  margin: 0;
+}
+
+.modalPromptText {
+  font-size: 14px;
+  color: #4B5563;
+  line-height: 1.6;
+  margin: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 160px;
+  padding-right: 8px;
+}
+
+.modalPromptText::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modalPromptText::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modalPromptText::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 99px;
+}
+
+.modalSelectBtn {
+  font-family: 'Hakgyoansim', sans-serif;
+  padding: 12px 0;
+  border-radius: 12px;
+  border: none;
+  background: #8B5CF6;
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+  text-align: center;
+}
+
+.modalSelectBtn:hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
+
+@media (max-width: 640px) {
+  .modalBody {
+    flex-direction: column;
+  }
+  .modalLeft {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .modalImg {
+    height: 240px;
+  }
+  .modalRight {
+    padding: 24px;
+  }
+}
+
+/* ── 캐릭터 포즈 생성 섹션 ── */
+.poseSection {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 236, 250, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(186, 174, 230, 0.04);
+  margin-top: 32px;
+}
+
+.poseTitle {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.8px;
+}
+
+.poseSelectGuide {
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px dashed rgba(139, 92, 246, 0.3);
+  border-radius: 14px;
+  padding: 32px;
+  text-align: center;
+  color: #6B7280;
+  font-size: 15px;
+}
+
+.poseContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.poseFormRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+.poseFormRow .input {
+  flex: 1;
+}
+
+.poseFormRow .generateBtn {
+  flex-shrink: 0;
+}
+
+.poseListHeader {
+  font-size: 16px;
+  font-weight: 700;
+  color: #374151;
+  margin: 8px 0 12px 0;
+}
+
+.poseGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.poseCard {
+  background: #FFFFFF;
+  border: 1px solid rgba(139, 92, 246, 0.08);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.poseCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.poseThumb {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 1px solid #F3F4F6;
+  overflow: hidden;
+  background: #F9FAFB;
+  margin-bottom: 8px;
+}
+
+.poseThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.posePrompt {
+  font-size: 12px;
+  color: #4B5563;
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  font-weight: 500;
+}
+
+.emptyPoses {
+  font-size: 14px;
+  color: #9CA3AF;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.poseStatus {
+  font-size: 14px;
+  color: #8B5CF6;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.poseError {
+  font-size: 14px;
+  color: #EF4444;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.poseValidation {
+  font-size: 13px;
+  color: #EF4444;
+  margin-top: 4px;
+}
+
+/* ── 포즈 라이트박스 모달 ── */
+.lightboxOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.lightboxContent {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: modalScaleIn 0.25s ease-out;
+}
+
+.lightboxImg {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  object-fit: contain;
+}
+
+.lightboxPrompt {
+  margin-top: 16px;
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 16px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.lightboxCloseBtn {
+  position: absolute;
+  top: -48px;
+  right: 0;
+  background: none;
+  border: none;
+  font-size: 36px;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  padding: 4px;
+}
+
+.lightboxCloseBtn:hover {
+  opacity: 0.8;
+}
+

@@ -36,12 +36,12 @@
 .list {
   display: flex;
   align-items: center;
-  gap: 16px; /* Dynamic flex gap that shrinks beautifully */
+  gap: 10px; /* Reduced gap to prevent GNB overflow */
   list-style: none;
   margin: 0;
   padding: 0;
   flex-shrink: 1; /* Allow the list of items to shrink dynamically */
-  overflow: hidden; /* Safety measure against unexpected layout shifts */
+  overflow: visible; /* Prevent clipping of popped active tab backgrounds */
 }
 
 .item {
@@ -54,27 +54,38 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 6px;
+  padding: 6px 8px;
   border-radius: 12px;
   text-decoration: none;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  min-width: 60px;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  width: 78px; /* Unified fixed width optimized to prevent GNB overflow */
   box-sizing: border-box;
   flex-shrink: 1;
+  border: 1px solid transparent;
 }
 
 .link:hover {
   transform: translateY(-3px) scale(1.06);
+  background: rgba(228, 204, 255, 0.45); /* Soft purple hover */
 }
 
 .link:hover .label,
 .active .label {
-  color: #000;
+  color: var(--accent);
   opacity: 1;
+  font-weight: 700;
 }
 
 .active {
   transform: translateY(-2px);
+  background: rgba(228, 204, 255, 0.9); /* Premium soft purple active background */
+  border-color: rgba(170, 59, 255, 0.4);
+  box-shadow: 0 4px 10px rgba(170, 59, 255, 0.2);
+}
+
+.active .icon {
+  transform: scale(1.05);
+  filter: drop-shadow(0px 2px 4px rgba(170, 59, 255, 0.25));
 }
 
 .icon {
@@ -83,7 +94,7 @@
   object-fit: contain;
   margin-bottom: 3px;
   filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, 0.15));
-  transition: width 0.2s ease, height 0.2s ease;
+  transition: width 0.2s ease, height 0.2s ease, transform 0.2s ease, filter 0.2s ease;
 }
 
 .label {
@@ -94,7 +105,7 @@
   opacity: 0.7;
   text-align: center;
   white-space: nowrap;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  transition: opacity 0.2s ease, color 0.2s ease, font-weight 0.2s ease;
 }
 
 /* First Breakpoint: Resizes start feeling tight (under 1200px) */
@@ -114,7 +125,7 @@
     height: 38px;
   }
   .link {
-    min-width: 52px;
+    width: 72px; /* Scaled unified width */
     padding: 4px 4px;
   }
 }
@@ -136,7 +147,7 @@
     height: 34px;
   }
   .link {
-    min-width: 46px;
+    width: 66px; /* Scaled unified width */
     padding: 3px 2px;
   }
   .label {
@@ -167,7 +178,7 @@
     height: 30px;
   }
   .link {
-    min-width: 44px;
+    width: 64px; /* Scaled unified width */
     padding: 2px 4px;
   }
   .label {

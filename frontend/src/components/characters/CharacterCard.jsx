@@ -9,6 +9,7 @@ export default function CharacterCard({ character }) {
   const selectedCharacterId = useCharacterStore((s) => s.selectedCharacterId)
   const selectCharacter = useCharacterStore((s) => s.selectCharacter)
   const removeCharacter = useCharacterStore((s) => s.removeCharacter)
+  const setDetailModalCharacter = useCharacterStore((s) => s.setDetailModalCharacter)
 
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
@@ -31,7 +32,14 @@ export default function CharacterCard({ character }) {
       className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
       onClick={() => selectCharacter(character.characterId)}
     >
-      <div className={styles.thumb}>
+      <div 
+        className={styles.thumb} 
+        onClick={(e) => {
+          e.stopPropagation()
+          setDetailModalCharacter(character)
+        }}
+        title="클릭하여 크게 보기"
+      >
         {character.imageUrl ? (
           <img src={character.imageUrl} alt={character.name} className={styles.thumbImg} />
         ) : (
@@ -45,7 +53,15 @@ export default function CharacterCard({ character }) {
         <>
           <span className={styles.cardName}>{character.name}</span>
           <span className={styles.cardDesc}>{character.appearancePrompt}</span>
-          <span className={styles.moreLink}>더보기</span>
+          <span 
+            className={styles.moreLink}
+            onClick={(e) => {
+              e.stopPropagation()
+              setDetailModalCharacter(character)
+            }}
+          >
+            더보기
+          </span>
           {isSelected && <span className={styles.selectedBadge}>선택됨</span>}
           {/* 임시 수정/삭제 버튼 (디자인 확정 전) */}
           <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>

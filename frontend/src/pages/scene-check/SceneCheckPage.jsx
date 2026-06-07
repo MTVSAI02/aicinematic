@@ -18,6 +18,7 @@ export default function SceneCheckPage() {
   const effectiveStoryId = searchParams.get('storyId') || storyId
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [frameHeight, setFrameHeight] = useState(0)
 
 
   const titleRef = useRef(null)
@@ -36,9 +37,37 @@ export default function SceneCheckPage() {
       .finally(() => setLoading(false))
   }, [effectiveStoryId, scenes.length, setScenes, setStoryId, setStoryTitle])
 
+  useEffect(() => {
+    const el = titleRef.current
+    if (!el) return
 
+    const updateHeight = () => {
+      const rect = el.getBoundingClientRect()
+      if (rect.width > 0) {
+        // SVG ratio: 2533 / 2672
+        const height = rect.width * (2533 / 2672)
+        setFrameHeight(height)
+      }
+    }
+
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    const timer = setTimeout(updateHeight, 150)
+
+    const observer = new ResizeObserver(() => {
+      updateHeight()
+    })
+    observer.observe(el)
+
+    return () => {
+      window.removeEventListener('resize', updateHeight)
+      clearTimeout(timer)
+      observer.disconnect()
+    }
+  }, [])
 
   // 팻말 마우스 & 터치 드래그 & 탄성 흔들림 물리 연산
+
   useEffect(() => {
     const el = titleRef.current
     if (!el) return
@@ -148,7 +177,7 @@ export default function SceneCheckPage() {
 
     frameId = requestAnimationFrame(updatePhysics)
     el.style.cursor = 'grab'
-    el.style.transformOrigin = '50% -450px' // 끈의 꼭대기(헤더 위쪽 고정점)를 회전축으로 설정하여 끈이 끊기지 않게 함
+    el.style.transformOrigin = '50% 50%' // 끈이 제거되었으므로 팻말 자체의 중심을 회전축으로 설정
 
     return () => {
       cancelAnimationFrame(frameId)
@@ -176,9 +205,35 @@ export default function SceneCheckPage() {
           </p>
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.titleFrame} ref={titleRef}>
-            <img src={titleSvg} alt="씬 확인 타이틀 액자" className={styles.titleFrameImg} />
-            <span className={styles.titleFrameText}>
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={titleSvg} 
+              alt="씬 확인 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+            <span 
+              className={styles.titleFrameText}
+              style={{
+                position: 'absolute',
+                top: '79%', /* 팻말 내 노란색/흰색 영역 정중앙 정렬 */
+                left: '50%',
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
               {storyTitle || '제목 없음'}
             </span>
           </div>

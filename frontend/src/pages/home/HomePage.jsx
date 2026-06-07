@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styles from './HomePage.module.css'
+import { getStories } from '@/api/stories'
 
 import homeLogoAnim from '@design/assets/figma-icons/Home/Home_logo_anim.svg'
 import homeBook from '@design/assets/figma-icons/Home/Home_book.svg'
@@ -8,6 +9,18 @@ import homeBook from '@design/assets/figma-icons/Home/Home_book.svg'
 export default function HomePage() {
   const navigate = useNavigate()
   const logoRef = useRef(null)
+  const [stories, setStories] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  useEffect(() => {
+    getStories()
+      .then((list) => {
+        setStories(list ?? [])
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
     const el = logoRef.current
@@ -199,13 +212,106 @@ export default function HomePage() {
         </button>
       </div>
 
-      <section className={styles.emptySection}>
-        <div className={styles.emptyCard}>
-          <img src={homeBook} alt="빈 책장" className={styles.bookImage} />
-          <h3 className={styles.emptyTitle}>책장이 비었네요.</h3>
-          <p className={styles.emptySub}>새 프로젝트를 시작해 동화 영상을 만들어보세요!</p>
-        </div>
-      </section>
+      {loading ? (
+        <div className={styles.loading}>불러오는 중…</div>
+      ) : stories.length === 0 ? (
+        <section className={styles.emptySection}>
+          <div className={styles.emptyCard}>
+            <img src={homeBook} alt="빈 책장" className={styles.bookImage} />
+            <h3 className={styles.emptyTitle}>책장이 비었네요.</h3>
+            <p className={styles.emptySub}>새 프로젝트를 시작해 동화 영상을 만들어보세요!</p>
+          </div>
+        </section>
+      ) : (
+        <section className={styles.bookshelfSection}>
+          <div className={styles.bookshelfContainer}>
+            <h2 className={styles.bookshelfTitle}>나의 책방</h2>
+
+            <div className={styles.bookshelfRow}>
+              {stories.length > 5 && (
+                <button 
+                  type="button" 
+                  className={`${styles.navBtn} ${styles.leftBtn}`}
+                  onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
+                  disabled={currentIndex === 0}
+                  aria-label="이전 책"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor" 
+                    strokeWidth="3" 
+                    style={{ width: '14px', height: '14px', display: 'block' }}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+              )}
+              
+              <div className={styles.bookshelfViewport}>
+                <div 
+                  className={styles.bookshelfTrack}
+                  style={{
+                    transform: `translateX(-${currentIndex * 150}px)`
+                  }}
+                >
+                  {stories.map((story, index) => {
+                    // 책 표지 파스텔 톤 순환
+                    const coverColors = [
+                      'linear-gradient(135deg, #FFDEE9, #E9D5FF)', // 파스텔 핑크 + 라벤더
+                      'linear-gradient(135deg, #E2D4F8, #ACE0F9)', // 라벤더 + 파스텔 하늘
+                      'linear-gradient(135deg, #E0F2FE, #BAE6FD)', // 파스텔 하늘
+                      'linear-gradient(135deg, #FFE4E6, #FBCFE8)', // 파스텔 핑크
+                      'linear-gradient(135deg, #DDD6FE, #F3E8FF)', // 라벤더
+                    ]
+                    const bg = coverColors[index % coverColors.length]
+                    return (
+                      <div 
+                        key={story.storyId} 
+                        className={styles.bookCard}
+                        onClick={() => navigate(`/scene-check?storyId=${story.storyId}`)}
+                        title={`${story.title} 이어서 편집하기`}
+                      >
+                        <div className={styles.bookCover} style={{ background: bg }}>
+                          <div className={styles.bookSpine} />
+                          <div className={styles.bookTitle}>{story.title || '제목 없음'}</div>
+                          <div className={styles.bookAuthor}>몽실 작가</div>
+                        </div>
+                        <div className={styles.bookInfo}>
+                          <h4 className={styles.bookName}>{story.title || '제목 없음'}</h4>
+                          <span className={styles.bookBtn}>이어서 만들기 →</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              
+              {stories.length > 5 && (
+                <button 
+                  type="button" 
+                  className={`${styles.navBtn} ${styles.rightBtn}`}
+                  onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, stories.length - 5))}
+                  disabled={currentIndex >= stories.length - 5}
+                  aria-label="다음 책"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor" 
+                    strokeWidth="3" 
+                    style={{ width: '14px', height: '14px', display: 'block' }}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

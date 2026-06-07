@@ -10,9 +10,11 @@ import VoiceTargetPanel from '@/components/voices/VoiceTargetPanel'
 import VoiceLibrary from '@/components/voices/VoiceLibrary'
 import styles from './VoicePage.module.css'
 
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+
 // 디자인 에셋 임포트
-import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
-import voiceMascot from '@design/assets/figma-icons/Voice_input/VoiceInput_Rabbit.svg'
+import headerBg from '@design/assets/figma-icons/Base/Base_voice.png'
+import characterVoiceSvg from '@design/assets/figma-icons/character/character_voice.svg'
 import yarnIcon from '@design/assets/figma-icons/Nav/nav_voice.svg'
 
 export default function VoicePage() {
@@ -20,7 +22,9 @@ export default function VoicePage() {
   const [searchParams] = useSearchParams()
   const queryStoryId = searchParams.get('storyId') || ''
   const currentStoryId = useStoryStore((s) => s.storyId)
+  const storyTitle = useStoryStore((s) => s.storyTitle)
 
+  const story = useVoiceStore((s) => s.story)
   const setVoices = useVoiceStore((s) => s.setVoices)
   const setStory = useVoiceStore((s) => s.setStory)
   const setCharacters = useVoiceStore((s) => s.setCharacters)
@@ -31,6 +35,8 @@ export default function VoicePage() {
   const nextStepEnabled = useVoiceStore((s) => s.nextStepEnabled)
   const message = useVoiceStore((s) => s.message)
   const error = useVoiceStore((s) => s.error)
+
+  const { titleRef, frameHeight } = useSwingingSignboard(1140 / 1470)
 
   const [stories, setStories] = useState([])
   const [storyId, setStoryId] = useState(queryStoryId || currentStoryId || '')
@@ -88,18 +94,39 @@ export default function VoicePage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 적용) ── */}
+      {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
       <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>스토리의 등장인물에게 목소리를 매칭해주세요</div>
-          <h1 className={styles.headerTitle}>보이스 연결</h1>
+          <h1 className={styles.headerTitle}>캐릭터에게<br />목소리 불어넣기</h1>
           <p className={styles.headerDesc}>
             나레이션과 캐릭터의 목소리를 골라 연결하고<br />
-            잠금 버튼을 눌러 음성을 생성해 보세요.
+            잠금 버튼을 눌러 음성을 생성해 보세요.<br />
+            AI가 생생한 음성을 만들어 줘요.
           </p>
         </div>
         <div className={styles.headerRight}>
-          <img src={voiceMascot} alt="보이스 마스코트" className={styles.headerMascot} />
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterVoiceSvg} 
+              alt="보이스 연결 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 
@@ -179,27 +206,21 @@ export default function VoicePage() {
             )}
 
           </div>
+          {/* ── 하단 네비게이션 고정 영역 ── */}
+          <div className={styles.fixedPageNav}>
+            <button className={styles.btnSecondary} onClick={() => navigate('/character')}>
+              ← 이전 단계
+            </button>
+            <button
+              className={styles.btnPrimary}
+              onClick={() => navigate('/background')}
+              disabled={!storyId || !nextStepEnabled}
+              title={!nextStepEnabled ? '모든 목소리를 잠가야 이동할 수 있어요' : undefined}
+            >
+              다음 단계 →
+            </button>
+          </div>
         </div>
-
-        {/* 하단 북마크 리본 데코레이션 */}
-        <div className={styles.bookmarkRibbon}>
-          <span className={styles.bookmarkStar}>★</span>
-        </div>
-      </div>
-
-      {/* ── 하단 네비게이션 고정 영역 ── */}
-      <div className={styles.fixedPageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/character')}>
-          ← 이전 단계
-        </button>
-        <button
-          className={styles.btnPrimary}
-          onClick={() => navigate('/background')}
-          disabled={!storyId || !nextStepEnabled}
-          title={!nextStepEnabled ? '모든 목소리를 잠가야 이동할 수 있어요' : undefined}
-        >
-          다음 단계 →
-        </button>
       </div>
     </div>
   )
