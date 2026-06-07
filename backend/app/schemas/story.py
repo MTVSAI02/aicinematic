@@ -111,6 +111,10 @@ class StoryParseResponse(BaseModel):
         default=None,
         description="나레이션 보이스 ID. 없으면 null (PATCH /api/stories/{storyId}/narrator-voice로 연결)",
     )
+    # 완성 여부 — 영상 렌더가 1건이라도 성공(render_results)하면 완성. (홈 "나의 책방" 배지/버튼 분기용)
+    isCompleted: bool = Field(default=False, description="영상 렌더 완성 여부(렌더 결과 존재 = 완성)")
+    videoUrl: str | None = Field(default=None, description="완성된 mp4 경로(없으면 null)")
+    completedAt: str | None = Field(default=None, description="완성 시각 ISO(렌더 결과 createdAt, 없으면 null)")
     scenes: list[SceneResponse]
 
     model_config = ConfigDict(

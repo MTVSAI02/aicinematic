@@ -335,6 +335,47 @@
   border-right: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+/* 완성 배지 — 표지 좌상단(⋯ 메뉴는 우상단). 파스텔 표지 위에서 읽히도록 흰 pill + 그린 텍스트 */
+.doneBadge {
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(47, 158, 110, 0.3);
+  color: #2f9e6e;
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* 작업 중 배지 — 완성 전(영상 미제작) 상태. 완성(그린)과 구분되게 앰버 톤, 같은 흰 pill 베이스 */
+.progressBadge {
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(183, 121, 31, 0.3);
+  color: #b7791f;
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 .bookTitle {
   font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
   font-size: 14px;

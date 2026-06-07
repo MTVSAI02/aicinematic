@@ -31,7 +31,16 @@ def _serialize_story(story: dict) -> dict:
             for ch in sc.get("characters", [])
         ]
         scenes.append({**sc, "characters": chars, "textOverlays": build_text_overlays(sc)})
-    return {**story, "scenes": scenes}
+    # 완성 여부: 렌더 결과(render_results 최신 1건=lastRender)가 있으면 완성.
+    # (render_results 는 렌더 성공 시에만 쌓이므로 "존재 = 완성". status 비교 불필요.)
+    last_render = story.get("lastRender")
+    return {
+        **story,
+        "scenes": scenes,
+        "isCompleted": last_render is not None,
+        "videoUrl": last_render.get("videoUrl") if last_render else None,
+        "completedAt": last_render.get("createdAt") if last_render else None,
+    }
 
 
 class StoryService:
