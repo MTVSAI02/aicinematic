@@ -205,6 +205,16 @@ class InvalidAudioFileError(AppException):
     detail = "Invalid audio file (allowed: webm/wav/mp3/m4a)."
 
 
+class VoiceReferenceConversionError(AppException):
+    """업로드한 reference 오디오(webm 등)를 wav 로 변환하지 못함(ffmpeg 실패/깨진 파일/빈 결과).
+
+    fallback 으로 원본을 보내면 클론 품질이 깨지므로, 조용히 넘기지 않고 명확히 드러낸다.
+    """
+
+    status_code = 400
+    detail = "녹음 파일을 변환할 수 없습니다. 다시 녹음해 주세요."
+
+
 class VoiceCloneFailedError(AppException):
     status_code = 500
     detail = "Voice clone failed"

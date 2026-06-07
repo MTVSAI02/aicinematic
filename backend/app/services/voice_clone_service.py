@@ -8,14 +8,23 @@
 - 내부 절대경로는 AI/백엔드 사이에서만 — 응답/저장 노출은 /storage URL 만.
 """
 
+import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 
-from ..core.config import VOICE_STORAGE_DIR, storage_url
+from ..core.config import (
+    VOICE_REFERENCE_SAMPLE_RATE,
+    VOICE_STORAGE_DIR,
+    resolve_ffmpeg_bin,
+    storage_url,
+)
 from ..core.exceptions import (
     CharacterNotFoundError,
+    FFmpegNotInstalledError,
     InvalidAudioFileError,
     VoiceCloneFailedError,
     VoiceCloneValidationError,
+    VoiceReferenceConversionError,
 )
 from ..repositories.character_repo import character_repository
 from ..repositories.voice_repository import voice_repository
@@ -39,6 +48,29 @@ def _ext_of(filename: str | None) -> str | None:
     if not filename or "." not in filename:
         return None
     return filename.rsplit(".", 1)[1].lower()
+
+
+def _convert_to_wav(src: Path, dst: Path) -> None:
+    """reference 오디오(webm 등)를 wav(pcm_s16le / mono / VOICE_REFERENCE_SAMPLE_RATE)로 변환한다.
+
+    브라우저 녹음(webm/opus)을 AI clone/TTS 입력으로 안정화하기 위함.
+    실패(ffmpeg 없음/깨진 파일/빈 결과) 시 webm fallback 없이 명확한 예외를 던진다.
+    """
+    ffmpeg = resolve_ffmpeg_bin()
+    if not ffmpeg:
+        raise FFmpegNotInstalledError()
+    cmd = [
+        ffmpeg, "-y", "-i", str(src),
+        "-ac", "1", "-ar", str(VOICE_REFERENCE_SAMPLE_RATE),
+        "-c:a", "pcm_s16le", str(dst),
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, timeout=120)
+    except Exception as e:  # noqa: BLE001 — 변환 실패는 그대로 드러낸다(fallback 금지)
+        raise VoiceReferenceConversionError() from e
+    # 결과 검증: 정상 종료 + wav 가 비어있지 않음(44=wav 헤더 최소 크기)
+    if proc.returncode != 0 or not dst.exists() or dst.stat().st_size <= 44:
+        raise VoiceReferenceConversionError()
 
 
 def create_voice_clone_job(
@@ -93,11 +125,21 @@ def create_voice_clone_job(
     )
     voice_id = voice["voiceId"]
 
-    # ── reference 오디오 저장 ──
+    # ── reference 오디오 저장 + wav 변환 ──
+    # 브라우저 녹음(webm/opus)은 클론/TTS 입력으로 불안정 → 항상 wav(pcm_s16le/mono)로 변환해 사용한다.
+    # referenceAudioUrl 은 clone preview 뿐 아니라 이후 TTS(tts_service: referenceAudioBase64)에서도 쓰이므로
+    # 반드시 reference.wav 를 가리킨다(절반만 고치는 것 방지).
     vdir = VOICE_STORAGE_DIR / voice_id
     vdir.mkdir(parents=True, exist_ok=True)
-    (vdir / f"reference.{ext}").write_bytes(audio_bytes)
-    reference_url = storage_url("voices", voice_id, f"reference.{ext}")
+    wav_path = vdir / "reference.wav"
+    if ext == "wav":
+        wav_path.write_bytes(audio_bytes)
+    else:
+        original_path = vdir / f"reference_original.{ext}"  # 원본 보관(webm 등)
+        original_path.write_bytes(audio_bytes)
+        _convert_to_wav(original_path, wav_path)  # 실패 시 VoiceReferenceConversionError
+    reference_wav_bytes = wav_path.read_bytes()
+    reference_url = storage_url("voices", voice_id, "reference.wav")
     voice_repository.apply_clone_update(voice_id, {"referenceAudioUrl": reference_url})
 
     # ⚠️ 캐릭터 자동 연결 안 함 (확정 설계: 연결은 /voice 에서 ready voice 만).
@@ -113,8 +155,8 @@ def create_voice_clone_job(
                 character_id=char_id,
                 reference_text=reference_text.strip(),
                 voice_prompt=voice_prompt,
-                audio_bytes=audio_bytes,
-                audio_ext=ext,
+                audio_bytes=reference_wav_bytes,  # 변환된 wav 전달(webm 아님)
+                audio_ext="wav",
             )
             (vdir / "sample.wav").write_bytes(res["sample_bytes"])
             sample_url = storage_url("voices", voice_id, "sample.wav")
