@@ -76,6 +76,7 @@ export default function VoiceInputPage() {
   const [name, setName] = useState('')
   const [voicePrompt, setVoicePrompt] = useState('')
   const [sampleIndex, setSampleIndex] = useState(0)
+  const [referenceText, setReferenceText] = useState(SAMPLE_TEXTS[0])
 
   // 녹음/오디오
   const [isRecording, setIsRecording] = useState(false)
@@ -111,7 +112,6 @@ export default function VoiceInputPage() {
   }
 
   const speakerLabel = speaker === 'custom' ? customSpeaker.trim() : SPEAKERS.find((s) => s.id === speaker)?.label || ''
-  const sampleText = SAMPLE_TEXTS[sampleIndex]
   const progressPct = Math.min((recordingTime / MIN_SECONDS) * 100, 100)
   const isMinReached = recordingTime >= MIN_SECONDS
   const isDurationOk = audioDuration >= MIN_SECONDS
@@ -196,7 +196,7 @@ export default function VoiceInputPage() {
     const fd = new FormData()
     fd.append('name', name.trim())
     fd.append('voiceType', voiceType)
-    fd.append('referenceText', sampleText) // 따라 읽은 문장 = referenceText
+    fd.append('referenceText', referenceText.trim())
     if (voicePrompt.trim()) fd.append('voicePrompt', voicePrompt.trim())
     if (speakerLabel) fd.append('speakerLabel', speakerLabel)
     const file =
@@ -209,6 +209,10 @@ export default function VoiceInputPage() {
 
   async function handleSubmit() {
     if (!canSubmit) return
+    if (!referenceText.trim()) {
+      setError('샘플에서 실제로 말한 문장을 입력해 주세요.')
+      return
+    }
     setPhase('submitting')
     setError('')
     const controller = new AbortController()
@@ -436,11 +440,27 @@ export default function VoiceInputPage() {
                   <span className={styles.stepBadge}>4</span>아래 문장을 따라 읽어 주세요.
                 </h2>
                 <div className={styles.scriptBox}>
-                  <p className={styles.scriptText}>{sampleText}</p>
+                  <label className={styles.referenceTextLabel} htmlFor="voice-reference-text">
+                    샘플에서 실제로 말한 문장
+                  </label>
+                  <textarea
+                    id="voice-reference-text"
+                    className={`${styles.scriptText} ${styles.referenceTextArea}`}
+                    value={referenceText}
+                    onChange={(e) => setReferenceText(e.target.value)}
+                    rows={4}
+                  />
+                  <p className={`${styles.fieldHint} ${styles.referenceTextHelp}`}>
+                    녹음/업로드한 음성과 문장이 정확히 일치해야 클로닝 품질이 좋아집니다.
+                  </p>
                   <button
                     className={styles.scriptRefreshBtn}
                     disabled={isRecording}
-                    onClick={() => setSampleIndex((i) => (i + 1) % SAMPLE_TEXTS.length)}
+                    onClick={() => {
+                      const nextIndex = (sampleIndex + 1) % SAMPLE_TEXTS.length
+                      setSampleIndex(nextIndex)
+                      setReferenceText(SAMPLE_TEXTS[nextIndex])
+                    }}
                   >
                     다른 문장 <span className={styles.refreshIcon}>↻</span>
                   </button>
