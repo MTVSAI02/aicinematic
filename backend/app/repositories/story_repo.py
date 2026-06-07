@@ -54,6 +54,7 @@ def _scene_to_dict(scene: Scene, scene_chars: list[SceneCharacter]) -> dict:
         "subtitleSettings": scene.subtitle_settings or {},
         "cueTimings": scene.cue_timings or [],
         "sceneTextColor": scene.scene_text_color,
+        "subtitleBackground": scene.subtitle_background,
         "characters": [_scene_char_to_dict(c) for c in scene_chars],
     }
 
@@ -127,6 +128,7 @@ class StoryRepository:
             duration=float(sc.get("duration") or 3.0),
             background_id=sc.get("backgroundId"),
             scene_text_color=sc.get("sceneTextColor"),
+            subtitle_background=sc.get("subtitleBackground"),
             items=sc.get("items") or [],
             cue_timings=sc.get("cueTimings") or [],
             subtitle_settings=sc.get("subtitleSettings") or {},
@@ -228,6 +230,8 @@ class StoryRepository:
                     scene.background_id = sc["backgroundId"]
                 if "sceneTextColor" in sc:
                     scene.scene_text_color = sc["sceneTextColor"]
+                if "subtitleBackground" in sc:
+                    scene.subtitle_background = sc["subtitleBackground"]
                 if "items" in sc:
                     scene.items = sc["items"] or []
                 if "cueTimings" in sc:

@@ -21,6 +21,13 @@ const PALETTE = [
 ]
 const DEFAULT_COLOR = '#111111'
 
+// 씬 단위 자막 배경(투명/검정30%/흰색30%) — 옵션값은 백엔드와 동일.
+const BACKGROUNDS = [
+  ['none', '없음'],
+  ['black', '검정'],
+  ['white', '흰색'],
+]
+
 export default function SubtitleCuePanel({
   sceneOrder,
   overlays,
@@ -34,6 +41,8 @@ export default function SubtitleCuePanel({
   onSetCueAlign,
   sceneTextColor,
   onSetSceneColor,
+  subtitleBackground = 'none',
+  onSetSceneBackground,
 }) {
   // cue 그룹별로 묶기: [[cueOrder, overlays[]], ...] (cueOrder 오름차순)
   const cueGroups = (() => {
@@ -74,6 +83,25 @@ export default function SubtitleCuePanel({
                   />
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {/* 씬 단위 자막 배경(없음/검정/흰색) */}
+        {overlays.length > 0 && (
+          <div className={styles.colorSection}>
+            <span className={styles.panelSubLabel}>자막 배경</span>
+            <div className={styles.alignBtns}>
+              {BACKGROUNDS.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => onSetSceneBackground(value)}
+                  className={`${styles.alignBtn}${subtitleBackground === value ? ` ${styles.alignBtnActive}` : ''}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         )}
