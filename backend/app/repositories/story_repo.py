@@ -22,8 +22,24 @@ from sqlalchemy.orm import Session
 from ..core.ids import new_id
 from ..db.models import RenderResult, Scene, SceneCharacter, Story, TtsAudio
 from ..db.session import SessionLocal
+from ..services.story_parser import _is_narration_speaker
 
 _SCENE_ID_RE = re.compile(r"(\d+)")
+
+
+def _normalize_items(items: list) -> list:
+    """화자가 나레이션 별칭(나레이션/내레이션/narration)으로 들어간 dialogue 를 narration 으로 정규화.
+
+    대본에 "나레이션: ..." 처럼 화자로 적혀 dialogue 로 저장된 옛/오파싱 데이터를 읽는 시점에 바로잡아,
+    /voice(나레이션은 캐릭터 불필요) · TTS(나레이터 보이스) · 씬편집/타임라인이 일관되게 동작하게 한다.
+    """
+    out = []
+    for it in items or []:
+        if it.get("type") == "dialogue" and _is_narration_speaker(it.get("speaker")):
+            out.append({**it, "type": "narration", "speaker": None})
+        else:
+            out.append(it)
+    return out
 
 
 def _local_scene_id(order_index: int) -> str:
@@ -50,7 +66,7 @@ def _scene_to_dict(scene: Scene, scene_chars: list[SceneCharacter]) -> dict:
         "order": scene.order_index,
         "duration": scene.duration,
         "backgroundId": scene.background_id,
-        "items": scene.items or [],
+        "items": _normalize_items(scene.items or []),
         "subtitleSettings": scene.subtitle_settings or {},
         "cueTimings": scene.cue_timings or [],
         "sceneTextColor": scene.scene_text_color,
