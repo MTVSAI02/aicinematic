@@ -16,8 +16,24 @@ import SubtitleCuePanel from '@/components/scene-editor/SubtitleCuePanel'
 import SceneCharacterPanel from '@/components/scene-editor/SceneCharacterPanel'
 import styles from './SceneEditorPage.module.css'
 
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+
 // 디자인 자산 임포트
+import headerBg from '@design/assets/figma-icons/Base/Base_Scene_edit.png'
+import characterSceneEditSvg from '@design/assets/figma-icons/character/character_Scene-edit.svg'
 import navBackgroundIcon from '@design/assets/figma-icons/Nav/nav_background.svg'
+import navSceneEditorIcon from '@design/assets/figma-icons/Nav/nav_scene_editor.svg'
+
+// 자막 배경(씬 단위) 옵션 ↔ style.backgroundColor 매핑. 백엔드와 동일(불투명도 0.3 고정).
+const SUBTITLE_BG_TO_CSS = {
+  black: 'rgba(0, 0, 0, 0.3)',
+  white: 'rgba(255, 255, 255, 0.3)',
+}
+// style.backgroundColor → 옵션값(none/black/white) 역매핑. 없으면 none.
+function bgOptionFromStyle(bgColor) {
+  if (!bgColor) return 'none'
+  return bgColor.replace(/\s/g, '').startsWith('rgba(255') ? 'white' : 'black'
+}
 
 function sceneText(scene) {
   const items = scene.items ?? []
@@ -30,6 +46,8 @@ export default function SceneEditorPage() {
   const { characters, setCharacters } = useCharacterStore()
 
   const globalStoryId = useStoryStore((s) => s.storyId)
+  const storyTitle = useStoryStore((s) => s.storyTitle)
+  const { titleRef, frameHeight } = useSwingingSignboard(1129 / 1470)
   const setGlobalStoryId = useStoryStore((s) => s.setStoryId)
   const setGlobalStoryTitle = useStoryStore((s) => s.setStoryTitle)
   const setGlobalScenes = useStoryStore((s) => s.setScenes)
@@ -249,6 +267,9 @@ export default function SceneEditorPage() {
       const res = await updateSceneSubtitles(sceneId, {
         storyId,
         sceneTextColor: nextOverlays.find((o) => o.style?.color)?.style?.color ?? null,
+        subtitleBackground: bgOptionFromStyle(
+          nextOverlays.find((o) => o.style?.backgroundColor)?.style?.backgroundColor,
+        ),
         overlays: nextOverlays.map((o) => ({
           itemIndex: o.sourceItemIndex,
           cueOrder: o.cueOrder,
@@ -292,6 +313,18 @@ export default function SceneEditorPage() {
     persistOverlays(next)
   }
 
+  // 씬 단위 자막 배경(none/black/white). none 이면 backgroundColor 제거(투명).
+  function handleSetSceneBackground(option) {
+    const css = SUBTITLE_BG_TO_CSS[option]
+    const next = sceneTextOverlays.map((o) => {
+      const style = { ...(o.style || {}) }
+      if (css) style.backgroundColor = css
+      else delete style.backgroundColor
+      return { ...o, style }
+    })
+    persistOverlays(next)
+  }
+
   async function handleApplyPose(characterId, poseId) {
     setError('')
     try {
@@ -318,24 +351,45 @@ export default function SceneEditorPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 영역 ── */}
-      <header className={styles.header}>
+      {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
+      <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>씬을 선택해 배경과 캐릭터를 설정하세요.</div>
-          <div className={styles.headerTitleRow}>
-            <h1 className={styles.headerTitle}>씬 편집</h1>
-            <button
-              type="button"
-              className={styles.toggleListBtn}
-              onClick={() => setShowSceneList(!showSceneList)}
-              aria-expanded={showSceneList}
-            >
-              🎬 씬 목록 {showSceneList ? '접기' : '펼치기'}
-            </button>
-          </div>
+          <h1 className={styles.headerTitle}>씬 편집</h1>
+          <button
+            type="button"
+            className={styles.toggleListBtn}
+            onClick={() => setShowSceneList(!showSceneList)}
+            aria-expanded={showSceneList}
+          >
+            🎬 씬 목록 {showSceneList ? '접기' : '펼치기'}
+          </button>
           <p className={styles.headerDesc}>
             자막과 cue를 배치해 이야기를 완성할 수 있어요. (단축키: Esc)
           </p>
+        </div>
+        <div className={styles.headerRight}>
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterSceneEditSvg} 
+              alt="씬 편집 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 
@@ -403,12 +457,21 @@ export default function SceneEditorPage() {
           <div className={styles.centerStage}>
             {!selectedScene ? (
               <div className={styles.placeholder}>
-                <p>편집할 씬을 선택하세요.</p>
+                <img
+                  src={navSceneEditorIcon}
+                  alt="씬 편집 마스코트"
+                  className={styles.placeholderIcon}
+                />
+                <h3 className={styles.placeholderTitle}>편집할 씬을 선택해주세요</h3>
+                <p className={styles.placeholderDesc}>
+                  좌측 목록에서 편집할 씬을 클릭하거나,<br />
+                  아래 버튼을 눌러 목록을 펼치세요.
+                </p>
                 <button
                   type="button"
                   className={styles.panelBtn}
                   onClick={() => setShowSceneList(true)}
-                  style={{ marginTop: '12px', width: 'auto' }}
+                  style={{ width: 'auto', padding: '10px 24px' }}
                 >
                   🎬 씬 목록 열기
                 </button>
@@ -533,6 +596,10 @@ export default function SceneEditorPage() {
                     onSetCueAlign={handleSetCueAlign}
                     sceneTextColor={sceneTextOverlays.find((o) => o.style?.color)?.style?.color ?? null}
                     onSetSceneColor={handleSetSceneColor}
+                    subtitleBackground={bgOptionFromStyle(
+                      sceneTextOverlays.find((o) => o.style?.backgroundColor)?.style?.backgroundColor,
+                    )}
+                    onSetSceneBackground={handleSetSceneBackground}
                   />
                 )}
               </div>

@@ -7,15 +7,20 @@ import BackgroundPromptPanel from '@/components/backgrounds/BackgroundPromptPane
 import BackgroundLibrary from '@/components/backgrounds/BackgroundLibrary'
 import styles from './BackgroundPage.module.css'
 
+import useStoryStore from '@/store/useStoryStore'
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+
 // 디자인 에셋 임포트
-import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
-import navBackgroundMascot from '@design/assets/figma-icons/Nav/nav_background.svg'
+import headerBg from '@design/assets/figma-icons/Base/Base_Background.png'
+import characterBackgroundSvg from '@design/assets/figma-icons/character/character_background.svg'
 import yarnIcon from '@design/assets/figma-icons/Nav/nav_voice.svg'
 
 export default function BackgroundPage() {
   const navigate = useNavigate()
   const setBackgrounds = useBackgroundStore((s) => s.setBackgrounds)
   const [loadError, setLoadError] = useState('')
+  const storyTitle = useStoryStore((s) => s.storyTitle)
+  const { titleRef, frameHeight } = useSwingingSignboard(1169 / 1538)
 
   // 페이지 진입 시 저장된 배경 목록으로 store 동기화
   useEffect(() => {
@@ -32,18 +37,39 @@ export default function BackgroundPage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 (밤하늘 배경 BACJ.png 적용) ── */}
+      {/* ── 상단 헤더 (밤하늘 배경 적용) ── */}
       <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>장면에 어울리는 배경을 생성하거나,</div>
-          <h1 className={styles.headerTitle}>배경</h1>
+          <h1 className={styles.headerTitle}>멋진 동화 속<br />배경 그리기</h1>
           <p className={styles.headerDesc}>
-            스토리와 씬을 선택하면 추천 배경 프롬프트를<br />
-            받을 수 있어요.
+            스토리와 씬을 선택하면 같은 그림체의<br />
+            예쁘고 멋진 배경이 나와요.<br />
+            똑같은 비율과 똑같은 그림체의 배경으로 나와요.
           </p>
         </div>
         <div className={styles.headerRight}>
-          <img src={navBackgroundMascot} alt="배경 마스코트" className={styles.headerMascot} />
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterBackgroundSvg} 
+              alt="배경 설정 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 
@@ -83,22 +109,16 @@ export default function BackgroundPage() {
             </div>
 
           </div>
+          {/* ── 하단 네비게이션 고정 영역 ── */}
+          <div className={styles.fixedPageNav}>
+            <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
+              ← 이전 단계
+            </button>
+            <button className={styles.btnPrimary} onClick={() => navigate('/scene-editor')}>
+              다음 단계 →
+            </button>
+          </div>
         </div>
-
-        {/* 하단 북마크 리본 데코레이션 */}
-        <div className={styles.bookmarkRibbon}>
-          <span className={styles.bookmarkStar}>★</span>
-        </div>
-      </div>
-
-      {/* ── 하단 네비게이션 고정 영역 ── */}
-      <div className={styles.fixedPageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/voice')}>
-          ← 이전 단계
-        </button>
-        <button className={styles.btnPrimary} onClick={() => navigate('/scene-editor')}>
-          다음 단계 →
-        </button>
       </div>
     </div>
   )

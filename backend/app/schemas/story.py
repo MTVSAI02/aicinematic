@@ -65,6 +65,11 @@ class EmotionOption(BaseModel):
     value: str = Field(examples=["happy"])
 
 
+class StoryDeleteResponse(BaseModel):
+    deleted: bool
+    storyId: str
+
+
 class StoryItemResponse(BaseModel):
     type: str = Field(description="narration 또는 dialogue")
     speaker: str | None = Field(description="dialogue일 때 화자명, narration이면 null")

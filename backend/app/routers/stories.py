@@ -4,6 +4,7 @@ from ..schemas.story import (
     EmotionOption,
     NarratorVoiceResponse,
     NarratorVoiceUpdateRequest,
+    StoryDeleteResponse,
     StoryParseRequest,
     StoryParseResponse,
     VoiceLockActionResponse,
@@ -59,6 +60,19 @@ def get_story(story_id: str):
     - 존재하지 않는 storyId 요청 시 404(Story not found)를 반환합니다.
     """
     return story_service.get_story(story_id)
+
+
+@router.delete("/{story_id}", response_model=StoryDeleteResponse, summary="스토리 삭제")
+def delete_story(story_id: str):
+    """
+    스토리 하나와 그 하위 산출물을 삭제합니다.
+
+    - 씬 / 씬-캐릭터 연결 / TTS 오디오 / 렌더 결과는 FK CASCADE 로 함께 삭제됩니다.
+    - 연결된 TTS 오디오 파일과 렌더 mp4 파일도 storage 에서 정리합니다.
+    - 캐릭터와 배경은 공용 라이브러리이므로 삭제하지 않습니다.
+    - 존재하지 않는 storyId 요청 시 404(Story not found)를 반환합니다.
+    """
+    return story_service.delete_story(story_id)
 
 
 @router.patch(

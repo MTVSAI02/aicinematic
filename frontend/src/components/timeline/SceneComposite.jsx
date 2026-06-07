@@ -94,7 +94,9 @@ export default function SceneComposite({
               lineHeight: 1.3,
               textAlign: L.align || 'center',
               color: st.color || '#111111',
-              background: 'transparent', // 자막 배경 박스 없음(렌더와 동일)
+              background: st.backgroundColor || 'transparent', // 자막 배경 박스(none=투명, 렌더와 동일)
+              borderRadius: h ? (st.borderRadius ?? 0.02) * h : `${(st.borderRadius ?? 0.02) * 100}cqh`,
+              padding: h ? (st.padding ?? 0.02) * h : `${(st.padding ?? 0.02) * 100}cqh`,
               fontFamily: "'Hakgyoansim Dunggeunmiso', sans-serif", // 자막 전용 폰트(Regular)
               fontWeight: 400, // Regular 만 사용(굵게 X)
               whiteSpace: 'pre-wrap',

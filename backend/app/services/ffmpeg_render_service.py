@@ -208,9 +208,16 @@ def _draw_subtitle(canvas, ov, w, h):
     else:
         text_color = _TEXT_ON_LIGHT   # 밝은 배경 → 검은 글자
 
-    # 배경 박스/그림자/외곽선 없음(투명 타일). 글자색만 — 미리보기와 동일.
+    # 자막 배경: style.backgroundColor 있으면 둥근 박스(미리보기와 동일), 없으면 투명.
     tile = Image.new("RGBA", (tile_w, tile_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(tile)
+    bg_color = _parse_color(style.get("backgroundColor"))
+    if bg_color is not None:
+        # borderRadius 는 스테이지 높이 대비 정규화값(기본 0.02). 글자색과 무관한 박스 채움.
+        radius = int(float(style.get("borderRadius", 0.02)) * h)
+        draw.rounded_rectangle(
+            [0, 0, tile_w - 1, tile_h - 1], radius=max(0, radius), fill=bg_color
+        )
     y = pad_y
     for line in lines:
         lw = font.getlength(line)

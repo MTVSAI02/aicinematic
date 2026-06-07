@@ -10,9 +10,11 @@ import { clampDuration } from '@/components/timeline/DurationControl'
 import { sceneOffsets, resolvePlayback } from '@/components/timeline/previewPlayback'
 import styles from '@/components/timeline/Timeline.module.css'
 
+import useSwingingSignboard from '@/hooks/useSwingingSignboard'
+
 // 디자인 에셋 임포트
-import headerBg from '@design/assets/figma-icons/Scene-_Check/BACJ.png'
-import timelineMascot from '@design/assets/figma-icons/Nav/nav_timeline.svg'
+import headerBg from '@design/assets/figma-icons/Base/Base_Timeline.png'
+import characterTimelineSvg from '@design/assets/figma-icons/character/character_Timeline.svg'
 
 // /timeline — 스토리보드 기반 타임라인. 순서는 스토리 원본 고정(재배치 없음).
 // 역할: 씬 재생 길이(duration) + 자막 cue 그룹 타이밍(startSec/durationSec) 조절. 변경 시 자동 저장.
@@ -23,6 +25,9 @@ const clampNum = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 export default function TimelinePage() {
   const navigate = useNavigate()
   const storyId = useStoryStore((s) => s.storyId)
+  const storyTitle = useStoryStore((s) => s.storyTitle)
+
+  const { titleRef, frameHeight } = useSwingingSignboard(1116 / 1470)
 
   const [scenes, setScenes] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -241,10 +246,30 @@ export default function TimelinePage() {
         <div className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
           <div className={styles.headerLeft}>
             <div className={styles.headerSubTitle}>각 씬의 자막 타이밍과 길이를 조절하세요</div>
-            <h1 className={styles.headerTitle}>타임라인 설정</h1>
+            <h1 className={styles.headerTitle}>동화의<br />타임라인 설정</h1>
           </div>
           <div className={styles.headerRight}>
-            <img src={timelineMascot} alt="타임라인 마스코트" className={styles.headerMascot} />
+            <div 
+              className={styles.titleFrame} 
+              ref={titleRef}
+              style={{
+                display: 'block',
+                width: '100%',
+                height: frameHeight ? `${frameHeight}px` : 'auto',
+                position: 'relative'
+              }}
+            >
+              <img 
+                src={characterTimelineSvg} 
+                alt="타임라인 타이틀 액자" 
+                className={styles.titleFrameImg} 
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block'
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -255,9 +280,6 @@ export default function TimelinePage() {
               <button className={styles.btnPrimary} onClick={() => navigate('/story-input')}>스토리 입력하러 가기</button>
             </div>
           </div>
-          <div className={styles.bookmarkRibbon}>
-            <span className={styles.bookmarkStar}>★</span>
-          </div>
         </div>
       </div>
     )
@@ -265,18 +287,39 @@ export default function TimelinePage() {
 
   return (
     <div className={styles.page}>
-      {/* ── 상단 헤더 영역 (밤하늘 배경 BACJ.png 적용) ── */}
+      {/* ── 상단 헤더 영역 (밤하늘 배경 적용) ── */}
       <header className={styles.header} style={{ backgroundImage: `url(${headerBg})` }}>
         <div className={styles.headerLeft}>
           <div className={styles.headerSubTitle}>각 씬의 자막 타이밍과 길이를 조절하세요</div>
-          <h1 className={styles.headerTitle}>타임라인 설정</h1>
+          <h1 className={styles.headerTitle}>동화의<br />타임라인 설정</h1>
           <p className={styles.headerDesc}>
             씬 순서는 대본 순서로 고정되며,<br />
-            여기서 영상의 구체적인 재생 시간을 완성합니다.
+            여기서 영상의 구체적인 재생 시간을 완성합니다.<br />
+            멋진 영상을 만들어 보세요.
           </p>
         </div>
         <div className={styles.headerRight}>
-          <img src={timelineMascot} alt="타임라인 마스코트" className={styles.headerMascot} />
+          <div 
+            className={styles.titleFrame} 
+            ref={titleRef}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: frameHeight ? `${frameHeight}px` : 'auto',
+              position: 'relative'
+            }}
+          >
+            <img 
+              src={characterTimelineSvg} 
+              alt="타임라인 타이틀 액자" 
+              className={styles.titleFrameImg} 
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block'
+              }}
+            />
+          </div>
         </div>
       </header>
 
@@ -351,25 +394,19 @@ export default function TimelinePage() {
                 />
               </>
             )}
-
             {error && <p className={styles.error}>{error} (다시 시도해 주세요)</p>}
+
+          </div>
+          {/* ── 하단 네비게이션 고정 영역 ── */}
+          <div className={styles.fixedPageNav}>
+            <button className={styles.btnSecondary} onClick={() => navigate('/scene-editor')}>
+              ← 씬 편집
+            </button>
+            <button className={styles.btnPrimary} onClick={() => navigate('/render')}>
+              영상 생성 →
+            </button>
           </div>
         </div>
-
-        {/* 하단 북마크 리본 데코레이션 */}
-        <div className={styles.bookmarkRibbon}>
-          <span className={styles.bookmarkStar}>★</span>
-        </div>
-      </div>
-
-      {/* ── 하단 네비게이션 고정 영역 ── */}
-      <div className={styles.fixedPageNav}>
-        <button className={styles.btnSecondary} onClick={() => navigate('/scene-editor')}>
-          ← 씬 편집
-        </button>
-        <button className={styles.btnPrimary} onClick={() => navigate('/render')}>
-          영상 생성 →
-        </button>
       </div>
     </div>
   )

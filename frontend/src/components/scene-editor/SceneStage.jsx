@@ -204,12 +204,29 @@ export default function SceneStage({
                 pointerEvents: charMode ? 'auto' : 'none',
               }}
             >
-              <div
-                className={styles.charPlaceholder}
-                style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
-              >
-                <span className={styles.charPlaceholderName}>{c.name || '캐릭터'}</span>
-              </div>
+              {c.imageUrl ? (
+                <img
+                  src={c.imageUrl}
+                  alt={c.name}
+                  className={styles.charImg}
+                  style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
+                  onLoad={(e) => {
+                    const { naturalWidth, naturalHeight } = e.currentTarget
+                    setAspects((prev) => ({
+                      ...prev,
+                      [c.characterId]: naturalWidth / naturalHeight,
+                    }))
+                  }}
+                  draggable={false}
+                />
+              ) : (
+                <div
+                  className={styles.charPlaceholder}
+                  style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}
+                >
+                  <span className={styles.charPlaceholderName}>{c.name || '캐릭터'}</span>
+                </div>
+              )}
             </div>
           )
         })}
@@ -236,10 +253,11 @@ export default function SceneStage({
                 fontSize: g.fontSize,
                 textAlign: g.layout.align,
                 color: st.color || '#111111',
-                background: 'transparent', // 자막 배경 박스 없음(렌더와 동일)
+                background: st.backgroundColor || 'transparent', // 자막 배경 박스(none=투명, 렌더와 동일)
+                borderRadius: `${(st.borderRadius ?? 0.02) * stage.h}px`, // 둥근 박스(렌더와 동일)
                 fontFamily: "'Hakgyoansim Dunggeunmiso', sans-serif", // 자막 전용 폰트(Regular)
                 fontWeight: 400, // Regular 만 사용(굵게 X)
-                padding: `${(st.padding ?? 0.02) * stage.h}px`, // 드래그 hit 영역 확보용(투명)
+                padding: `${(st.padding ?? 0.02) * stage.h}px`, // 박스 안쪽 여백(렌더와 동일, 투명일 땐 hit 영역)
               }}
             >
               {o.text}

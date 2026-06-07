@@ -27,6 +27,12 @@ export function getStory(storyId) {
   return request(`/api/stories/${storyId}`)
 }
 
+// DELETE /api/stories/{storyId} — 스토리 + 씬/음성/영상 삭제(캐릭터·배경은 공용 보관함이라 유지)
+// 응답: { deleted: true, storyId }
+export function deleteStory(storyId) {
+  return request(`/api/stories/${storyId}`, { method: 'DELETE' })
+}
+
 // PATCH /api/stories/{storyId}/narrator-voice — 나레이션 보이스 연결/해제
 // payload: { voiceId: "voice_preset_narrator_calm_001" } 또는 { voiceId: null }(해제)
 export function assignNarratorVoiceToStory(storyId, payload) {

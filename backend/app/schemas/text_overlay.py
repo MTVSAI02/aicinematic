@@ -31,7 +31,9 @@ class TextOverlayStyle(BaseModel):
     """
 
     color: str = "#ffffff"
-    backgroundColor: str = "rgba(0,0,0,0.45)"
+    # 기본 None = 자막 배경 없음(투명). 씬 단위 subtitleBackground(black/white) 선택 시에만 값이 채워진다.
+    # (기본값을 색으로 두면 none 인데도 응답에 backgroundColor 가 끼어들어 프론트 역매핑이 깨진다.)
+    backgroundColor: str | None = None
     fontWeight: str = "600"
     borderRadius: float = Field(default=0.02, ge=0.0, le=0.5)
     padding: float = Field(default=0.02, ge=0.0, le=0.5)
@@ -70,6 +72,9 @@ class SceneSubtitleSettingsRequest(BaseModel):
 
     storyId: str
     sceneTextColor: str | None = Field(default=None, description="씬 전체 자막 글자색 hex(없으면 자동 색)")
+    subtitleBackground: Literal["none", "black", "white"] | None = Field(
+        default=None, description="씬 전체 자막 배경 박스(none/black/white, 없으면 none)"
+    )
     overlays: list[SceneSubtitleSetting] = []
 
 
