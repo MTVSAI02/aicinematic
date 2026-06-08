@@ -1,0 +1,8 @@
+# Vercel 배포는 frontend + design(공유 에셋)만 필요. 나머지는 업로드 제외(용량·시크릿 보호).
+.git
+.venv
+backend
+.claude
+**/node_modules
+**/__pycache__
+*.log
