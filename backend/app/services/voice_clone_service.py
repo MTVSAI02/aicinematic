@@ -33,10 +33,9 @@ from .ai_voice_client import clone_voice as ai_clone_voice
 from .job_manager import job_manager
 
 _ALLOWED_EXT = {"webm", "wav", "mp3", "m4a"}
-_ALLOWED_MIME = {
-    "audio/webm", "audio/wav", "audio/x-wav", "audio/wave",
-    "audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/aac", "audio/ogg",
-}
+# MIME 화이트리스트는 두지 않는다 — 같은 오디오도 브라우저/OS 가 audio/webm·video/webm·audio/vnd.wave 등
+# 제각각으로 태깅해 신뢰할 수 없다(끝없이 추가하는 whack-a-mole). 검증은 확장자(_ALLOWED_EXT) +
+# ffmpeg 변환 성공 여부로 한다 — 실제 오디오를 디코딩해보는 ffmpeg 가 진짜 판정자.
 _MAX_AUDIO_BYTES = 20 * 1024 * 1024  # 20MB — 20초 음성 MVP엔 충분(과대 업로드 차단)
 
 
@@ -99,10 +98,8 @@ def create_voice_clone_job(
     ext = _ext_of(audio_filename)
     if ext not in _ALLOWED_EXT:
         raise InvalidAudioFileError()
-    # MIME 검증: content_type 이 주어졌고 허용 목록 밖이면 거부 (빈/octet-stream 은 ext 검증으로 대체)
-    ctype = (content_type or "").split(";")[0].strip().lower()
-    if ctype and ctype not in _ALLOWED_MIME and ctype != "application/octet-stream":
-        raise InvalidAudioFileError(f"unsupported audio MIME: {ctype}")
+    # MIME(content_type)은 검증하지 않는다 — 브라우저/OS 마다 같은 오디오를 다르게 태깅(video/webm 등)해
+    # 화이트리스트가 brittle 하다. 실제 검증은 아래 reference 변환(ffmpeg)에서 한다(깨진/비오디오 → 변환 실패).
     # narrator 는 characterId 없음. character 면 있을 때만 존재 검증(연결은 안 함 — 메타로만 저장).
     char_id = character_id if (voice_type == "character" and character_id) else None
     if char_id and character_repository.get(char_id) is None:
@@ -132,12 +129,12 @@ def create_voice_clone_job(
     vdir = VOICE_STORAGE_DIR / voice_id
     vdir.mkdir(parents=True, exist_ok=True)
     wav_path = vdir / "reference.wav"
-    if ext == "wav":
-        wav_path.write_bytes(audio_bytes)
-    else:
-        original_path = vdir / f"reference_original.{ext}"  # 원본 보관(webm 등)
-        original_path.write_bytes(audio_bytes)
-        _convert_to_wav(original_path, wav_path)  # 실패 시 VoiceReferenceConversionError
+    # 원본 보관 후, 확장자와 무관하게 항상 ffmpeg 로 wav(pcm_s16le/mono/VOICE_REFERENCE_SAMPLE_RATE)로
+    # 변환·정규화한다. wav 업로드도 변환을 거쳐 검증되고(깨진 파일 → VoiceReferenceConversionError),
+    # sample rate/channel 이 통일된다. = "확장자 + ffmpeg 변환 성공"이 곧 입력 검증.
+    original_path = vdir / f"reference_original.{ext}"  # 원본 보관(webm/wav/mp3/m4a)
+    original_path.write_bytes(audio_bytes)
+    _convert_to_wav(original_path, wav_path)  # 디코딩 불가/깨진/비오디오 파일 → VoiceReferenceConversionError
     reference_wav_bytes = wav_path.read_bytes()
     reference_url = storage_url("voices", voice_id, "reference.wav")
     voice_repository.apply_clone_update(voice_id, {"referenceAudioUrl": reference_url})
