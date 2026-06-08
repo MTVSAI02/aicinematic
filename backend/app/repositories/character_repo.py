@@ -116,6 +116,14 @@ class CharacterRepository:
             db.commit()
             return _load_one(db, character_id)
 
+    def names_using_voice(self, voice_id: str) -> list[str]:
+        """해당 voiceId 를 연결한 캐릭터 이름 목록(보이스 삭제 차단 판단/메시지용). 없으면 빈 리스트."""
+        with SessionLocal() as db:
+            rows = db.execute(
+                select(Character.name).where(Character.voice_id == voice_id)
+            ).scalars().all()
+            return list(rows)
+
     def detach_voice(self, voice_id: str) -> int:
         """해당 voiceId 를 참조하던 모든 캐릭터의 voice_id 를 NULL 로(보이스 삭제 캐스케이드)."""
         with SessionLocal() as db:

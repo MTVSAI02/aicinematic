@@ -205,6 +205,13 @@ class InvalidAudioFileError(AppException):
     detail = "Invalid audio file (allowed: webm/wav/mp3/m4a)."
 
 
+class VoiceInUseError(AppException):
+    """캐릭터에 연결된 보이스는 삭제 불가 — 먼저 캐릭터에서 보이스 연결을 해제해야 함."""
+
+    status_code = 409
+    detail = "연결된 캐릭터가 있어 삭제할 수 없습니다. 먼저 캐릭터에서 보이스 연결을 해제해 주세요."
+
+
 class VoiceReferenceConversionError(AppException):
     """업로드한 reference 오디오(webm 등)를 wav 로 변환하지 못함(ffmpeg 실패/깨진 파일/빈 결과).
 

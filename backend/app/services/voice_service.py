@@ -1,11 +1,11 @@
 import logging
-import shutil
 
-from ..core.config import VOICE_STORAGE_DIR
+from ..core import storage
 from ..core.exceptions import (
     DefaultVoiceCannotBeDeletedError,
     DefaultVoiceCannotBeModifiedError,
     NoFieldsToUpdateError,
+    VoiceInUseError,
     VoiceNotFoundError,
 )
 from ..repositories.character_repo import character_repository
@@ -56,11 +56,11 @@ class VoiceService:
         # 기본 제공(preset) 보이스는 삭제 불가
         if voice.get("isPreset"):
             raise DefaultVoiceCannotBeDeletedError()
+        # 캐릭터에 연결돼 있으면 삭제 불가 — 먼저 캐릭터에서 보이스 연결을 해제해야 함.
+        if self._character_repo.names_using_voice(voice_id):
+            raise VoiceInUseError()
         self._voice_repo.delete(voice_id)
-        # 참조 해제(배경 삭제와 동일 정책): 이 voiceId를 쓰던
-        # - 캐릭터의 voiceId를 null로
-        # - 스토리의 narratorVoiceId를 null로
-        self._character_repo.detach_voice(voice_id)
+        # 캐릭터 연결은 위에서 차단했으므로(연결 0건) 여기선 나레이션 연결만 해제한다.
         self._story_repo.detach_narrator_voice(voice_id)
         # reference/sample 등 디스크 파일도 함께 정리 (orphan 방지). 실패해도 삭제 응답은 성공.
         self._delete_voice_files(voice_id)
@@ -68,17 +68,14 @@ class VoiceService:
 
     @staticmethod
     def _delete_voice_files(voice_id: str) -> None:
-        """storage/voices/{voiceId}/ 폴더(reference/sample) 삭제.
+        """voices/{voiceId}/ 하위 파일(reference_original/reference/sample) 삭제.
 
-        - 폴더가 이미 없으면 조용히 무시.
-        - 권한 등으로 삭제 실패하면 warning 로그만 남기고 삭제 API 자체는 실패시키지 않는다.
+        - storage 추상화 경유: R2 모드면 prefix 하위 객체 일괄 삭제, 로컬이면 폴더 삭제.
+        - 없어도 에러 없음. 실패해도 삭제 API 자체는 성공으로 둔다(레코드는 이미 삭제됨).
         """
-        folder = VOICE_STORAGE_DIR / voice_id
-        if not folder.exists():
-            return
         try:
-            shutil.rmtree(folder)
-        except OSError as e:  # noqa: BLE001 (권한 등 — 레코드 삭제는 이미 성공)
+            storage.delete_prefix(f"voices/{voice_id}/")
+        except Exception as e:  # noqa: BLE001 (파일 정리 실패가 삭제 API 를 막지 않게)
             logger.warning("voice 파일 정리 실패 (voiceId=%s): %s", voice_id, e)
 
 

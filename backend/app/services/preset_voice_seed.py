@@ -12,12 +12,11 @@ Qwen3-TTS CustomVoice 내장 화자 4종을 우리 voiceId 로 노출한다.
 """
 
 import logging
-import shutil
 from pathlib import Path
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from ..core.config import VOICE_STORAGE_DIR, storage_url
+from ..core import storage
 from ..db.models import Voice
 from ..db.session import SessionLocal
 
@@ -39,16 +38,19 @@ PRESET_NARRATOR_VOICES = [
 
 
 def _ensure_sample(voice_id: str) -> str | None:
-    """동봉 자산이 있으면 storage 로 복사하고 sampleAudioUrl 반환. 없으면 None."""
+    """동봉 자산이 있으면 storage 로 1회 업로드하고 sampleAudioUrl 반환. 없으면 None.
+
+    custom voice clone 과 동일한 key 구조(voices/{voiceId}/sample.wav)로 저장한다.
+    storage 추상화 경유라 R2 모드면 R2, 아니면 로컬 app/storage 에 올라간다.
+    이미 올라가 있으면 재업로드를 생략해 매 startup 중복 쓰기를 피한다(idempotent).
+    """
     asset = _SEED_ASSET_DIR / f"{voice_id}.wav"
     if not asset.is_file():
         return None
-    vdir = VOICE_STORAGE_DIR / voice_id
-    vdir.mkdir(parents=True, exist_ok=True)
-    dest = vdir / "sample.wav"
-    if not dest.exists():
-        shutil.copyfile(asset, dest)
-    return storage_url("voices", voice_id, "sample.wav")
+    key = f"voices/{voice_id}/sample.wav"
+    if not storage.exists(key):
+        storage.save_bytes(key, asset.read_bytes(), content_type="audio/wav")
+    return storage.get_storage_url(key)
 
 
 def seed_preset_narrator_voices() -> None:
