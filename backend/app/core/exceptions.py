@@ -162,6 +162,13 @@ class CharacterPoseNotFoundError(AppException):
     detail = "Character pose not found"
 
 
+class PoseInUseError(AppException):
+    """씬에서 사용 중인 포즈는 삭제 불가 — 먼저 해당 씬에서 포즈를 해제해야 함."""
+
+    status_code = 409
+    detail = "씬에서 사용 중인 포즈는 삭제할 수 없습니다. 먼저 해당 씬에서 포즈를 해제해 주세요."
+
+
 class RenderPlanInvalidError(AppException):
     """렌더 플랜이 비어 있거나 렌더링 불가(예: scene 0개)."""
 

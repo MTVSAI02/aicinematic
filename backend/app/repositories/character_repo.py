@@ -10,7 +10,7 @@ from __future__ import annotations
 from sqlalchemy import select, update
 
 from ..core.ids import new_id
-from ..db.models import Character, CharacterPose
+from ..db.models import Character, CharacterPose, SceneCharacter
 from ..db.session import SessionLocal
 
 
@@ -165,6 +165,23 @@ class CharacterRepository:
                 select(CharacterPose).where(CharacterPose.character_id == character_id)
             ).scalars().all()
             return [_pose_to_dict(p) for p in poses]
+
+    def pose_in_use(self, pose_id: str) -> bool:
+        """해당 포즈가 어떤 씬 캐릭터에 적용돼 있으면 True (삭제 차단 판단용)."""
+        with SessionLocal() as db:
+            return db.execute(
+                select(SceneCharacter.id).where(SceneCharacter.pose_id == pose_id).limit(1)
+            ).first() is not None
+
+    def delete_pose(self, character_id: str, pose_id: str) -> bool:
+        """캐릭터 소유의 포즈 1개 삭제. 없거나 다른 캐릭터 소유면 False."""
+        with SessionLocal() as db:
+            p = db.get(CharacterPose, pose_id)
+            if p is None or p.character_id != character_id:
+                return False
+            db.delete(p)
+            db.commit()
+            return True
 
 
 character_repository = CharacterRepository()

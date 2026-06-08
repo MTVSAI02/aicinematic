@@ -8,6 +8,7 @@ from ..schemas.character import (
     CharacterResponse,
     CharacterUpdateRequest,
     CharacterVoiceUpdateRequest,
+    PoseDeleteResponse,
     PoseGenerateRequest,
 )
 from ..schemas.job import JobCreatedResponse
@@ -139,3 +140,13 @@ def generate_character_pose(character_id: str, request: PoseGenerateRequest):
 def list_character_poses(character_id: str):
     """캐릭터에 생성된 포즈 목록(1:N). 캐릭터 없음 → 404."""
     return character_service.list_poses(character_id)
+
+
+@router.delete(
+    "/{character_id}/poses/{pose_id}",
+    response_model=PoseDeleteResponse,
+    summary="캐릭터 포즈 삭제",
+)
+def delete_character_pose(character_id: str, pose_id: str):
+    """캐릭터 포즈 1개 삭제. 캐릭터/포즈 없음 → 404, 씬에서 사용 중인 포즈 → 409(삭제 차단)."""
+    return character_service.delete_pose(character_id, pose_id)
