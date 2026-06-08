@@ -1,4 +1,5 @@
 import { getJob } from '@/api/jobs'
+import useJobCountStore from '@/store/useJobCountStore'
 
 // 폴링 중단(abort) 공통 에러. 호출부는 e.aborted로 식별해 조용히 무시한다.
 function abortedError() {
@@ -20,6 +21,16 @@ export async function pollJob(
   jobId,
   { interval = 1500, maxAttempts = 240, onStatus, signal } = {},
 ) {
+  const { increment, decrement } = useJobCountStore.getState()
+  increment()
+  try {
+   return await _pollLoop(jobId, { interval, maxAttempts, onStatus, signal })
+  } finally {
+    decrement()
+  }
+}
+
+async function _pollLoop(jobId, { interval, maxAttempts, onStatus, signal }) {
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     if (signal?.aborted) throw abortedError()
 
