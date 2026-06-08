@@ -21,6 +21,9 @@ import notifySoundUrl from '@/assets/notify.wav'
 
 const POLL_MS = 5000
 const TOAST_MS = 4500
+// 작업이 끝나(activeJobCount=0) 도 이 시간 동안은 알림 폴링을 유지한다.
+// 완료 알림은 작업 종료와 거의 동시에 생성되므로, 종료 즉시 폴링을 끄면 그 알림을 놓친다.
+const NOTIFICATION_GRACE_MS = 30000
 
 export default function useNotifications() {
   const [notifications, setNotifications] = useState([])
@@ -86,15 +89,26 @@ export default function useNotifications() {
   const activeJobCount = useJobCountStore((s) => s.activeJobCount)
 
   useEffect(() => {
-    if (activeJobCount === 0) return
+    // 작업 중에는 5초 주기로 폴링. 작업이 끝나(activeJobCount=0) 도 grace 동안은 유지해
+    // 종료 직후 생성되는 "완료" 알림을 놓치지 않는다. grace 까지 지나면 idle 로 보고 중단(부하 절약).
+    // 새 작업이 생기면 activeJobCount 변화로 effect 가 재실행돼 즉시 다시 폴링한다.
     const ctrl = new AbortController()
     // refresh 의 setState 는 전부 await(fetch) 이후라 동기 cascading render 가 아니다.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    refresh(ctrl.signal)
+    refresh(ctrl.signal) // 진입 즉시 1회(마운트/작업 종료 직후 최신화)
     const id = setInterval(() => refresh(ctrl.signal), POLL_MS)
+    // 완전 idle(작업 0) 이면 grace 후 폴링 중단. 작업 중이면 멈추지 않는다.
+    const stopId =
+      activeJobCount === 0
+        ? setTimeout(() => {
+            clearInterval(id)
+            ctrl.abort()
+          }, NOTIFICATION_GRACE_MS)
+        : null
     return () => {
       ctrl.abort()
       clearInterval(id)
+      if (stopId) clearTimeout(stopId)
     }
   }, [refresh, activeJobCount])
 
