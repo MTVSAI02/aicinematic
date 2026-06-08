@@ -221,8 +221,14 @@ export default function VoiceInputPage() {
       const { jobId, voiceId } = await cloneVoice(buildFormData())
       setPhase('processing')
       await pollJob(jobId, { interval: 1200, signal: controller.signal })
-      // 완료 → 결과 보이스 조회 후 라이브러리에도 반영
-      const voice = await getVoice(voiceId)
+      // 완료 → 결과 보이스 조회 후 라이브러리에도 반영.
+      // sampleAudioUrl 이 잠깐 비어 올 수 있어, 이 화면에서 바로 미리듣기 되도록 몇 번 재조회한다.
+      let voice = await getVoice(voiceId)
+      for (let i = 0; i < 5 && !voice?.sampleAudioUrl; i += 1) {
+        await new Promise((r) => setTimeout(r, 1000))
+        if (controller.signal.aborted) return
+        voice = await getVoice(voiceId)
+      }
       setResultVoice(voice)
       addVoice(voice)
       setPhase('completed')
@@ -306,13 +312,12 @@ export default function VoiceInputPage() {
             <div className={styles.resultMeta}>
               <span><b>{resultVoice.name}</b></span>
               <span>{resultVoice.voiceType === 'narrator' ? '나레이션 추천' : '캐릭터 추천'}{resultVoice.speakerLabel ? ` · ${resultVoice.speakerLabel}` : ''}</span>
-              <span className={styles.muted}>voiceId: {resultVoice.voiceId}</span>
             </div>
             {resultVoice.sampleAudioUrl ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
               <audio className={styles.audio} controls src={`${BASE_URL}${resultVoice.sampleAudioUrl}`} />
             ) : (
-              <p className={styles.muted}>샘플 음성은 준비되는 대로 보이스 페이지에서 들을 수 있어요.</p>
+              <p className={styles.muted}>미리듣기 샘플을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
             )}
             <div className={styles.cardActions}>
               <button className={styles.btnPrimary} onClick={() => navigate('/voice')}>보이스 페이지에서 연결하기</button>
