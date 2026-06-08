@@ -4,11 +4,8 @@ import { assignNarratorVoiceToStory } from '@/api/stories'
 import { assignVoiceToCharacter } from '@/api/characters'
 import { updateVoice as apiUpdateVoice, deleteVoice as apiDeleteVoice } from '@/api/voices'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import styles from '@/pages/voice/VoicePage.module.css'
-
-// 미디어(/storage/...) 는 백엔드에서 서빙되므로 API 베이스 URL 을 붙여 절대경로로 만든다.
-// (상대경로면 Vercel 도메인 기준으로 해석돼 배포 환경에서 재생이 안 된다 — RenderPage/VoiceInputPage 와 동일 처리)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 // 보이스 한 개 카드: 미리듣기 / 연결 / (preset 아니면) 수정·삭제.
 // 연결은 voiceType 과 무관하게 status==ready 면 가능(추천 태그일 뿐). 선택 대상이 locked 면 연결 비활성.
@@ -138,7 +135,7 @@ export default function VoiceCard({ voice }) {
               preset 샘플은 백엔드 storage/voices/{voiceId}/sample.wav 고정 파일, 클론은 AI 결과로 채워진다. */}
           {hasSample ? (
             // eslint-disable-next-line jsx-a11y/media-has-caption
-            <audio className={styles.audio} controls src={`${BASE_URL}${voice.sampleAudioUrl}`} />
+            <audio className={styles.audio} controls src={mediaUrl(voice.sampleAudioUrl)} />
           ) : (
             <button className={styles.cardBtn} disabled>샘플 없음</button>
           )}

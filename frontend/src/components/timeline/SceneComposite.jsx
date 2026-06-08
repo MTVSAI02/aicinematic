@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { mediaUrl } from '@/utils/mediaUrl'
 
 // 읽기전용 미니 합성: 배경 위에 캐릭터(layout) + 자막(textOverlays)을 정규화 좌표대로 겹쳐 보여준다.
 // %(정규화) 좌표를 그대로 써서 카드 썸네일/상세 등 어떤 크기에서도 동일 배치로 스케일된다.
@@ -31,7 +32,7 @@ export default function SceneComposite({
     <div ref={ref} className={className} style={{ position: 'relative', overflow: 'hidden' }}>
       {backgroundUrl ? (
         <img
-          src={backgroundUrl}
+          src={mediaUrl(backgroundUrl)}
           alt=""
           draggable={false}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
@@ -58,7 +59,7 @@ export default function SceneComposite({
         return (
           <img
             key={c.characterId}
-            src={c.imageUrl}
+            src={mediaUrl(c.imageUrl)}
             alt=""
             draggable={false}
             style={{

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import CharacterEditForm from './CharacterEditForm'
 import styles from '@/pages/character/CharacterPage.module.css'
 
@@ -41,7 +42,7 @@ export default function CharacterCard({ character }) {
         title="클릭하여 크게 보기"
       >
         {character.imageUrl ? (
-          <img src={character.imageUrl} alt={character.name} className={styles.thumbImg} />
+          <img src={mediaUrl(character.imageUrl)} alt={character.name} className={styles.thumbImg} />
         ) : (
           <span className={styles.thumbEmpty}>이미지 준비 중</span>
         )}

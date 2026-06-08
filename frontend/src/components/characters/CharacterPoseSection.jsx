@@ -3,6 +3,7 @@ import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
 import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import styles from '@/pages/character/CharacterPage.module.css'
 
 const JOB_STATUS_TEXT = {
@@ -189,7 +190,7 @@ export default function CharacterPoseSection() {
                     <div className={styles.poseThumb}>
                       {pose.imageUrl ? (
                         <img
-                          src={pose.imageUrl}
+                          src={mediaUrl(pose.imageUrl)}
                           alt={pose.posePrompt}
                           className={styles.poseThumbImg}
                         />
