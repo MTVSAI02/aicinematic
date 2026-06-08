@@ -15,10 +15,11 @@
   display: block;
 }
 
-/* 2열 썸네일 그리드 */
+/* 썸네일 그리드 — 패널 폭에 상관없이 카드가 작게 유지되도록 고정 최소폭으로 채운다.
+   (repeat(2,1fr) 은 넓은 패널에서 카드가 절반 폭까지 커져 이미지가 거대해지고 잘려 보였음) */
 .poseGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 12px;
   margin-top: 4px;
 }
