@@ -1,4 +1,4 @@
-from ..core.config import CHARACTER_STORAGE_DIR, storage_url
+from ..core import storage
 from ..core.exceptions import CharacterGenerationFailedError
 from ..repositories.character_repo import character_repository
 from ..schemas.job import JobType
@@ -31,10 +31,9 @@ def create_character_generation_job(request_data: dict) -> dict:
         # AI 서버에는 {"prompt": final_prompt}. 응답에서 이미지 bytes + AI 서버 경로(포즈 reference용)를 받는다.
         image_bytes, ai_image_path = generate_character_image(final_prompt)
 
-        # 3. 저장은 backend 담당: storage 파일 저장 → /storage URL → record 저장
-        CHARACTER_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-        (CHARACTER_STORAGE_DIR / f"{character_id}.png").write_bytes(image_bytes)
-        image_url = storage_url("characters", f"{character_id}.png")
+        # 3. 저장은 backend 담당: storage(R2/로컬) 저장 → /storage URL → record 저장. key 형태 유지.
+        storage.save_bytes(f"characters/{character_id}.png", image_bytes, content_type="image/png")
+        image_url = storage.get_storage_url(f"characters/{character_id}.png")
         return character_repository.create(
             character_id,
             {
