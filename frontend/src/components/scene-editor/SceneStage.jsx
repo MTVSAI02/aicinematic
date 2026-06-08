@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Moveable from 'react-moveable'
+import { mediaUrl } from '@/utils/mediaUrl'
 import styles from './SceneStage.module.css'
 
 // 씬 합성 미리보기 + 배치 편집 (react-moveable).
@@ -170,7 +171,7 @@ export default function SceneStage({
     >
       {backgroundUrl ? (
         <img
-          src={backgroundUrl}
+          src={mediaUrl(backgroundUrl)}
           alt=""
           data-bg="1"
           draggable={false}
@@ -206,7 +207,7 @@ export default function SceneStage({
             >
               {c.imageUrl ? (
                 <img
-                  src={c.imageUrl}
+                  src={mediaUrl(c.imageUrl)}
                   alt={c.name}
                   className={styles.charImg}
                   style={{ transform: g.layout.flipX ? 'scaleX(-1)' : 'none' }}

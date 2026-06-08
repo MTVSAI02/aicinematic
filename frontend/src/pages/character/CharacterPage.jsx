@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import CharacterCreateForm from '@/components/characters/CharacterCreateForm'
 import CharacterList from '@/components/characters/CharacterList'
 import CharacterPoseSection from '@/components/characters/CharacterPoseSection'
@@ -116,7 +117,7 @@ export default function CharacterPage() {
             <div className={styles.modalBody}>
               <div className={styles.modalLeft}>
                 {detailModalCharacter.imageUrl ? (
-                  <img src={detailModalCharacter.imageUrl} alt={detailModalCharacter.name} className={styles.modalImg} />
+                  <img src={mediaUrl(detailModalCharacter.imageUrl)} alt={detailModalCharacter.name} className={styles.modalImg} />
                 ) : (
                   <span className={styles.thumbEmpty}>이미지 준비 중</span>
                 )}
@@ -151,7 +152,7 @@ export default function CharacterPage() {
             <button type="button" className={styles.lightboxCloseBtn} onClick={() => setLightboxPose(null)}>
               ×
             </button>
-            <img src={lightboxPose.imageUrl} alt={lightboxPose.posePrompt} className={styles.lightboxImg} />
+            <img src={mediaUrl(lightboxPose.imageUrl)} alt={lightboxPose.posePrompt} className={styles.lightboxImg} />
             <p className={styles.lightboxPrompt}>{lightboxPose.posePrompt}</p>
           </div>
         </div>

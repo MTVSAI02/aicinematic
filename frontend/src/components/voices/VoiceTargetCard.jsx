@@ -4,6 +4,7 @@ import { assignNarratorVoiceToStory } from '@/api/stories'
 import { assignVoiceToCharacter } from '@/api/characters'
 import { lockVoiceTarget, unlockVoiceTarget } from '@/api/stories'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import styles from '@/pages/voice/VoicePage.module.css'
 
 // lockStatus/ttsStatus → 카드 상태 문구
@@ -101,7 +102,7 @@ export default function VoiceTargetCard({ lock }) {
         {isNarration ? (
           <span className={styles.targetIcon}>📖</span>
         ) : lock.imageUrl ? (
-          <img className={styles.targetThumb} src={lock.imageUrl} alt={lock.displayName} />
+          <img className={styles.targetThumb} src={mediaUrl(lock.imageUrl)} alt={lock.displayName} />
         ) : (
           <span className={styles.targetIcon}>🎭</span>
         )}

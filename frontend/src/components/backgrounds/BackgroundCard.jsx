@@ -2,6 +2,7 @@ import { useState } from 'react'
 import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import styles from '@/pages/background/BackgroundPage.module.css'
 
 export default function BackgroundCard({ background }) {
@@ -48,7 +49,7 @@ export default function BackgroundCard({ background }) {
     >
       <div className={styles.thumb}>
         {background.imageUrl ? (
-          <img src={background.imageUrl} alt={background.name} className={styles.thumbImg} />
+          <img src={mediaUrl(background.imageUrl)} alt={background.name} className={styles.thumbImg} />
         ) : (
           <span className={styles.thumbEmpty}>이미지 준비 중</span>
         )}

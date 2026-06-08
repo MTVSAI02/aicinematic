@@ -3,6 +3,7 @@ import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
 import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import styles from './CharacterPosePanel.module.css'
 
 const JOB_STATUS_TEXT = {
@@ -93,7 +94,7 @@ export default function CharacterPosePanel({ characterId, currentPoseId = null, 
               role="button"
             >
               {character?.imageUrl && (
-                <img className={styles.poseImg} src={character.imageUrl} alt="" draggable={false} />
+                <img className={styles.poseImg} src={mediaUrl(character.imageUrl)} alt="" draggable={false} />
               )}
               <span className={styles.posePrompt}>기본 포즈</span>
             </div>
@@ -104,7 +105,7 @@ export default function CharacterPosePanel({ characterId, currentPoseId = null, 
                 onClick={() => onApplyPose(p.poseId)}
                 role="button"
               >
-                <img className={styles.poseImg} src={p.imageUrl} alt="" draggable={false} />
+                <img className={styles.poseImg} src={mediaUrl(p.imageUrl)} alt="" draggable={false} />
                 <span className={styles.posePrompt} title={p.posePrompt}>
                   {p.posePrompt}
                 </span>
