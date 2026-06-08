@@ -135,7 +135,7 @@ class Scene(Base):
     updated_at: Mapped[datetime] = mapped_column(_TS, nullable=False, server_default=func.now())
     __table_args__ = (
         UniqueConstraint("story_id", "order_index", name="uq_scene_story_order"),
-        CheckConstraint("duration >= 1.0 and duration <= 30.0", name="scene_duration_range"),
+        CheckConstraint("duration >= 1.0 and duration <= 180.0", name="scene_duration_range"),
     )
 
 

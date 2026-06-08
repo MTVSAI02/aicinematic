@@ -213,7 +213,7 @@ export default function TimelinePage() {
   }
 
   // 음성 길이에 맞추기: 각 cue durationSec = audioDurationSec(없으면 기존 유지), startSec 누적, 씬 duration = 합계.
-  // 합계가 30초(씬 최대)를 넘으면 적용/저장하지 않고 안내만(무리한 축소 방지).
+  // 합계가 180초(씬 최대)를 넘으면 적용/저장하지 않고 안내만(무리한 축소 방지).
   function handleFitToAudio(sceneId) {
     setError('')
     const scene = latestScenes.current.find((s) => s.sceneId === sceneId)
@@ -225,8 +225,8 @@ export default function TimelinePage() {
       return sum > 0 ? round3(sum) : c.durationSec
     })
     const total = round3(lengths.reduce((a, b) => a + b, 0))
-    if (total > 30) {
-      setError('음성 길이 합계가 씬 최대 길이 30초를 초과합니다. 자막을 줄이거나 씬을 나눠주세요.')
+    if (total > 180) {
+      setError('음성 길이 합계가 씬 최대 길이 180초를 초과합니다. 자막을 줄이거나 씬을 나눠주세요.')
       return
     }
     let acc = 0
