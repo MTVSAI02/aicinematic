@@ -87,7 +87,8 @@ export default function SceneComposite({
               position: 'absolute',
               left: `${L.x * 100}%`,
               top: `${L.y * 100}%`,
-              width: `${L.width * 100}%`,
+              // 박스 폭: 씬편집(SceneStage)과 동일하게 0.1~1 로 클램프 → 줄바꿈 기준 일치
+              width: `${Math.min(1, Math.max(0.1, L.width)) * 100}%`,
               transform: `translate(-50%, -50%) rotate(${L.rotation || 0}deg)`,
               transformOrigin: 'center',
               zIndex: L.zIndex ?? 100,
@@ -95,6 +96,7 @@ export default function SceneComposite({
               lineHeight: 1.3,
               textAlign: L.align || 'center',
               color: st.color || '#111111',
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.6)', // 씬편집/렌더와 동일한 가독성 그림자
               background: st.backgroundColor || 'transparent', // 자막 배경 박스(none=투명, 렌더와 동일)
               borderRadius: h ? (st.borderRadius ?? 0.02) * h : `${(st.borderRadius ?? 0.02) * 100}cqh`,
               padding: h ? (st.padding ?? 0.02) * h : `${(st.padding ?? 0.02) * 100}cqh`,

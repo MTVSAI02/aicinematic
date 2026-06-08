@@ -5,20 +5,32 @@ import SceneComposite from './SceneComposite'
 import CueTimingEditor from './CueTimingEditor'
 import { mediaUrl } from '@/utils/mediaUrl'
 
+// 전역 오디오 스케줄: 각 음성 item 을 자막 cue.startSec 와 "동일한 시간축"(절대 globalStartSec)에 배치한다.
+// 자막은 마스터 시계(previewTime)로 표시되므로, 오디오도 같은 시계에 종속시켜야 누적 밀림이 없다.
+// globalStart = (이전 씬 duration 합) + cue.startSec + (같은 cue 앞 item 들의 audioDurationSec 합).
+// (렌더의 _collect_audio_inputs 와 동일한 배치 규칙 — 미리보기/렌더 타이밍 일치)
 // 전체 미리보기 재생 큐: 씬 order 순 → cueOrder 순 → items(sourceItemIndex 순) → audioUrl 있는 것만.
-// (전체 미리보기는 전 씬을 훑으므로 audio 도 전 씬을 순서대로 이어서 재생한다.)
+// 각 음성에 "전체 타임라인 기준 시작 offset"(= 이전 씬 합 + cue.startSec + cue 내 앞 item 길이 합)을 함께 담는다.
+// 이 offset + audio.currentTime 이 자막 시계(previewTime)가 되어, 자막이 재생 중 음성을 따라가게 한다(음성=master).
+// (offset 은 cue.startSec 기반이라 audioDurationSec 가 없어도 단일 item cue 는 정확. 같은 cue 내 다중 item 만 길이 누적 사용)
 function buildAudioQueue(scenes) {
   const list = [...(scenes ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-  const urls = []
+  const items = []
+  let sceneStart = 0
   for (const s of list) {
     const cues = [...(s.cueTimings ?? [])].sort((a, b) => a.cueOrder - b.cueOrder)
     for (const c of cues) {
-      for (const it of c.items ?? []) {
-        if (it.audioUrl) urls.push(mediaUrl(it.audioUrl))
+      const cueStart = sceneStart + (c.startSec ?? 0)
+      let itemOff = 0
+      const cueItems = [...(c.items ?? [])].sort((a, b) => (a.sourceItemIndex ?? 0) - (b.sourceItemIndex ?? 0))
+      for (const it of cueItems) {
+        if (it.audioUrl) items.push({ url: mediaUrl(it.audioUrl), offset: cueStart + itemOff })
+        itemOff += it.audioDurationSec || 0
       }
     }
+    sceneStart += s.duration ?? 0
   }
-  return urls
+  return items
 }
 
 // 선택한 씬 상세: 왼쪽 = 큰 미리보기(기존 UI 유지), 오른쪽 = 씬 정보 / 재생 길이 / 자막 타이밍.
@@ -26,37 +38,74 @@ function buildAudioQueue(scenes) {
 export default function TimelineSceneDetail({ scene, allScenes, saveStatus, playback, onDurationChange, onCueTimingChange, onAutoSplitCues, onFitToAudio }) {
   const [selectedCue, setSelectedCue] = useState(null)
 
-  // ── 선택 씬 음성 순차 재생(기존 재생/정지에 얹음) ──
-  const audioRef = useRef(null)
-  const queueRef = useRef([])
+  // ── 선택 씬 음성 순차 재생 (음성=master, 자막 follower) ──
+  // 미리보기 음성은 원격(mongsil)에서 받아오므로 트랙마다 즉석 로딩하면 전환 때 멈춤(갭)이 생긴다.
+  // → 재생 시작 시 모든 음성을 blob 으로 통째 받아 메모리에서 재생(네트워크 의존 제거 = 갭 없음).
+  //    단 첫 트랙은 autoplay 정책상 사용자 클릭(제스처) 안에서 즉시 재생해야 하므로 네트워크 src 로 먼저 튼다.
+  const audioRef = useRef(null) // 현재 재생 중 element
+  const audiosRef = useRef([]) // element 배열(each._offset = 전체 타임라인 시작 위치)
+  const blobUrlsRef = useRef([]) // 생성한 objectURL (정리용)
   const idxRef = useRef(0)
+  const wantIdxRef = useRef(-1) // blob 아직 안 와서 재생 대기 중인 index
 
-  const playCurrent = () => {
-    const q = queueRef.current
-    if (idxRef.current >= q.length) return
-    let a = audioRef.current
-    if (!a) {
-      a = new Audio()
-      audioRef.current = a
+  const setAudioClock = (v) => {
+    const ref = playback?.audioClockRef
+    if (ref) ref.current = v
+  }
+  const playIndex = (i) => {
+    const list = audiosRef.current
+    if (i >= list.length) {
+      setAudioClock(null) // 끝 → 음성 master 해제(rAF 가 남은 길이 진행 후 정지)
+      return
     }
-    a.src = q[idxRef.current]
-    a.onended = () => {
-      idxRef.current += 1
-      playCurrent()
+    idxRef.current = i
+    const a = list[i]
+    audioRef.current = a
+    a.ontimeupdate = () => setAudioClock(a._offset + a.currentTime)
+    a.onended = () => playIndex(i + 1)
+    a.onerror = () => playIndex(i + 1)
+    if (!a.src) {
+      wantIdxRef.current = i // blob 아직 → 준비되면 재생(아래 fetch 핸들러가 호출)
+      return
     }
-    a.onerror = () => {
-      idxRef.current += 1
-      playCurrent()
+    wantIdxRef.current = -1
+    try {
+      a.currentTime = 0
+    } catch {
+      /* 메타데이터 로딩 전이면 무시 */
     }
-    a.play().catch(() => {
-      idxRef.current += 1
-      playCurrent()
-    })
+    a.play().catch(() => playIndex(i + 1))
   }
   const startAudio = () => {
-    queueRef.current = buildAudioQueue(allScenes && allScenes.length ? allScenes : [scene])
-    idxRef.current = 0
-    if (queueRef.current.length) playCurrent()
+    stopAudio()
+    const q = buildAudioQueue(allScenes && allScenes.length ? allScenes : [scene])
+    const els = q.map((it) => {
+      const a = new Audio()
+      a.preload = 'auto'
+      a._offset = it.offset
+      return a
+    })
+    audiosRef.current = els
+    if (els.length) {
+      els[0].src = q[0].url // 0번은 네트워크 src 로 즉시 재생(제스처 → autoplay OK)
+      playIndex(0)
+    }
+    // 전부 blob 으로 받아 element src 교체 → 이후 트랙은 메모리에서 재생(갭 없음)
+    q.forEach((it, i) => {
+      fetch(it.url)
+        .then((r) => (r.ok ? r.blob() : null))
+        .then((b) => {
+          if (!b) return
+          const a = audiosRef.current[i]
+          if (!a) return // 이미 stop
+          if (idxRef.current === i && !a.paused) return // 재생 중인 트랙은 안 건드림
+          const obj = URL.createObjectURL(b)
+          blobUrlsRef.current.push(obj)
+          a.src = obj
+          if (wantIdxRef.current === i) playIndex(i) // 그 트랙 차례인데 기다리고 있었으면 재생
+        })
+        .catch(() => {})
+    })
   }
   const resumeAudio = () => {
     const a = audioRef.current
@@ -65,14 +114,20 @@ export default function TimelineSceneDetail({ scene, allScenes, saveStatus, play
   }
   const pauseAudio = () => audioRef.current?.pause()
   const stopAudio = () => {
-    const a = audioRef.current
-    if (a) {
+    audiosRef.current.forEach((a) => {
       a.pause()
       a.onended = null
       a.onerror = null
+      a.ontimeupdate = null
       a.src = ''
-    }
+    })
+    blobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u))
+    blobUrlsRef.current = []
+    audiosRef.current = []
+    audioRef.current = null
     idxRef.current = 0
+    wantIdxRef.current = -1
+    setAudioClock(null)
   }
 
   // 선택 씬이 바뀌면 cue 필터만 초기화(전체 미리보기 음성은 전 씬을 이어 재생하므로 중단하지 않음)
