@@ -4,6 +4,7 @@ import * as characterApi from '@/api/characters'
 import { pollJob } from '@/utils/pollJob'
 import { getApiErrorMessage } from '@/utils/apiError'
 import { mediaUrl } from '@/utils/mediaUrl'
+import ConfirmModal from '@/components/common/ConfirmModal'
 import styles from '@/pages/character/CharacterPage.module.css'
 
 const JOB_STATUS_TEXT = {
@@ -25,6 +26,7 @@ export default function CharacterPoseSection() {
   const [jobStatus, setJobStatus] = useState(null)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+  const [confirmPose, setConfirmPose] = useState(null) // 삭제 확인 중인 포즈
 
   const abortRef = useRef(null)
 
@@ -57,9 +59,10 @@ export default function CharacterPoseSection() {
       })
   }, [selectedCharacterId])
 
-  // 포즈 삭제: 씬에서 사용 중이면 백엔드가 409 로 막는다(메시지 표시). 안 쓰는 포즈만 삭제됨.
-  const handleDeletePose = async (pose) => {
-    if (!window.confirm('이 포즈를 삭제할까요?')) return
+  // 포즈 삭제(모달 확인 후): 씬에서 사용 중이면 백엔드가 409 로 막는다(메시지 표시). 안 쓰는 포즈만 삭제됨.
+  const handleDeletePose = async () => {
+    const pose = confirmPose
+    if (!pose) return
     setError('')
     setDeletingId(pose.poseId)
     try {
@@ -69,6 +72,7 @@ export default function CharacterPoseSection() {
       setError(getApiErrorMessage(err)) // 씬에서 사용 중(409) 등
     } finally {
       setDeletingId(null)
+      setConfirmPose(null)
     }
   }
 
@@ -224,7 +228,7 @@ export default function CharacterPoseSection() {
                       </button>
                       <button
                         className={styles.cardBtn}
-                        onClick={() => handleDeletePose(pose)}
+                        onClick={() => setConfirmPose(pose)}
                         disabled={deletingId === pose.poseId}
                       >
                         {deletingId === pose.poseId ? '삭제 중…' : '삭제'}
@@ -237,6 +241,22 @@ export default function CharacterPoseSection() {
           </div>
         </div>
       )}
+
+      {/* 공용 삭제 확인 모달 */}
+      <ConfirmModal
+        open={confirmPose !== null}
+        title="이 포즈를 삭제할까요?"
+        message={
+          '씬에서 사용 중인 포즈는 삭제할 수 없습니다.\n사용하지 않는 포즈만 삭제됩니다.'
+        }
+        confirmText={deletingId ? '삭제 중…' : '삭제하기'}
+        variant="danger"
+        busy={deletingId !== null}
+        onConfirm={handleDeletePose}
+        onCancel={() => {
+          if (deletingId === null) setConfirmPose(null)
+        }}
+      />
     </section>
   )
 }

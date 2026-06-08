@@ -3,6 +3,7 @@ import useCharacterStore from '@/store/useCharacterStore'
 import * as characterApi from '@/api/characters'
 import { getApiErrorMessage } from '@/utils/apiError'
 import { mediaUrl } from '@/utils/mediaUrl'
+import ConfirmModal from '@/components/common/ConfirmModal'
 import CharacterEditForm from './CharacterEditForm'
 import styles from '@/pages/character/CharacterPage.module.css'
 
@@ -14,17 +15,21 @@ export default function CharacterCard({ character }) {
 
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const isSelected = character.characterId === selectedCharacterId
 
   async function handleDelete() {
-    if (!window.confirm('이 캐릭터를 삭제할까요?')) return
     setError('')
+    setDeleting(true)
     try {
       await characterApi.deleteCharacter(character.characterId)
-      removeCharacter(character.characterId)
+      removeCharacter(character.characterId) // 성공 시 목록에서 제거 → 이 카드 언마운트
     } catch (e) {
       setError(getApiErrorMessage(e))
+      setDeleting(false)
+      setConfirmOpen(false)
     }
   }
 
@@ -69,13 +74,29 @@ export default function CharacterCard({ character }) {
             <button className={styles.cardBtn} onClick={() => setEditing(true)}>
               수정
             </button>
-            <button className={styles.cardBtn} onClick={handleDelete}>
+            <button className={styles.cardBtn} onClick={() => setConfirmOpen(true)}>
               삭제
             </button>
           </div>
           {error && <span className={styles.error}>{error}</span>}
         </>
       )}
+
+      {/* 공용 삭제 확인 모달 (카드 onClick 버블 방지 래퍼) */}
+      <span onClick={(e) => e.stopPropagation()}>
+        <ConfirmModal
+          open={confirmOpen}
+          title="이 캐릭터를 삭제할까요?"
+          message={`'${character.name}' 캐릭터가 삭제됩니다.`}
+          confirmText={deleting ? '삭제 중…' : '삭제하기'}
+          variant="danger"
+          busy={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            if (!deleting) setConfirmOpen(false)
+          }}
+        />
+      </span>
     </li>
   )
 }

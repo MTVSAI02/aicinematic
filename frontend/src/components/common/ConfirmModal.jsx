@@ -2,6 +2,7 @@
 // open 이 true 일 때만 렌더하고, 오버레이 클릭 / ESC / 취소 버튼으로 onCancel,
 // 확인 버튼으로 onConfirm 을 호출한다. variant="danger" 면 확인 버튼이 위험 스타일.
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 import styles from './ConfirmModal.module.css'
 
@@ -28,7 +29,9 @@ export default function ConfirmModal({
 
   if (!open) return null
 
-  return (
+  // 카드 등 조상에 transform/filter/backdrop-filter 가 있으면 position:fixed 오버레이가
+  // 뷰포트가 아니라 그 조상 기준으로 갇힌다 → body 로 portal 해 항상 전체화면으로 띄운다.
+  return createPortal(
     <div
       className={styles.overlay}
       onMouseDown={(e) => {
@@ -59,6 +62,7 @@ export default function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
