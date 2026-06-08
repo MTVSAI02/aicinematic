@@ -44,6 +44,7 @@ export default function RenderPage() {
   const [jobStatus, setJobStatus] = useState('')
   const [video, setVideo] = useState(null) // { renderId, videoUrl, duration, createdAt? }
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('') // 실패는 아닌 안내(예: 폴링 timeout = 백그라운드 진행 중)
   const [summary, setSummary] = useState(null) // { sceneCount, totalDuration }
   const [renderStep, setRenderStep] = useState(0)
   const abortRef = useRef(null)
@@ -86,12 +87,18 @@ export default function RenderPage() {
     if (!storyId) return
     setStatus('rendering')
     setError('')
+    setNotice('')
     setJobStatus('pending')
     const controller = new AbortController()
     abortRef.current = controller
     try {
       const { jobId } = await startRender(storyId)
-      const job = await pollJob(jobId, { signal: controller.signal, onStatus: (j) => setJobStatus(j.status) })
+      // 렌더는 길어질 수 있어 폴링을 15분까지(1.5s × 600) 잡는다. 그래도 끝나면 알림/lastRender 로 확인 가능.
+      const job = await pollJob(jobId, {
+        signal: controller.signal,
+        maxAttempts: 600,
+        onStatus: (j) => setJobStatus(j.status),
+      })
       // 완료 후 createdAt 포함된 canonical lastRender 로 갱신(실패 시 job.result 로 폴백)
       let result = null
       try {
@@ -103,11 +110,15 @@ export default function RenderPage() {
       setStatus('done')
     } catch (e) {
       if (e?.aborted) return
-      setError(
-        e?.timedOut
-          ? '렌더링이 오래 걸리고 있습니다. 잠시 후 다시 시도해 주세요.'
-          : e?.detail || getApiErrorMessage(e),
-      )
+      if (e?.timedOut) {
+        // 백엔드는 계속 렌더 중 — 실패가 아니라 "진행 중"으로 안내. 완료되면 알림이 오고 새로고침하면 영상이 보인다.
+        setNotice(
+          '렌더링이 예상보다 길어지고 있어요. 백그라운드에서 계속 진행 중이며, 완료되면 알림으로 알려드립니다. 잠시 후 이 페이지를 새로고침하면 완성된 영상이 표시됩니다.',
+        )
+        setStatus('rendering')
+        return
+      }
+      setError(e?.detail || getApiErrorMessage(e))
       setStatus('error')
     }
   }
@@ -261,6 +272,14 @@ export default function RenderPage() {
                 <p className={styles.muted}>
                   {jobStatus === 'pending' ? '대기열에서 작업을 준비하고 있습니다…' : '렌더링 중입니다…'}
                 </p>
+                {notice && (
+                  <>
+                    <p className={styles.cardDesc} style={{ marginTop: 12 }}>{notice}</p>
+                    <button className={styles.btnSecondary} onClick={() => window.location.reload()}>
+                      새로고침해서 결과 확인
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
