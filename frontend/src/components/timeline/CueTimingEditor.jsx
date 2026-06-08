@@ -84,15 +84,10 @@ export default function CueTimingEditor({
           </div>
           <div className={styles.cueHint}>씬 전체 {duration.toFixed(1)}초 기준으로 cue 시간을 조절합니다.</div>
         </div>
-        {cues.length > 0 && (
+        {cues.length > 0 && hasAnyAudio && (
           <div className={styles.cueHeadBtns}>
-            {hasAnyAudio && (
-              <button type="button" className={styles.cueAutoBtn} onClick={() => onFitToAudio()}>
-                음성 길이에 맞추기
-              </button>
-            )}
-            <button type="button" className={styles.cueAutoBtn} onClick={() => onAutoSplit()}>
-              자동 균등 분할
+            <button type="button" className={styles.cueAutoBtn} onClick={() => onFitToAudio()}>
+              음성 길이에 맞추기
             </button>
           </div>
         )}

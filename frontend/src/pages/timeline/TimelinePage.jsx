@@ -40,6 +40,9 @@ export default function TimelinePage() {
   const [playing, setPlaying] = useState(false)
   const [previewTime, setPreviewTime] = useState(0) // 전체 타임라인 기준 현재 시간(초)
   const timeRef = useRef(0) // rAF 루프의 실제 시간 소스(state는 렌더용)
+  // 음성 재생 중 현재 음성의 전체 타임라인 위치(초). 음성이 master — 자막 시계가 이 값을 따라간다.
+  // null이면 음성 없음/끝 → 기존 rAF 진행. (TimelineSceneDetail 이 timeupdate 마다 갱신)
+  const audioClockRef = useRef(null)
 
   const latestScenes = useRef([]) // debounce 시점의 최신 scenes 참조
   const lastSaved = useRef([]) // 마지막으로 서버에 반영된 값(실패 시 rollback 기준)
@@ -93,7 +96,9 @@ export default function TimelinePage() {
       if (!last) last = ts
       const dt = (ts - last) / 1000
       last = ts
-      const nt = timeRef.current + dt
+      // 음성 재생 중이면 음성 위치가 master(자막이 음성을 따라감). 아니면 기존처럼 dt 누적.
+      const at = audioClockRef.current
+      const nt = at != null ? at : timeRef.current + dt
       if (nt >= totalDuration) {
         timeRef.current = totalDuration
         setPreviewTime(totalDuration)
@@ -121,6 +126,7 @@ export default function TimelinePage() {
   }
   function handlePreviewStop() {
     setPlaying(false)
+    audioClockRef.current = null
     timeRef.current = 0
     setPreviewTime(0)
   }
@@ -139,6 +145,7 @@ export default function TimelinePage() {
     onPlay: handlePreviewPlay,
     onPause: handlePreviewPause,
     onStop: handlePreviewStop,
+    audioClockRef, // 음성(master) 위치를 여기에 써주면 자막 시계가 따라감
   }
 
   // 저장(debounce): 모든 씬의 duration + cueTimings 전송. cueTimings 은 씬 duration 안으로 클램프(서버 422 방지).
@@ -212,32 +219,61 @@ export default function TimelinePage() {
     persist()
   }
 
-  // 음성 길이에 맞추기: 각 cue durationSec = audioDurationSec(없으면 기존 유지), startSec 누적, 씬 duration = 합계.
-  // 합계가 180초(씬 최대)를 넘으면 적용/저장하지 않고 안내만(무리한 축소 방지).
-  function handleFitToAudio(sceneId) {
-    setError('')
-    const scene = latestScenes.current.find((s) => s.sceneId === sceneId)
+  // 한 씬을 음성 길이에 맞춘 결과 계산(순수 함수). cue 없으면 null, 합계 180초 초과면 {over:true}.
+  // 각 cue durationSec = 그 cue 음성 합(없으면 기존 자막 길이), startSec 누적, 씬 duration = 합계.
+  function computeSceneFit(scene) {
     const cues = [...(scene?.cueTimings ?? [])].sort((a, b) => a.cueOrder - b.cueOrder)
-    if (cues.length === 0) return
-    // cue 길이 = 그 cue items 음성 합계(없으면 기존 자막 길이 유지)
+    if (cues.length === 0) return null
     const lengths = cues.map((c) => {
       const sum = (c.items ?? []).reduce((a, it) => a + (it.audioDurationSec || 0), 0)
       return sum > 0 ? round3(sum) : c.durationSec
     })
     const total = round3(lengths.reduce((a, b) => a + b, 0))
-    if (total > 180) {
-      setError('음성 길이 합계가 씬 최대 길이 180초를 초과합니다. 자막을 줄이거나 씬을 나눠주세요.')
-      return
-    }
+    if (total > 180) return { over: true }
     let acc = 0
-    const newCues = cues.map((t, i) => {
+    const cueTimings = cues.map((t, i) => {
       const startSec = round3(acc)
       acc += lengths[i]
       return { ...t, startSec, durationSec: round3(lengths[i]) }
     })
-    const newDuration = clampDuration(total)
-    setScenes((cur) => cur.map((s) => (s.sceneId === sceneId ? { ...s, duration: newDuration, cueTimings: newCues } : s)))
+    return { duration: clampDuration(total), cueTimings }
+  }
+
+  // 한 씬 음성 길이에 맞추기. 합계가 180초(씬 최대) 초과면 적용 않고 안내만.
+  function handleFitToAudio(sceneId) {
+    setError('')
+    const fit = computeSceneFit(latestScenes.current.find((s) => s.sceneId === sceneId))
+    if (!fit) return
+    if (fit.over) {
+      setError('음성 길이 합계가 씬 최대 길이 180초를 초과합니다. 자막을 줄이거나 씬을 나눠주세요.')
+      return
+    }
+    setScenes((cur) =>
+      cur.map((s) => (s.sceneId === sceneId ? { ...s, duration: fit.duration, cueTimings: fit.cueTimings } : s)),
+    )
     persist()
+  }
+
+  // 전체 씬 음성 길이에 맞추기. 180초 초과 씬은 건너뛰고 개수만 안내.
+  function handleFitAllToAudio() {
+    setError('')
+    const fits = {}
+    const overIds = []
+    for (const s of latestScenes.current) {
+      const fit = computeSceneFit(s)
+      if (!fit) continue
+      if (fit.over) overIds.push(s.sceneId)
+      else fits[s.sceneId] = fit
+    }
+    if (Object.keys(fits).length > 0) {
+      setScenes((cur) =>
+        cur.map((s) => (fits[s.sceneId] ? { ...s, duration: fits[s.sceneId].duration, cueTimings: fits[s.sceneId].cueTimings } : s)),
+      )
+      persist()
+    }
+    if (overIds.length > 0) {
+      setError(`일부 씬 ${overIds.length}개는 음성 합계가 180초를 넘어 건너뛰었습니다. 해당 씬은 나눠주세요.`)
+    }
   }
 
   if (!storyId) {
@@ -370,6 +406,14 @@ export default function TimelinePage() {
               <p className={styles.empty}>씬이 없습니다. 스토리를 먼저 입력해 주세요.</p>
             ) : (
               <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <button type="button" className={styles.btnSecondary} onClick={handleFitAllToAudio}>
+                    전체 음성 길이에 맞추기
+                  </button>
+                  <span style={{ fontSize: 13, color: '#6B7280' }}>
+                    모든 씬의 자막 타이밍을 각 음성 길이에 맞춥니다.
+                  </span>
+                </div>
                 <div className={styles.track}>
                   {scenes.map((scene) => (
                     <TimelineSceneCard
