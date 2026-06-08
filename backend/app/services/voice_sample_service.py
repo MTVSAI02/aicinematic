@@ -6,12 +6,8 @@ from typing import Any
 
 import httpx
 
-from ..core.config import (
-    AI_REQUEST_HEADERS,
-    VOICE_STORAGE_DIR,
-    storage_path,
-    storage_url,
-)
+from ..core import storage
+from ..core.config import AI_REQUEST_HEADERS
 from ..core.exceptions import AiVoiceServerError, VoiceNotFoundError
 from ..repositories.voice_repository import voice_repository
 
@@ -225,11 +221,13 @@ class VoiceSampleService:
             raise VoiceNotFoundError()
 
         current_url = voice.get("sampleAudioUrl")
-        current_path = storage_path(current_url)
-        if current_url and current_path and current_path.is_file():
-            if _is_audio_bytes(current_path.read_bytes()[:16]):
-                return voice
-            current_path.unlink(missing_ok=True)
+        if current_url:
+            key = storage.storage_url_to_key(current_url)
+            data = storage.read_bytes(key)  # R2/로컬 공통. 없으면 None.
+            if data is not None:
+                if _is_audio_bytes(data[:16]):
+                    return voice            # 유효한 기존 샘플 → 재사용
+                storage.delete(key)          # 깨진 샘플 → 정리 후 재생성
 
         result = _request_ai_sample(voice)
         sample_bytes = result.get("sample_bytes")
@@ -237,11 +235,9 @@ class VoiceSampleService:
             raise AiVoiceServerError("AI/TTS 샘플 응답 오디오가 비어 있습니다.")
         _ensure_audio_bytes(sample_bytes)
 
-        target_dir = VOICE_STORAGE_DIR / voice_id
-        target_dir.mkdir(parents=True, exist_ok=True)
-        (target_dir / "sample.wav").write_bytes(sample_bytes)
-
-        sample_url = storage_url("voices", voice_id, "sample.wav")
+        # storage(R2/로컬) 저장 — key 형태 유지(voices/{voiceId}/sample.wav).
+        storage.save_bytes(f"voices/{voice_id}/sample.wav", sample_bytes, content_type="audio/wav")
+        sample_url = storage.get_storage_url(f"voices/{voice_id}/sample.wav")
         updated = self._voice_repo.apply_clone_update(
             voice_id,
             {

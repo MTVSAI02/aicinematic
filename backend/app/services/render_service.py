@@ -9,7 +9,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from ..core.config import RENDER_STORAGE_DIR, storage_path
+from ..core import storage
 from ..core.exceptions import (
     FFmpegRenderFailedError,
     RenderAudioNotReadyError,
@@ -41,8 +41,8 @@ def _validate_audio_ready(story_id: str, plan: dict) -> None:
         for cue in scene.get("cueTimings") or []:
             for item in cue.get("items") or []:
                 url = item.get("audioUrl")
-                path = storage_path(url) if url else None
-                if not url or path is None or not path.exists():
+                # storage(R2/로컬) 에 실제 객체가 있는지 검증 — 로컬 경로 직접 접근 대신 key 기준.
+                if not url or not storage.exists(storage.storage_url_to_key(url)):
                     raise RenderAudioNotReadyError()
 
 
@@ -73,9 +73,9 @@ def create_render_job(story_id: str) -> dict:
             },
         )
 
-        # 스토리당 최신 1개 유지: 이전 mp4 정리(실패해도 무시)
+        # 스토리당 최신 1개 유지: 이전 mp4 정리(없어도 무시). storage(R2/로컬) 경유.
         if prev and prev.get("renderId") and prev["renderId"] != render_id:
-            (RENDER_STORAGE_DIR / f"{prev['renderId']}.mp4").unlink(missing_ok=True)
+            storage.delete(f"renders/{prev['renderId']}.mp4")
 
         return {"renderId": render_id, "storyId": story_id, "videoUrl": video_url, "duration": duration}
 
