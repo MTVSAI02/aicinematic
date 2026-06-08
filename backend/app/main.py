@@ -56,6 +56,8 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
+    # Vercel 배포 프론트(프로덕션·프리뷰 도메인)에서의 호출 허용. *.vercel.app 전부 매칭.
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
