@@ -393,6 +393,35 @@
   word-break: keep-all;
 }
 
+.referenceTextLabel {
+  display: block;
+  margin-bottom: 10px;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.referenceTextArea {
+  width: 100%;
+  min-height: 116px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.referenceTextArea:focus {
+  color: #111827;
+}
+
+.referenceTextHelp {
+  margin-top: 12px;
+  padding-right: 132px;
+}
+
 .scriptRefreshBtn {
   position: absolute;
   bottom: 16px;
