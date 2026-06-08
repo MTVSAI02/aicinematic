@@ -3,6 +3,7 @@
 // - 첫 로드의 기존 알림은 토스트/OS알림 안 띄움(seenRef 초기화), 이후 새로 생긴 것만 알림
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import useJobCountStore from '@/store/useJobCountStore'
 import {
   deleteAllNotifications,
   deleteNotification,
@@ -82,7 +83,10 @@ export default function useNotifications() {
     [pushToast, playSound],
   )
 
+  const activeJobCount = useJobCountStore((s) => s.activeJobCount)
+
   useEffect(() => {
+    if (activeJobCount === 0) return
     const ctrl = new AbortController()
     // refresh 의 setState 는 전부 await(fetch) 이후라 동기 cascading render 가 아니다.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -92,7 +96,7 @@ export default function useNotifications() {
       ctrl.abort()
       clearInterval(id)
     }
-  }, [refresh])
+  }, [refresh, activeJobCount])
 
   const markRead = useCallback(
     async (id) => {

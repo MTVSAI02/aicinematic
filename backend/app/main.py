@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import os
 import sys
 from pathlib import Path
@@ -60,7 +61,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(AppException, app_exception_handler)  # type: ignore[arg-type]
 
 app.include_router(health.router)
 app.include_router(stories.router)
