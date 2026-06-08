@@ -98,6 +98,14 @@ def _resume_unfinished_tts_jobs():
     tts_service.resume_unfinished_story_tts_jobs()
 
 
+@app.on_event("startup")
+def _cleanup_unfinished_render_jobs():
+    # 서버 재시작으로 죽은 렌더 job(DB에 running/pending 잔존)을 failed 로 정리 → 유령 job 제거.
+    from .services.render_service import cleanup_unfinished_render_jobs
+
+    cleanup_unfinished_render_jobs()
+
+
 # 생성된 이미지/오디오/영상 서빙 — 스토리지 추상화(storage) 경유.
 # R2 모드면 R2(get_object)에서, 아니면 로컬 app/storage 에서 읽어 스트리밍한다.
 # (정적 StaticFiles 마운트 대신 프록시 라우트 — R2 비공개 버킷도 백엔드 통해서만 접근)

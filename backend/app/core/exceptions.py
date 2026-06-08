@@ -191,6 +191,13 @@ class FFmpegRenderFailedError(AppException):
     detail = "Video render (ffmpeg) failed"
 
 
+class RenderInProgressError(AppException):
+    """이미 진행 중인 렌더가 있어 새 렌더를 시작할 수 없음(서버당 동시 1개)."""
+
+    status_code = 409
+    detail = "이미 렌더가 진행 중입니다. 완료된 뒤 다시 시도해 주세요."
+
+
 class RenderAudioNotReadyError(AppException):
     """렌더 전 음성 검증 실패(미잠금/실패/누락/파일없음). detail 이 프론트에 그대로 노출된다."""
 
