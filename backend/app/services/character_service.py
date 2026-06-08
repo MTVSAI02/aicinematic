@@ -6,6 +6,7 @@ from ..core.exceptions import (
     CharacterPoseNotFoundError,
     CharacterPoseSourceMissingError,
     NoFieldsToUpdateError,
+    PoseInUseError,
     SceneNotFoundError,
     StoryNotFoundError,
     VoiceNotFoundError,
@@ -139,6 +140,25 @@ class CharacterService:
         if poses is None:
             raise CharacterNotFoundError()
         return poses
+
+    def delete_pose(self, character_id: str, pose_id: str) -> dict:
+        """포즈 1개 삭제. 캐릭터/포즈 없음 → 404, 씬에서 사용 중이면 → 409(삭제 차단).
+
+        씬에서 쓰는 포즈는 막고, 안 쓰는 포즈만 삭제 가능. 파일 정리는 best-effort(DB 삭제가 진실원본).
+        """
+        poses = self._character_repo.list_poses(character_id)
+        if poses is None:
+            raise CharacterNotFoundError()
+        if not any(p.get("poseId") == pose_id for p in poses):
+            raise CharacterPoseNotFoundError()
+        if self._character_repo.pose_in_use(pose_id):
+            raise PoseInUseError()
+        self._character_repo.delete_pose(character_id, pose_id)
+        try:
+            storage.delete(f"character_poses/{pose_id}.png")
+        except Exception as e:  # noqa: BLE001 (파일 정리 실패가 삭제 API 를 막지 않게)
+            logger.warning("포즈 파일 정리 실패 (poseId=%s): %s", pose_id, e)
+        return {"deleted": True, "poseId": pose_id}
 
     def set_scene_character_pose(
         self, story_id: str, scene_id: str, character_id: str, pose_id: str | None

@@ -26,6 +26,11 @@ export function getCharacterPoses(characterId) {
   return request(`/api/characters/${characterId}/poses`)
 }
 
+// DELETE /api/characters/{characterId}/poses/{poseId} — 포즈 삭제 (씬에서 사용 중이면 409)
+export function deleteCharacterPose(characterId, poseId) {
+  return request(`/api/characters/${characterId}/poses/${poseId}`, { method: 'DELETE' })
+}
+
 // GET /api/characters — 캐릭터 목록 조회
 export function getCharacters() {
   return request('/api/characters')

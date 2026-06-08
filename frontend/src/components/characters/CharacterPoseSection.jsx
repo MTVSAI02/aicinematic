@@ -24,6 +24,7 @@ export default function CharacterPoseSection() {
   const [loading, setLoading] = useState(false)
   const [jobStatus, setJobStatus] = useState(null)
   const [error, setError] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
 
   const abortRef = useRef(null)
 
@@ -55,6 +56,21 @@ export default function CharacterPoseSection() {
         setError(`포즈 목록을 불러오지 못했습니다. ${getApiErrorMessage(err)}`)
       })
   }, [selectedCharacterId])
+
+  // 포즈 삭제: 씬에서 사용 중이면 백엔드가 409 로 막는다(메시지 표시). 안 쓰는 포즈만 삭제됨.
+  const handleDeletePose = async (pose) => {
+    if (!window.confirm('이 포즈를 삭제할까요?')) return
+    setError('')
+    setDeletingId(pose.poseId)
+    try {
+      await characterApi.deleteCharacterPose(selectedCharacterId, pose.poseId)
+      setPoses((prev) => prev.filter((p) => p.poseId !== pose.poseId))
+    } catch (err) {
+      setError(getApiErrorMessage(err)) // 씬에서 사용 중(409) 등
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const selectedCharacter = characters.find(
     (c) => c.characterId === selectedCharacterId
@@ -201,6 +217,19 @@ export default function CharacterPoseSection() {
                     <p className={styles.posePrompt} title={pose.posePrompt}>
                       {pose.posePrompt}
                     </p>
+                    {/* 캐릭터 카드와 동일한 수정/삭제 버튼 행 (수정은 추후 기능 — 현재 비활성) */}
+                    <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
+                      <button className={styles.cardBtn} disabled title="준비 중">
+                        수정
+                      </button>
+                      <button
+                        className={styles.cardBtn}
+                        onClick={() => handleDeletePose(pose)}
+                        disabled={deletingId === pose.poseId}
+                      >
+                        {deletingId === pose.poseId ? '삭제 중…' : '삭제'}
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -152,6 +152,11 @@ class CharacterDeleteResponse(BaseModel):
     characterId: str
 
 
+class PoseDeleteResponse(BaseModel):
+    deleted: bool
+    poseId: str
+
+
 class PoseGenerateRequest(BaseModel):
     """POST /api/characters/{characterId}/poses/generate body. (characterId는 URL path)"""
 
