@@ -5,10 +5,11 @@
 - Voice/TTS, ffmpeg 렌더링은 이번 범위 아님. render plan 은 "2차 ffmpeg 가 그대로 쓸 데이터"까지만 만든다.
 """
 
+import io
 import logging
 import wave
 
-from ..core.config import storage_path
+from ..core import storage
 from ..core.exceptions import (
     CueTimingValidationError,
     SceneNotFoundError,
@@ -33,15 +34,17 @@ def _wav_duration_sec(audio_url: str | None) -> float | None:
     """/storage 의 wav 파일에서 실제 재생 길이(초)를 계산한다.
 
     AI /tts 가 durationSec 을 null 로 주는 동안 백엔드가 직접 길이를 구한다(자막↔음성 길이 비교/맞추기용).
-    파일이 없거나 PCM wav 가 아니면 None.
+    storage 추상화 경유라 R2/로컬 동일하게 동작한다. wave 는 file-like 를 받으므로 bytes 를
+    메모리(BytesIO)로 바로 열어 tmp 파일/디스크를 쓰지 않는다(cue 마다 호출되는 경로).
+    파일이 없거나(read_bytes None) PCM wav 가 아니면 None — 잘못된 duration 을 채우지 않고 fallback 에 맡긴다.
     """
     if not audio_url:
         return None
-    path = storage_path(audio_url)
-    if not path or not path.is_file():
+    data = storage.read_bytes(storage.storage_url_to_key(audio_url))
+    if data is None:  # 파일 없음 → 기존과 동일하게 None(상위에서 fallback)
         return None
     try:
-        with wave.open(str(path), "rb") as wf:
+        with wave.open(io.BytesIO(data), "rb") as wf:
             rate = wf.getframerate()
             if rate:
                 return round(wf.getnframes() / float(rate), 3)
