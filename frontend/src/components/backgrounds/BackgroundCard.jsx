@@ -9,6 +9,7 @@ import styles from '@/pages/background/BackgroundPage.module.css'
 export default function BackgroundCard({ background }) {
   const selectedBackgroundId = useBackgroundStore((s) => s.selectedBackgroundId)
   const setSelectedBackgroundId = useBackgroundStore((s) => s.setSelectedBackgroundId)
+  const setDetailModalBackground = useBackgroundStore((s) => s.setDetailModalBackground)
   const updateBackgroundInStore = useBackgroundStore((s) => s.updateBackground)
   const removeBackground = useBackgroundStore((s) => s.removeBackground)
 
@@ -52,7 +53,14 @@ export default function BackgroundCard({ background }) {
       className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
       onClick={() => setSelectedBackgroundId(background.backgroundId)}
     >
-      <div className={styles.thumb}>
+      <div
+        className={styles.thumb}
+        onClick={(e) => {
+          e.stopPropagation()
+          setDetailModalBackground(background)
+        }}
+        title="클릭하여 크게 보기"
+      >
         {background.imageUrl ? (
           <img src={mediaUrl(background.imageUrl)} alt={background.name} className={styles.thumbImg} />
         ) : (
@@ -81,6 +89,15 @@ export default function BackgroundCard({ background }) {
         <>
           <span className={styles.cardName}>{background.name}</span>
           <span className={styles.cardDesc}>{background.prompt}</span>
+          <span
+            className={styles.moreLink}
+            onClick={(e) => {
+              e.stopPropagation()
+              setDetailModalBackground(background)
+            }}
+          >
+            더보기
+          </span>
           {isSelected && <span className={styles.selectedBadge}>선택됨</span>}
           <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
             <button className={styles.cardBtn} onClick={() => setEditing(true)}>수정</button>
