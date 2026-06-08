@@ -1,0 +1,26 @@
+{
+  "_comment": "IP-Adapter for Flux 얼굴 고정 워크플로 — 고혜원 담당. ComfyUI에서 Export한 JSON으로 교체 예정.",
+  "_status": "TODO: ComfyUI에서 실제 워크플로 JSON 붙여넣기",
+  "_model_info": {
+    "base_model": "HiDream-I1 (Flux 계열 DiT)",
+    "ipadapter": "ip_adapter_flux_dev.safetensors",
+    "clip_vision": "ip_adapter_flux_image_encoder (CLIP-L)",
+    "face_embed": "InsightFace antelopev2",
+    "note": "SDXL용 IPAdapter FaceID 아님 — Flux용 IP-Adapter 사용"
+  },
+  "_required_models": [
+    "models/ipadapter/ip_adapter_flux_dev.safetensors",
+    "models/ipadapter/ip_adapter_flux_image_encoder/",
+    "models/insightface/models/antelopev2/"
+  ],
+  "inputs": {
+    "reference_image": null,
+    "positive_prompt": "",
+    "ip_strength": 0.8,
+    "steps": 28,
+    "cfg": 1.0,
+    "width": 1024,
+    "height": 1024
+  },
+  "nodes": []
+}

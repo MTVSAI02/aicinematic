@@ -1,0 +1,1037 @@
+/* 음성 입력(보이스 클로닝) 페이지 고도화 CSS.
+   전체적으로 피그마 디자인 스펙을 충실히 따르고, 뽀얀 보라빛의 유리 질감 카드와 애니메이션을 가미함. */
+
+.page {
+  padding: 40px 0 80px;
+  /* 좌우 패딩을 0으로 만들어 #root의 64px 마진 정렬선과 일치시킴 */
+  width: 100%;
+  max-width: 100%;
+  /* max-width 900px 제한 해제 */
+  margin: 0 auto;
+  font-family: 'Hakgyoansim', "Inter", sans-serif;
+}
+
+/* ── 상단 헤더 (밤하늘 배경 배너 적용) ── */
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  height: 500px; /* 세로폭 고정 */
+  box-sizing: border-box;
+  gap: 20px;
+  padding: 48px 64px;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 24px;
+  overflow: visible; /* 캐릭터가 헤더 경계를 살짝 벗어나 3D 입체감을 주도록 visible 설정 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.headerLeft {
+  flex: 1;
+  padding-left: 20px;
+}
+
+.headerSubTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #C084FC; /* 밝은 연보라 */
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.headerTitle {
+  font-family: 'KerisKedu', sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  color: #FFFFFF; /* 흰색 글자 */
+  margin: 0 0 16px 0;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.headerDesc {
+  font-size: 20px;
+  color: #E5E7EB; /* 밝은 회색 */
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.headerRight {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 570px; /* 음성입력 팻말 크기로 통일 + 50px 확대 */
+}
+
+/* ── 캐릭터 액자 + 제목 오버레이 ── */
+.titleFrame {
+  position: relative;
+  display: block;
+  animation: titleFloat 3.5s ease-in-out infinite alternate;
+  margin-right: -10px; /* 우측 밀착 */
+  margin-top: 40px; /* 80px 아래로 이동 (-40px -> 40px) */
+  width: 100%;
+  aspect-ratio: 1473 / 1142;
+}
+
+.titleFrameImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+}
+
+.titleFrameText {
+  position: absolute;
+  top: 56%; /* 캐릭터 팻말 디자인 내 흰색 영역 중앙 */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'KerisKedu', sans-serif;
+  font-size: clamp(16px, 2.2vw, 25px);
+  font-weight: 700;
+  color: #1F2937;
+  white-space: normal;
+  word-break: keep-all;
+  text-align: center;
+  pointer-events: none;
+  width: 58%;
+  max-width: 65%;
+  max-height: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+@keyframes titleFloat {
+  0% {
+    transform: translateY(0px) rotate(-0.5deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+/* ── 섹션 공통 ── */
+.section {
+  background: rgba(255, 255, 255, 0.5);
+  /* 책의 내지 색감이 살짝 스며들도록 투명도 조절 */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 236, 250, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
+  /* 콤팩트 패딩 */
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(186, 174, 230, 0.04);
+}
+
+.stepTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 25px;
+  /* 크기 조정 */
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.8px;
+}
+
+.stepBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #C084FC;
+  /* 부드러운 보라빛 동그라미 */
+  color: #FFFFFF;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sectionHelp {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.5;
+  margin: 16px 0 0 0;
+  letter-spacing: -0.3px;
+}
+
+.sectionHelp strong {
+  color: #4B5563;
+  font-weight: 700;
+}
+
+.sectionSubDesc {
+  font-size: 14px;
+  color: #6B7280;
+  margin: -10px 0 20px 0;
+  letter-spacing: -0.5px;
+}
+
+/* ── 1단계: 화자 선택 ── */
+.speakerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.speakerCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.speakerCard:hover {
+  transform: translateY(-2px);
+  border-color: #C084FC;
+  box-shadow: 0 6px 16px rgba(192, 132, 252, 0.08);
+}
+
+.speakerCardSelected {
+  border-color: #8B5CF6;
+  background: rgba(245, 243, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.12);
+  transform: translateY(-2px);
+}
+
+.speakerIcon {
+  width: 140px;
+  /* 50px 확대 */
+  height: 140px;
+  /* 50px 확대 */
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.speakerLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  /* Bold */
+  color: #1F2937;
+  margin-bottom: 6px;
+}
+
+.speakerDesc {
+  font-size: 15px;
+  color: #a2a9b7;
+  line-height: 1.4;
+  word-break: keep-all;
+  font-family: 'Hakgyoansim', sans-serif;
+}
+
+.customInputContainer {
+  margin-top: 16px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── 2단계: 추천 용도 ── */
+.voiceTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 600px;
+}
+
+.voiceTypeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.voiceTypeCard:hover {
+  transform: translateY(-2px);
+  border-color: #C084FC;
+  box-shadow: 0 6px 16px rgba(192, 132, 252, 0.08);
+}
+
+.voiceTypeCardSelected {
+  border-color: #8B5CF6;
+  background: rgba(245, 243, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.12);
+  transform: translateY(-2px);
+}
+
+.voiceTypeIcon {
+  width: 114px;
+  /* 50px 확대 */
+  height: 114px;
+  /* 50px 확대 */
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.voiceTypeLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  /* Bold */
+  color: #1F2937;
+  margin-bottom: 6px;
+}
+
+.voiceTypeDesc {
+  font-size: 15px;
+  color: #a2a9b7;
+  line-height: 1.4;
+  font-family: 'Hakgyoansim', sans-serif;
+}
+
+/* ── 3단계: 목소리 정보 입력 ── */
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.input {
+  padding: 14px 16px;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.input::placeholder {
+  color: #9CA3AF;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: #9CA3AF;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* ── 4단계: 따라 읽을 문장 ── */
+.scriptBox {
+  position: relative;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 24px 28px 60px;
+  /* 아래 리프레시 버튼 공간 고려 */
+  min-height: 80px;
+}
+
+.scriptText {
+  font-size: 15px;
+  /* 크기 조정 */
+  color: #1F2937;
+  line-height: 1.8;
+  margin: 0;
+  font-weight: 400;
+  /* Regular */
+  word-break: keep-all;
+}
+
+.referenceTextLabel {
+  display: block;
+  margin-bottom: 10px;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.referenceTextArea {
+  width: 100%;
+  min-height: 116px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.referenceTextArea:focus {
+  color: #111827;
+}
+
+.referenceTextHelp {
+  margin-top: 12px;
+  padding-right: 132px;
+}
+
+.scriptRefreshBtn {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  transition: all 0.15s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.scriptRefreshBtn:hover:not(:disabled) {
+  border-color: #9CA3AF;
+  color: #374151;
+  background: #F3F4F6;
+}
+
+.scriptRefreshBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refreshIcon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ── 5단계: 녹음하기 ── */
+.minLabel {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(243, 244, 246, 0.8);
+  color: #4B5563;
+  margin-left: 10px;
+  border: 1px solid #E5E7EB;
+}
+
+.recordingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+}
+
+.recordingRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+/* 말풍선 공통 스타일 */
+.speechBubbleLeft,
+.speechBubbleRight {
+  flex: 1;
+  max-width: 280px;
+  /* 18px 텍스트 크기에 대응해 가로폭 소폭 증가 */
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  font-size: 18px;
+  /* 크기 조정 */
+  color: #4B5563;
+  line-height: 1.5;
+  font-weight: 400;
+  /* Regular */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  position: relative;
+}
+
+/* 말풍선 꼬리 (왼쪽용 -> 꼬리가 우측 중앙) */
+.speechBubbleLeft::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent #FFFFFF;
+}
+
+.speechBubbleLeft::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -11px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent #E5E7EB;
+  z-index: -1;
+}
+
+/* 말풍선 꼬리 (오른쪽용 -> 꼬리가 좌측 중앙) */
+.speechBubbleRight::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #FFFFFF transparent transparent;
+}
+
+.speechBubbleRight::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #E5E7EB transparent transparent;
+  z-index: -1;
+}
+
+/* 원형 녹음기 버튼 외곽 */
+.micButtonWrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 190px;
+  /* 50px 확대 */
+  height: 190px;
+  /* 50px 확대 */
+  z-index: 5;
+}
+
+.micButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 170px;
+  /* 50px 확대 */
+  height: 170px;
+  /* 50px 확대 */
+  border-radius: 50%;
+  border: 4px solid #F4ECFA;
+  background: linear-gradient(135deg, #F3E8FF 0%, #D8B4FE 100%);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.15);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  z-index: 10;
+}
+
+.micButton:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.25);
+  border-color: #E8D5F8;
+}
+
+.micButtonActive {
+  background: linear-gradient(135deg, #FCA5A5 0%, #EF4444 100%);
+  border-color: #FEE2E2;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+.micIcon {
+  width: 80px;
+  /* 20px 확대 */
+  height: 80px;
+  /* 20px 확대 */
+  margin-bottom: 6px;
+  transition: transform 0.2s;
+}
+
+.micButtonActive .micIcon {
+  transform: scale(1.1);
+  filter: brightness(0) invert(1);
+}
+
+.micLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6B21A8;
+}
+
+.micButtonActive .micLabel {
+  color: #FFFFFF;
+}
+
+/* 녹음 진행 시 물결 파동 백그라운드 */
+.micPulseBg {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 170px;
+  /* 50px 확대 (190px wrapper 중앙 정치) */
+  height: 170px;
+  /* 50px 확대 */
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  z-index: 1;
+  animation: voicePulse 1.8s infinite ease-out;
+}
+
+@keyframes voicePulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* ── 미리보기 및 결과 ── */
+.previewArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 20px;
+  background: rgba(249, 250, 251, 0.8);
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 16px 24px;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+.previewTop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.audio {
+  height: 40px;
+  flex: 1;
+}
+
+.previewResetBtn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  color: #4B5563;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.previewResetBtn:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.durationOk {
+  font-size: 13px;
+  color: #10B981;
+  font-weight: 600;
+  margin: 0;
+}
+
+.durationWarn {
+  font-size: 13px;
+  color: #EF4444;
+  font-weight: 600;
+  margin: 0;
+  font-family: 'Hakgyoansim', sans-serif;
+}
+
+.orDivider {
+  font-size: 13px;
+  color: #9CA3AF;
+  margin: 16px 0;
+  position: relative;
+  width: 100%;
+  text-align: center;
+}
+
+.orDivider::before,
+.orDivider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 42%;
+  height: 1px;
+  background: #E5E7EB;
+}
+
+.orDivider::before {
+  left: 0;
+}
+
+.orDivider::after {
+  right: 0;
+}
+
+/* ── 파일 업로드 바 (가로형 보라 그라데이션) ── */
+.fileUploadContainer {
+  width: 100%;
+  max-width: 500px;
+}
+
+.fileUploadBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(180deg, #F3E8FF 0%, #DDD6FE 100%);
+  border: 1px solid #C4B5FD;
+  border-radius: 12px;
+  color: #6D28D9;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(109, 40, 217, 0.05);
+}
+
+.fileUploadBar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.12);
+  background: linear-gradient(180deg, #ECE0FD 0%, #D3C9FE 100%);
+}
+
+.fileInput {
+  display: none;
+}
+
+.folderIcon {
+  font-size: 16px;
+}
+
+.legalNotice {
+  font-size: 11px;
+  color: #9CA3AF;
+  margin-top: 14px;
+}
+
+/* ── 에러 및 네비게이션 ── */
+.error {
+  color: #EF4444;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  margin: 16px 0 0 0;
+}
+
+.pageNav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 40px;
+}
+
+.btnPrimary {
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+}
+
+.btnPrimary:disabled {
+  background: #DDD6FE;
+  color: #A78BFA;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btnPrimary:not(:disabled):hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
+
+.btnSecondary {
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #FFFFFF;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+/* ── 진행/결과 전용 큰 카드 ── */
+.statusCard {
+  border: 1px solid rgba(244, 236, 250, 0.7);
+  border-radius: 20px;
+  background: #FFFFFF;
+  box-shadow: 0 8px 32px rgba(186, 174, 230, 0.1);
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.statusCardError {
+  border-color: #FCA5A5;
+  background: rgba(254, 242, 242, 0.5);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1F2937;
+}
+
+.cardDesc {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  color: #4B5563;
+  line-height: 1.6;
+  max-width: 480px;
+}
+
+.resultMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+  color: #374151;
+  background: #F3F4F6;
+  padding: 16px 28px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+
+.resultMeta b {
+  font-size: 18px;
+  color: #111827;
+}
+
+.emoji {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.muted {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 4px solid #EDE9FE;
+  border-top-color: #8B5CF6;
+  animation: voiceSpin 0.9s linear infinite;
+}
+
+@keyframes voiceSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── 반응형 레이아웃 ── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .headerMascot {
+    width: 220px;
+    margin-top: 10px;
+  }
+
+
+
+  .speakerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .voiceTypeGrid {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+
+  .recordingRow {
+    flex-direction: column;
+  }
+
+  .speechBubbleLeft,
+  .speechBubbleRight {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 모바일 말풍선 꼬리 위치 수정 */
+  .speechBubbleLeft::after,
+  .speechBubbleLeft::before,
+  .speechBubbleRight::after,
+  .speechBubbleRight::before {
+    display: none;
+    /* 모바일에서는 꼬리를 숨김 */
+  }
+
+  .pageNav {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* 모바일 환경에서는 고정비율 책 배경을 풀고 일반적인 세로 스크롤 레이아웃으로 변경 */
+  .bookContainer {
+    aspect-ratio: auto;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    background: transparent;
+    border: none;
+  }
+
+  .bookBackground {
+    display: none;
+    /* 배경 책 이미지 숨김 */
+  }
+
+  .bookContentOverlay {
+    position: static;
+    padding: 0;
+  }
+
+  .formScrollArea {
+    overflow-y: visible;
+    padding: 0;
+  }
+}
+
+/* ── 책 배경 오버레이 및 컨텐츠 제어 ── */
+.bookContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.05);
+  overflow: hidden;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.bookContentOverlay {
+  width: 100%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.formScrollArea {
+  width: 100%;
+  padding: 24px 32px 36px;
+  /* 하단 여백 추가로 마지막 스크롤 시 안정감 제공 */
+  box-sizing: border-box;
+}

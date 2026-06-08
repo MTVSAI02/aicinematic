@@ -1,0 +1,639 @@
+/* 스토리 입력 페이지 리디자인 CSS.
+   보이스 입력 페이지와 동일한 책 테두리 프레임, 마스코트 배치, 폰트 및 정렬선을 계승하고 파스텔톤 입력을 적용함. */
+
+.page {
+  padding: 40px 0 80px;
+  /* 좌우 패딩을 0으로 만들어 #root의 64px 마진 정렬선과 일치시킴 */
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: 'Hakgyoansim', "Inter", sans-serif;
+}
+
+/* ── 상단 헤더 (밤하늘 배경 배너 적용) ── */
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  height: 500px; /* 세로폭 고정 */
+  box-sizing: border-box;
+  gap: 20px;
+  padding: 48px 64px;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 24px;
+  overflow: visible; /* 캐릭터가 헤더 경계를 살짝 벗어나 3D 입체감을 주도록 visible 설정 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.headerLeft {
+  flex: 1;
+  padding-left: 20px;
+}
+
+.headerSubTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #C084FC; /* 밝은 연보라 */
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.headerTitle {
+  font-family: 'KerisKedu', sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  color: #FFFFFF; /* 흰색 글자 */
+  margin: 0 0 16px 0;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.headerDesc {
+  font-size: 20px;
+  color: #E5E7EB; /* 밝은 회색 */
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.headerRight {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 570px; /* 음성입력 팻말 크기로 통일 + 50px 확대 */
+}
+
+/* ── 캐릭터 액자 + 제목 오버레이 ── */
+.titleFrame {
+  position: relative;
+  display: block;
+  animation: titleFloat 3.5s ease-in-out infinite alternate;
+  margin-right: -10px; /* 우측 밀착 */
+  margin-top: 40px; /* 80px 아래로 이동 (-40px -> 40px) */
+  width: 100%;
+  aspect-ratio: 1470 / 1088;
+}
+
+.titleFrameImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+}
+
+.titleFrameText {
+  position: absolute;
+  top: 56%; /* 캐릭터 팻말 디자인 내 흰색 영역 중앙 */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'KerisKedu', sans-serif;
+  font-size: clamp(16px, 2.2vw, 25px);
+  font-weight: 700;
+  color: #1F2937;
+  white-space: normal;
+  word-break: keep-all;
+  text-align: center;
+  pointer-events: none;
+  width: 58%;
+  max-width: 65%;
+  max-height: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+@keyframes titleFloat {
+  0% {
+    transform: translateY(0px) rotate(-0.5deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+/* ── 내용 컨테이너 ── */
+.bookContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.bookContentOverlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.formScrollArea {
+  width: 100%;
+  padding: 24px 32px 16px;
+  box-sizing: border-box;
+}
+
+/* ── 제목 입력 섹션 ── */
+.fieldSection {
+  margin-bottom: 28px;
+}
+
+.fieldLabel {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.5px;
+}
+
+.titleInput {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 15px;
+  box-sizing: border-box;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.titleInput::placeholder {
+  color: #9CA3AF;
+}
+
+/* ── 씬 카드 리스트 ── */
+.scenes {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.sceneCard {
+  position: relative;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(244, 236, 250, 0.8);
+  border-radius: 16px;
+  padding: 32px 24px 20px;
+  box-shadow: 0 4px 16px rgba(186, 174, 230, 0.04);
+}
+
+.scenePill {
+  position: absolute;
+  top: -14px;
+  left: 20px;
+  padding: 4px 16px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #4B5563;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.sceneDelBtn {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  border: none;
+  background: none;
+  color: #EF4444;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.sceneDelBtn:hover:not(:disabled) {
+  background: #FEE2E2;
+}
+
+.sceneDelBtn:disabled {
+  color: #9CA3AF;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── 대사(Item) 행 ── */
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 커스텀 감정선택 */
+.selectWrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 130px;
+}
+
+.emotionSelect {
+  width: 100%;
+  padding: 11px 28px 11px 16px;
+  border: 1px solid #DDD6FE;
+  border-radius: 12px;
+  background: #EDE9FE;
+  color: #7C3AED;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.emotionSelect:focus {
+  outline: none;
+  border-color: #8B5CF6;
+}
+
+.arrowIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: #7C3AED;
+  pointer-events: none;
+}
+
+/* 역할 입력 */
+.roleInput {
+  flex-shrink: 0;
+  width: 100px;
+  padding: 11px 12px;
+  border: 1px solid #BAE6FD;
+  border-radius: 12px;
+  background: #E0F2FE;
+  color: #0369A1;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.roleInput:focus {
+  outline: none;
+  border-color: #0284C7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.roleInput::placeholder {
+  color: #7DD3FC;
+}
+
+/* 대사 입력 */
+.textInput {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 16px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 14px;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.textInput::placeholder {
+  color: #9CA3AF;
+}
+
+/* 대사 삭제 */
+.itemDelBtn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #9CA3AF;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.itemDelBtn:hover:not(:disabled) {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
+.itemDelBtn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.sceneActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.addItemBtn {
+  padding: 8px 16px;
+  border: 1px solid #DDD6FE;
+  border-radius: 12px;
+  background: #DDD6FE;
+  color: #6D28D9;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addItemBtn:hover {
+  background: #C4B5FD;
+  color: #5B21B6;
+}
+
+/* ── 씬 추가하기 ── */
+.addSceneBtn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px dashed #FCD34D;
+  border-radius: 14px;
+  background: #FEF3C7;
+  color: #D97706;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addSceneBtn:hover {
+  background: #FDE68A;
+  color: #B45309;
+}
+
+.error {
+  color: #EF4444;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 16px;
+}
+
+/* ── 하단 네비게이션 고정 영역 (flex 배치로 절대 겹치지 않음) ── */
+.fixedPageNav {
+  flex-shrink: 0;
+  padding: 12px 32px 24px; /* 아래 여백 24px을 주어 카드 테두리와 겹치지 않게 함 */
+  /* formScrollArea와 좌우 마진 통일 */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  background: transparent;
+}
+
+.pageNav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btnPrimary {
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+}
+
+.btnPrimary:disabled {
+  background: #DDD6FE;
+  color: #A78BFA;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btnPrimary:not(:disabled):hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
+
+.btnSecondary {
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #FFFFFF;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+.hint {
+  font-size: 13px;
+  color: #9CA3AF;
+  text-align: right;
+  margin: 0;
+}
+
+/* ── 취소 확인 모달 ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.modal {
+  width: 320px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 0 8px;
+}
+
+.modalDesc {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0 0 20px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+}
+
+.modalKeepBtn,
+.modalConfirmBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.modalKeepBtn {
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #374151;
+}
+
+.modalKeepBtn:hover {
+  background: #F9FAFB;
+}
+
+.modalConfirmBtn {
+  border: none;
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.modalConfirmBtn:hover {
+  background: #DC2626;
+}
+
+/* ── 반응형 레이아웃 ── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .headerMascot {
+    width: 220px;
+    margin-top: 10px;
+  }
+
+
+  .itemRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    background: #F9FAFB;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+  }
+
+  .selectWrapper {
+    width: 100%;
+  }
+
+  .roleInput {
+    width: 100%;
+  }
+
+  .pageNav {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .bookContainer {
+    aspect-ratio: auto;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    background: transparent;
+    border: none;
+  }
+
+  .bookBackground {
+    display: none;
+  }
+
+  .bookContentOverlay {
+    position: static;
+    padding: 0;
+  }
+
+  .formScrollArea {
+    overflow-y: visible;
+    padding: 0;
+  }
+
+  .fixedPageNav {
+    width: 100%;
+    padding: 0;
+    margin-top: 24px;
+  }
+}

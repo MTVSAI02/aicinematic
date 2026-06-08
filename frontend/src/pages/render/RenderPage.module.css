@@ -1,0 +1,476 @@
+/* /render — 최종 영상 생성·확인 페이지.
+   Book.png 책 배경 레이아웃 탑재 및 밤하늘 헤더 배너 적용 */
+
+.page {
+  padding: 40px 0 80px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: 'Hakgyoansim', "Inter", sans-serif;
+}
+
+/* ── 상단 헤더 (밤하늘 배경 BACJ.png 적용) ── */
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  height: 500px; /* 세로폭 고정 */
+  box-sizing: border-box;
+  gap: 20px;
+  padding: 48px 64px;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 24px;
+  overflow: visible; /* 캐릭터가 헤더 경계를 살짝 벗어나 3D 입체감을 주도록 visible 설정 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.headerLeft {
+  flex: 1;
+  padding-left: 20px;
+}
+
+.headerSubTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #C084FC; /* 밝은 연보라 */
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.headerTitle {
+  font-family: 'KerisKedu', sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 16px 0;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.headerDesc {
+  font-size: 20px;
+  color: #E5E7EB;
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.headerRight {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 620px; /* 음성입력 팻말 크기로 통일 + 50px 확대 + 50px 추가 확대 */
+}
+
+/* ── 캐릭터 액자 + 제목 오버레이 ── */
+.titleFrame {
+  position: relative;
+  display: block;
+  animation: titleFloat 3.5s ease-in-out infinite alternate;
+  margin-right: -10px; /* 우측 밀착 */
+  margin-top: 40px; /* 80px 아래로 이동 (-40px -> 40px) */
+  width: 100%;
+  aspect-ratio: 1470 / 1108;
+}
+
+.titleFrameImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+}
+
+.titleFrameText {
+  position: absolute;
+  top: 56%; /* 캐릭터 팻말 디자인 내 흰색 영역 중앙 */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'KerisKedu', sans-serif;
+  font-size: clamp(16px, 2.2vw, 25px);
+  font-weight: 700;
+  color: #1F2937;
+  white-space: normal;
+  word-break: keep-all;
+  text-align: center;
+  pointer-events: none;
+  width: 58%;
+  max-width: 65%;
+  max-height: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+@keyframes titleFloat {
+  0% {
+    transform: translateY(0px) rotate(-0.5deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+/* ── 내용 컨테이너 (Glassmorphism Card) ── */
+.bookContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.bookContentOverlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.scrollArea {
+  width: 100%;
+  padding: 64px 48px 16px; /* Symmetrical padding adjustment: top increased, bottom decreased */
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.scrollArea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 99px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+.stateContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  justify-content: center;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.cardTitle {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0;
+}
+
+.cardDesc {
+  font-size: 15px;
+  color: #4B5563;
+  max-width: 480px;
+  line-height: 1.6;
+  margin: 0 0 8px 0;
+}
+
+.emptyIcon {
+  font-size: 56px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
+  margin-bottom: 8px;
+}
+
+.muted {
+  color: #6B7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ── 생성 중: 스피너 + 단계 ── */
+.spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 4px solid rgba(139, 92, 246, 0.15);
+  border-top-color: #8B5CF6;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.steps {
+  list-style: none;
+  margin: 16px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.step {
+  font-size: 14px;
+  color: #6B7280;
+  opacity: 0.6;
+  transition: all 0.2s;
+}
+
+.stepActive {
+  color: #8B5CF6;
+  opacity: 1;
+  font-weight: 700;
+}
+
+/* ── 완료: 결과 카드 ── */
+.resultHead {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.storyTitleBadge {
+  color: #8B5CF6;
+  background: #F5F3FF;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.videoWrap {
+  width: 100%;
+  max-width: 640px; /* 16:9 비율 비디오 */
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 3px solid #8B5CF6; /* 보라색 엣지 포인트 */
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.meta {
+  color: #4B5563;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.note {
+  color: #6B7280;
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+/* ── 실패 카드 ── */
+.errorState {
+  color: #EF4444;
+}
+
+/* ── 액션 버튼 ── */
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.btnPrimary,
+.btnOutline,
+.btnSecondary {
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btnPrimary {
+  padding: 10px 24px; /* Primary 버튼은 가로폭을 좀 더 넓힘 */
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border-color: #8B5CF6;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+}
+
+.btnPrimary:hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
+
+.btnOutline {
+  background: transparent;
+  color: #8B5CF6;
+  border-color: #C084FC;
+  font-weight: 600;
+}
+
+.btnOutline:hover {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: #8B5CF6;
+}
+
+.btnSecondary {
+  background: #FFFFFF;
+  color: #4B5563;
+  border-color: #D1D5DB;
+  font-weight: 600;
+}
+
+.btnSecondary:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #E8D5FF;
+  color: #7C3AED;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  white-space: nowrap;
+}
+
+/* ── 북마크 리본 데코레이션 ── */
+.bookmarkRibbon {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 60px;
+  background: #8B5CF6;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  box-sizing: border-box;
+}
+
+.bookmarkStar {
+  color: #FCD34D;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ── 하단 네비게이션 고정 영역 ── */
+.fixedPageNav {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 16px 80px 36px; /* Reduced bottom padding to balance vertical space */
+}
+
+/* ── 반응형 조정 (모바일에서 책 이미지 숨기고 카드 레이아웃으로 변경) ── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .headerRight {
+    width: 220px;
+    margin-top: 16px;
+  }
+
+  .bookContainer {
+    aspect-ratio: auto;
+    height: auto;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 20px;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.05);
+  }
+
+  .bookBackground {
+    display: none;
+  }
+
+  .bookContentOverlay {
+    position: static;
+    width: 100%;
+    height: auto;
+  }
+
+  .scrollArea {
+    padding: 0;
+  }
+
+  .fixedPageNav {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 24px 0 0;
+    gap: 12px;
+    background: transparent;
+  }
+
+  .btnPrimary,
+  .btnOutline,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 8px;
+  }
+}
+

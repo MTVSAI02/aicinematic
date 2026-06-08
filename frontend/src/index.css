@@ -1,3 +1,34 @@
+
+@font-face {
+  font-family: 'Hakgyoansim';
+  src: url('@design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF R.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Hakgyoansim';
+  src: url('@design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF B.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* 자막 폰트(학교안심 둥근미소 Regular) — /scene-editor·/timeline 미리보기 자막에 사용.
+   소스는 design 에셋 단일화(@design alias). 백엔드 렌더(Pillow)도 같은 design OTF 사용. */
+@font-face {
+  font-family: 'Hakgyoansim Dunggeunmiso';
+  src: url('@design/assets/fonts/학교안심 둥근미소/Hakgyoansim Dunggeunmiso OTF R.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'KerisKedu';
+  src: url('@design/assets/fonts/케리스 케듀체/KERISKEDU_B.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -7,19 +38,19 @@
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
+  --danger: #c0392b;
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Hakgyoansim', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Hakgyoansim', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -40,6 +71,7 @@
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
+    --danger: #e05c5c;
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
@@ -50,20 +82,53 @@
   }
 }
 
+html {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  scrollbar-gutter: stable; /* Keeps horizontal layout perfectly aligned when scrollbars appear */
+}
+
 body {
   margin: 0;
+  background: transparent;
+}
+
+.global-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('@design/assets/figma-images/Background.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  z-index: -10;
+  pointer-events: none;
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
+  width: calc(100% - 128px); /* Enforces exactly 64px margin on both sides */
+  max-width: 1600px; /* 1400px에서 1600px로 추가 확대하여 책 프레임 비주얼을 한층 더 크게 노출 */
   margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  background: transparent;
+}
+
+@media (max-width: 1024px) {
+  #root {
+    width: calc(100% - 48px); /* 24px margins on tablets */
+  }
+}
+
+@media (max-width: 768px) {
+  #root {
+    width: calc(100% - 32px); /* 16px margins on mobile */
+  }
 }
 
 h1,

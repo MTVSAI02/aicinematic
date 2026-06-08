@@ -1,0 +1,451 @@
+.page {
+  min-height: calc(100vh - 120px);
+  padding: 8px 24px 12px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.centerSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: -35px;
+  margin-bottom: 12px;
+  max-width: 600px;
+  width: 100%;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.titleLogo {
+  width: 360px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.sub {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 14px;
+  color: #000;
+  margin-bottom: 6px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.cta {
+  display: inline-flex;
+  width: 180px;
+  height: 40px;
+  padding: 8px 12px 6px 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+
+  border-radius: 11px;
+  border: 1px solid #BAAEE6;
+  background: linear-gradient(180deg, rgba(247, 235, 255, 0.60) 0%, rgba(214, 196, 254, 0.60) 51.78%, rgba(136, 117, 216, 0.60) 100%);
+  box-shadow: 1px 1px 1px 0 rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(7.4px);
+  -webkit-backdrop-filter: blur(7.4px);
+
+  color: #FFF;
+  text-align: center;
+  -webkit-text-stroke-width: 0.5px;
+  -webkit-text-stroke-color: #BAAEE6;
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 120%;
+  letter-spacing: -1.2px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.cta:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 1px 3px 6px rgba(136, 117, 216, 0.4);
+  filter: brightness(1.05); /* Soft glowing effect */
+}
+
+.cta:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.starIcon {
+  font-size: 16px; /* Icon size matching 20px bold font line height */
+  display: inline-block;
+  transform: translateY(-1px);
+}
+
+.emptySection {
+  width: 1120px;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.emptyCard {
+  width: 100%;
+  border: 2px dashed rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 50px 24px; /* Sized up height by 50px via padding as requested */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.bookImage {
+  width: 240px; /* Sized up from 180px as requested by the user */
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.emptyTitle {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 22px; /* Reduced by 3px (from 25px to 22px) as requested */
+  font-weight: 700; /* Styled with true bold weight (700) */
+  color: #000;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.5px;
+}
+
+.emptySub {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 13px;
+  color: #555;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ── 책장이 채워졌을 때 (프로젝트 목록 Grid ➔ Nintendo UI Slider로 변경) ── */
+.bookshelfSection {
+  width: 1120px;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.bookshelfTitle {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #000;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.bookshelfContainer {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 2px dashed rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 20px 16px 24px 16px;
+  box-sizing: border-box;
+  gap: 16px;
+}
+
+.bookshelfRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 20px;
+}
+
+.bookshelfViewport {
+  width: 718px; /* Exactly 5 items * 118px + 4 gaps * 32px = 590 + 128 = 718px */
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  padding: 12px 0; /* Add padding to prevent hover shadows from being clipped */
+}
+
+.bookshelfTrack {
+  display: flex;
+  gap: 32px;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* 닌텐도 스타일 좌우 이동 버튼 */
+.navBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(136, 117, 216, 0.3);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  color: #8875D8;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: #8875D8;
+  color: #FFFFFF;
+  box-shadow: 0 6px 14px rgba(136, 117, 216, 0.3);
+  transform: scale(1.08);
+}
+
+.navBtn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.navBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.bookCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  perspective: 1000px;
+  width: 118px; /* Fixed card width */
+  flex-shrink: 0;
+}
+
+/* ── 카드 ⋯ 메뉴 ── */
+.cardMenu {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+}
+.menuBtn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #374151;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.bookCard:hover .menuBtn {
+  opacity: 1;
+}
+.menuBtn:hover {
+  background: #ffffff;
+}
+.menuDropdown {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  min-width: 110px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+.menuItemDanger {
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #ef4444;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.menuItemDanger:hover {
+  background: #fef2f2;
+}
+
+.bookCover {
+  position: relative;
+  width: 118px;
+  height: 160px;
+  border-radius: 4px 12px 12px 4px;
+  box-shadow: 3px 6px 12px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
+  box-sizing: border-box;
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+}
+
+.bookSpine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 4px 0 0 4px;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* 완성 배지 — 표지 좌상단(⋯ 메뉴는 우상단). 파스텔 표지 위에서 읽히도록 흰 pill + 그린 텍스트 */
+.doneBadge {
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(47, 158, 110, 0.3);
+  color: #2f9e6e;
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* 작업 중 배지 — 완성 전(영상 미제작) 상태. 완성(그린)과 구분되게 앰버 톤, 같은 흰 pill 베이스 */
+.progressBadge {
+  position: absolute;
+  top: 6px;
+  left: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(183, 121, 31, 0.3);
+  color: #b7791f;
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.bookTitle {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1F2937;
+  word-break: keep-all;
+  text-align: center;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 100%;
+  padding: 0 4px;
+}
+
+.bookAuthor {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 10px;
+  color: #374151;
+  opacity: 0.6;
+  margin-top: 10px;
+  font-weight: 400;
+}
+
+.bookInfo {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.bookName {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  margin: 0 0 6px 0;
+  text-align: center;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookBtn {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease;
+}
+
+.bookBtn:hover {
+  transform: translateX(2px);
+}
+
+.bookCard:hover .bookCover {
+  transform: translateY(-8px) rotateY(-12deg) rotateZ(-1.5deg);
+  box-shadow: 8px 16px 28px rgba(136, 117, 216, 0.3);
+}
+
+.loading {
+  font-family: 'Hakgyoansim', '학교안심 둥근미소', sans-serif;
+  font-size: 18px;
+  color: #555;
+  padding: 80px 0;
+}

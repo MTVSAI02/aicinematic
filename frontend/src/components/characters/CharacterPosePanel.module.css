@@ -1,0 +1,158 @@
+/* 캐릭터 포즈 패널 전용 스타일 (3단 레이아웃 우측 검사기 상세 뷰에 최적화) */
+
+.posePanel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 섹션 타이틀 */
+.sectionTitle {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4B5563;
+  margin-bottom: 10px;
+  display: block;
+}
+
+/* 2열 썸네일 그리드 */
+.poseGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.poseCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 6px;
+  background: #FFFFFF;
+  border: 1.5px solid #F3E8FF;
+  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.02);
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
+.poseCard:hover {
+  border-color: #C084FC;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.06);
+}
+
+.poseCardActive {
+  border-color: #8B5CF6;
+  background: rgba(139, 92, 246, 0.02);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+}
+
+.poseImg {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #F9FAFB;
+  border: 1px solid #EDE9FE;
+  border-radius: 8px;
+}
+
+.posePrompt {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4B5563;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+
+.poseCardActive .posePrompt {
+  color: #7C3AED;
+  font-weight: 700;
+}
+
+/* 구분선 */
+.divider {
+  border: none;
+  border-top: 1px dashed rgba(139, 92, 246, 0.25);
+  margin: 16px 0;
+}
+
+/* 포즈 생성 폼 */
+.generatorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.textarea {
+  padding: 10px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 13px;
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.textarea::placeholder {
+  color: #9CA3AF;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+
+.btn {
+  padding: 10px 16px;
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch; /* 전체 가로 너비 채우기 */
+}
+
+.btn:hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 12px rgba(124, 58, 237, 0.25);
+}
+
+.btn:disabled {
+  background: #E5E7EB;
+  color: #9CA3AF;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.status {
+  font-size: 12px;
+  color: #7C3AED;
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.error {
+  font-size: 12px;
+  color: #EF4444;
+  margin: 4px 0 0;
+}

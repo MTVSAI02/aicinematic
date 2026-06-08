@@ -1,0 +1,11 @@
+# 권장 실행 방식은 루트에서 uv 사용 (pyproject.toml + uv.lock 이 source of truth).
+# 이 파일은 backend/ 안에서 pip 로 직접 띄울 때를 위한 보조 목록이며,
+# 루트 pyproject.toml 의 의존성과 동기화해서 관리한다.
+fastapi>=0.136.3
+uvicorn[standard]>=0.48.0
+httpx>=0.28.1
+pillow>=12.2.0
+imageio-ffmpeg>=0.6.0
+python-multipart>=0.0.29
+websocket-client>=1.9.0
+pydantic>=2.0

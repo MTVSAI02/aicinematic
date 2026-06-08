@@ -1,0 +1,1027 @@
+/* 타임라인 — 스토리보드 카드형. premium glassmorphism 디자인 및 책 리본 데코레이션 탑재 */
+
+.page {
+  padding: 40px 0 80px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: 'Hakgyoansim', "Inter", sans-serif;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  height: 500px; /* 세로폭 고정 */
+  box-sizing: border-box;
+  gap: 20px;
+  padding: 48px 64px;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 24px;
+  overflow: visible; /* 캐릭터가 헤더 경계를 살짝 벗어나 3D 입체감을 주도록 visible 설정 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.headerLeft {
+  flex: 1;
+  padding-left: 20px;
+}
+
+.headerSubTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #C084FC; /* 밝은 연보라 */
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.headerTitle {
+  font-family: 'KerisKedu', sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 16px 0;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.headerDesc {
+  font-size: 20px;
+  color: #E5E7EB;
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.headerRight {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 620px; /* 음성입력 팻말 크기로 통일 + 50px 확대 + 50px 추가 확대 */
+}
+
+/* ── 캐릭터 액자 + 제목 오버레이 ── */
+.titleFrame {
+  position: relative;
+  display: block;
+  animation: titleFloat 3.5s ease-in-out infinite alternate;
+  margin-right: -10px; /* 우측 밀착 */
+  margin-top: 40px; /* 80px 아래로 이동 (-40px -> 40px) */
+  width: 100%;
+  aspect-ratio: 1470 / 1116;
+}
+
+.titleFrameImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+}
+
+.titleFrameText {
+  position: absolute;
+  top: 56%; /* 캐릭터 팻말 디자인 내 흰색 영역 중앙 */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'KerisKedu', sans-serif;
+  font-size: clamp(16px, 2.2vw, 25px);
+  font-weight: 700;
+  color: #1F2937;
+  white-space: normal;
+  word-break: keep-all;
+  text-align: center;
+  pointer-events: none;
+  width: 58%;
+  max-width: 65%;
+  max-height: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+@keyframes titleFloat {
+  0% {
+    transform: translateY(0px) rotate(-0.5deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+/* ── 내용 컨테이너 (Glassmorphism Card) ── */
+.bookContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.05);
+  overflow: visible; /* 북마크 리본 노출용 */
+  display: flex;
+  flex-direction: column;
+}
+
+.bookContentOverlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.scrollArea {
+  width: 100%;
+  padding: 40px 48px;
+  box-sizing: border-box;
+}
+
+/* ── 헤더 정보 영역 ── */
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.panelTitle {
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0;
+}
+
+.summary {
+  font-size: 14px;
+  color: #6B7280;
+}
+
+.summary b {
+  color: #1F2937;
+}
+
+.saveStatus {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.saveSaving {
+  color: #6B7280;
+}
+
+.saveSaved {
+  color: #8B5CF6;
+}
+
+.saveFailed {
+  color: #EF4444;
+}
+
+.guide {
+  font-size: 14px;
+  color: #4B5563;
+  margin: -12px 0 24px;
+  line-height: 1.5;
+}
+
+/* ── 카드 트랙 (가로 스크롤) ── */
+.track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 12px 4px 20px;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+  margin-bottom: 24px;
+}
+
+.track::-webkit-scrollbar {
+  height: 8px;
+}
+
+.track::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.05);
+  border-radius: 99px;
+}
+
+.track::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 99px;
+}
+
+.track::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+.card {
+  flex: 0 0 200px;
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  border-radius: 14px;
+  background: #FFFFFF;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.06);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.cardSelected {
+  border-color: #8B5CF6;
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.1);
+}
+
+.cardPlaying {
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 2px #C084FC, 0 6px 16px rgba(139, 92, 246, 0.15);
+}
+
+.cardPlayingTag {
+  font-size: 11px;
+  color: #8B5CF6;
+  font-weight: 700;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardOrder {
+  font-weight: 700;
+  color: #1F2937;
+  font-size: 15px;
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #F3F4F6;
+  display: block;
+  border: 1px solid #E5E7EB;
+}
+
+.thumbEmpty {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  background: #F3F4F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9CA3AF;
+  font-size: 13px;
+  border: 1px dashed #D1D5DB;
+}
+
+.textPreview {
+  font-size: 13px;
+  color: #374151;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 36px;
+  line-height: 1.4;
+}
+
+.cardSummary {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 36px;
+  margin: 0;
+}
+
+.cardCueLabel {
+  color: #8B5CF6;
+  font-weight: 700;
+}
+
+.cardDuration {
+  font-size: 14px;
+  color: #1F2937;
+  font-weight: 700;
+}
+
+/* ── readyStatus 뱃지 ── */
+.badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #F5F3FF;
+  color: #8B5CF6;
+  white-space: nowrap;
+}
+
+.badgeWarn {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: auto;
+}
+
+/* ── 상세 패널: 왼쪽 미리보기 / 오른쪽 편집 ── */
+.detail {
+  margin-top: 24px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.6);
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .detail {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 20px;
+  }
+}
+
+/* 왼쪽: 미리보기 */
+.detailPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 24px;
+}
+
+.detailPreviewLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4B5563;
+}
+
+.detailStage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #1F2937;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 전체 미리보기 재생 컨트롤 + 상태 */
+.playBar {
+  display: flex;
+  gap: 10px;
+}
+
+.playMain {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: #8B5CF6;
+  color: #FFFFFF;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+}
+
+.playMain:hover:not(:disabled) {
+  background: #7C3AED;
+}
+
+.playMain:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.playBtn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #4B5563;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.playBtn:hover {
+  border-color: #8B5CF6;
+  color: #8B5CF6;
+  background: #F5F3FF;
+}
+
+.playNote {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.5;
+}
+
+.playStatus {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #4B5563;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* 오른쪽: 정보 + 편집 패널 */
+.detailPanel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detailHeadRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.detailTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.detailText {
+  color: #4B5563;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.detailChars {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7C3AED;
+  background: #F5F3FF;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 999px;
+  padding: 4px 12px 4px 6px;
+}
+
+.chipAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  background: #FFFFFF;
+}
+
+/* ── duration 컨트롤 ── */
+.duration {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.durBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.durBtn:hover:not(:disabled) {
+  border-color: #8B5CF6;
+  color: #8B5CF6;
+  background: #F5F3FF;
+}
+
+.durBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.durValue {
+  min-width: 64px;
+  text-align: center;
+  color: #1F2937;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 공통 ── */
+.empty {
+  color: #6B7280;
+  padding: 48px 24px;
+  border: 1px dashed #DDD6FE;
+  border-radius: 16px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.3);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.error {
+  color: #EF4444;
+  font-size: 13px;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+/* ── 자막 cue 타이밍 편집기 ── */
+.cueTiming {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.cueTimingHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cueHint {
+  font-size: 13px;
+  color: #6B7280;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.cueSave {
+  font-size: 13px;
+  font-weight: 700;
+  color: #10B981;
+}
+
+.cueSaveFail {
+  color: #EF4444;
+}
+
+.cueAutoBtn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #4B5563;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cueAutoBtn:hover:not(:disabled) {
+  border-color: #8B5CF6;
+  color: #8B5CF6;
+  background: #F5F3FF;
+}
+
+.cueAutoBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cueHeadBtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── cue TTS 오디오/길이 ── */
+.cueAudio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cueLen {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 13px;
+  color: #4B5563;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.cueLenWarn {
+  color: #EF4444;
+  font-weight: 700;
+}
+
+.cueAudioPlayer {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  outline: none;
+}
+
+.cueAudioNote {
+  font-size: 13px;
+  color: #6B7280;
+}
+
+/* ── cue 안 줄(item)별 음성 ── */
+.cueItems {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.cueItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(139, 92, 246, 0.08);
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.02);
+}
+
+.cueItemHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.cueItemIcon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #E8D5FF;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.cueItemThumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #E5E7EB;
+  flex-shrink: 0;
+}
+
+.cueItemName {
+  color: #1F2937;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.cueItemVoice {
+  color: #8B5CF6;
+  font-weight: 600;
+}
+
+.cueItemLen {
+  color: #6B7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.cueItemText {
+  margin: 0;
+  color: #1F2937;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* ── 보이스 미완료 안내 배너 ── */
+.voiceGuard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  background: rgba(139, 92, 246, 0.05);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #7C3AED;
+  font-weight: 600;
+}
+
+.cueEmpty {
+  font-size: 14px;
+  color: #6B7280;
+  padding: 16px 0;
+}
+
+.cueList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* cue 카드: 라벨 + 자막 요약 + 시작/길이 + 미니바 */
+.cueCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  border-radius: 12px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cueCard:hover {
+  border-color: rgba(139, 92, 246, 0.25);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.04);
+}
+
+.cueCardActive {
+  border-color: #8B5CF6;
+  background: #F5F3FF;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
+}
+
+.cueCardTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cueLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: #8B5CF6;
+}
+
+.cueShown {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10B981;
+}
+
+.cueTextPreview {
+  margin: 0;
+  font-size: 14px;
+  color: #1F2937;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cueFields {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cueField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4B5563;
+}
+
+.cueInput {
+  width: 70px;
+  padding: 6px 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.cueInput:focus {
+  border-color: #8B5CF6;
+}
+
+.cueBar {
+  position: relative;
+  height: 12px;
+  background: #F3F4F6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cueSeg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #DDD6FE;
+  border-radius: 999px;
+  min-width: 6px;
+}
+
+.cueSegActive {
+  background: #8B5CF6;
+}
+
+/* ── 북마크 리본 데코레이션 ── */
+.bookmarkRibbon {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 60px;
+  background: #8B5CF6;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  box-sizing: border-box;
+}
+
+.bookmarkStar {
+  color: #FCD34D;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ── 하단 네비게이션 고정 영역 ── */
+.fixedPageNav {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 12px 48px 24px;
+}
+
+.btnPrimary {
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+  font-family: inherit;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btnSecondary {
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #FFFFFF;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+.btnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── 반응형 조정 ── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .headerRight {
+    width: 220px;
+    margin-top: 16px;
+  }
+
+  .scrollArea {
+    padding: 16px;
+  }
+
+  .fixedPageNav {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 24px 0 0;
+    gap: 12px;
+    background: transparent;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 8px;
+  }
+}
+

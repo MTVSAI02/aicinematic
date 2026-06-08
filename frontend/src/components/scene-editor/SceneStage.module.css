@@ -1,0 +1,93 @@
+/* 씬 합성 미리보기 스테이지 — 정적 스타일(색/테두리/배경/레이아웃)만 여기. */
+/* 계산값(left/top/width/height/transform/zIndex/aspectRatio)은 컴포넌트에서 inline 으로 둔다. */
+
+.stage {
+  position: relative;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--code-bg); /* 비어있는 영역 배경 토큰 */
+  border-radius: 12px;
+  overflow: hidden; /* 캐릭터를 프레임 안으로 클리핑 (Moveable 핸들은 rootContainer로 body에 렌더) */
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+.char {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: center;
+  cursor: move;
+}
+
+/* 선택 안 된 캐릭터에 옅은 점선 테두리(선택 가능 힌트). 선택된 건 Moveable 핸들이 대신. */
+.charUnselected {
+  outline: 1px dashed var(--accent-border);
+}
+
+.charImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 자막(텍스트 오버레이) — 위치/크기/색/배경은 컴포넌트 inline(정규화 계산값). */
+.textOverlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: center;
+  cursor: move;
+  box-sizing: border-box;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: none;
+  /* 어떤 배경 위에서도 읽히도록 외곽 그림자(가독성 기본값) */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.textOverlaySelected {
+  outline: 1px solid var(--accent);
+}
+
+.charPlaceholder {
+  width: 100%;
+  height: 100%;
+  border: 2px dashed #8B5CF6; /* 보라색 점선 */
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.1); /* 연한 보라빛 투명 배경 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: #7C3AED;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.charPlaceholderName {
+  font-family: "Hakgyoansim", sans-serif;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}

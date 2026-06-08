@@ -1,0 +1,462 @@
+/* 씬 확인·수정 페이지 리디자인 CSS.
+   목업 씬확인3.png를 기반으로 밤하늘 테마 헤더, 둥근 흰색 카드배경, 파스텔 씬 행 스타일을 적용함. */
+
+.page {
+  padding: 40px 0 80px;
+  /* 좌우 패딩을 0으로 만들어 #root의 64px 마진 정렬선과 일치시킴 */
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: 'Hakgyoansim', "Inter", sans-serif;
+}
+
+/* ── 상단 헤더 (밤하늘 배경 BACJ.png 적용) ── */
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto 40px; /* 1200px 중앙 정렬 및 아래 마진 */
+  width: 100%;
+  max-width: 1200px; /* 전체 너비를 1200px로 제한 */
+  height: 500px; /* 세로폭 고정 */
+  box-sizing: border-box;
+  gap: 20px;
+  padding: 48px 64px;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 24px;
+  overflow: hidden; /* 배경 이미지(배너) 밖으로 튀어나온 요소(액자 내부의 끈 등)를 숨기기 위해 overflow를 hidden으로 설정 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.headerLeft {
+  flex: 1;
+  padding-left: 20px; /* voice-input / story-input과 일치 */
+}
+
+.headerSubTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #C084FC; /* 밝은 연보라 */
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.headerTitle {
+  font-family: 'KerisKedu', sans-serif;
+  font-size: 60px;
+  font-weight: 700;
+  color: #FFFFFF; /* 흰색 글자 */
+  margin: 0 0 16px 0;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.headerDesc {
+  font-size: 20px;
+  color: #E5E7EB; /* 밝은 회색 */
+  line-height: 1.6;
+  margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.headerRight {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 600px; /* 팻말 크기를 600px로 조정 */
+}
+
+/* ── title.svg 액자 + 제목 오버레이 ── */
+.titleFrame {
+  position: relative;
+  display: block;
+  animation: titleFloat 3.5s ease-in-out infinite alternate;
+  margin-right: -10px; /* 우측 밀착 */
+  margin-top: -100px; /* 위로 100px 올려서 배너 테두리 위로 멋스럽게 걸치도록 함 */
+  width: 100%;
+  aspect-ratio: 2672 / 2533;
+}
+
+.titleFrameImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+}
+
+.titleFrameText {
+  position: absolute;
+  top: 56%; /* 팻말 내 흰색 영역 중앙 정렬 */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'KerisKedu', sans-serif;
+  font-size: clamp(16px, 2.2vw, 25px); /* 팻말 스케일업에 발맞춰 폰트 범위 상향 */
+  font-weight: 700;
+  color: #1F2937; /* 목업에 맞춰 어두운 어조 */
+  white-space: normal; /* 자동 줄바꿈 허용 */
+  word-break: keep-all;
+  text-align: center;
+  pointer-events: none;
+  width: 58%; /* 팻말 가로폭에 가둠 */
+  max-width: 65%;
+  max-height: 52%;
+  overflow: hidden; /* 영역 밖으로 삐져나가는 긴 글씨는 감춤 */
+  text-overflow: ellipsis;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+@keyframes titleFloat {
+  0% {
+    transform: translateY(0px) rotate(-0.5deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+.bookContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.bookContentOverlay {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.scrollArea {
+  width: 100%;
+  padding: 24px 32px 16px;
+  box-sizing: border-box;
+}
+
+/* ── 스토리 제목 박스 (상단 중앙 둥근 텍스트 박스) ── */
+.storyTitleBox {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  background: #F9FAFB;
+  font-family: 'Hakgyoansim', sans-serif;
+  font-size: 20px; 
+  font-weight: 700;
+  color: #1F2937;
+  text-align: center;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+  line-height: 1.45; /* 장문 2줄 시 글자 겹침 방지 */
+  word-break: keep-all; /* 단어 단위 개행 */
+  word-wrap: break-word;
+}
+
+/* ── 씬 카드 목록 ── */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid #F3E8FF;
+  border-radius: 16px;
+  padding: 32px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 4px 16px rgba(186, 174, 230, 0.04);
+}
+
+.scenePill {
+  position: absolute;
+  top: -14px;
+  left: 20px;
+  padding: 4px 16px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 99.9px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #4B5563;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── 대사 행 ── */
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 감정태그 라벨 (있을 때만 연보라 노출) */
+.emotionTag {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  background: #EDE9FE;
+  color: #7C3AED;
+  border: 1px solid #DDD6FE;
+  border-radius: 12px;
+  font-size: 13px; /* 14px에서 13px로 조정하여 스토리 입력의 입력 텍스트와 균형을 맞춤 */
+  font-weight: 700;
+  text-align: center;
+  min-width: 80px; /* 가로폭을 좀 더 컴팩트하게 조정 */
+  box-sizing: border-box;
+}
+
+/* 역할태그 라벨 (연하늘 노출) */
+.roleTag {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  background: #E0F2FE;
+  color: #0369A1;
+  border: 1px solid #BAE6FD;
+  border-radius: 12px;
+  font-size: 13px; /* 14px에서 13px로 조정 */
+  font-weight: 700;
+  text-align: center;
+  min-width: 90px; /* 가로폭을 좀 더 컴팩트하게 조정 */
+  box-sizing: border-box;
+}
+
+/* 대사 버블 (둥근 테두리 박스) */
+.textBubble {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #1F2937;
+  font-size: 13px; /* 14px에서 13px로 조정 */
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.guide {
+  color: #6B7280;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 0;
+  color: #6B7280;
+  text-align: center;
+}
+
+/* ── 하단 고정 버튼 영역 (flex 배치로 절대 겹치지 않음) ── */
+.fixedActions {
+  flex-shrink: 0;
+  padding: 16px 32px 24px; /* 아래 여백을 24px로 설정하여 StoryInput과 패딩 대칭 유지 */
+  display: flex;
+  justify-content: space-between;
+  background: transparent;
+}
+
+.btnPrimary {
+  padding: 10px 24px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #8B5CF6;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소하여 과도한 크기감 해소 */
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.2);
+}
+
+.btnPrimary:hover {
+  background: #7C3AED;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
+
+.btnSecondary {
+  padding: 10px 20px; /* 버튼의 패딩을 컴팩트하게 조정 */
+  background: #FFFFFF;
+  color: #4B5563;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  font-size: 14px; /* 15px에서 14px로 축소 */
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+/* ── 반응형 ── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 32px 20px;
+    background-size: cover;
+    overflow: hidden;
+  }
+
+  .headerLeft {
+    padding-left: 0;
+  }
+
+  .headerRight {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .headerTitle {
+    font-size: 40px;
+  }
+
+  .titleFrameText {
+    font-size: 22px;
+  }
+
+  /* 모바일 끈 노출 유지 */
+
+
+  .bookContainer {
+    aspect-ratio: auto;
+    height: auto;
+    border-radius: 0 !important;
+    box-shadow: none;
+    overflow: visible;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .bookBackground {
+    display: none; /* 모바일 책 배경 해제 */
+  }
+
+  .bookContentOverlay {
+    position: static;
+    padding: 0;
+  }
+
+  /* whiteCardBox 모바일 스타일 제거 */
+
+  .storyTitleBox {
+    font-size: 20px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+
+  .list {
+    gap: 16px;
+  }
+
+  .card {
+    padding: 24px 16px 16px;
+    border-radius: 12px;
+    gap: 12px;
+  }
+
+  .scenePill {
+    top: -12px;
+    left: 16px;
+    padding: 2px 12px;
+    font-size: 11px;
+  }
+
+  .itemsList {
+    gap: 10px;
+  }
+
+  .scrollArea {
+    padding: 0;
+  }
+
+  .itemRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    background: #F9FAFB;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+  }
+
+  .emotionTag {
+    width: 100%;
+    min-width: 100%;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
+  .roleTag {
+    width: 100%;
+    min-width: 100%;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
+  .textBubble {
+    width: 100%;
+    min-width: 100%;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
+  .fixedActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 24px 0 0;
+    gap: 12px;
+    background: transparent;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 8px;
+  }
+}

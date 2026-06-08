@@ -1,0 +1,275 @@
+.wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* ── 벨 버튼 + badge ── */
+.bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.bell:hover {
+  background: var(--accent-bg);
+}
+.bellIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bellImg {
+  width: 43px;
+  height: 43px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0px 1px 1px rgba(0, 0, 0, 0.15));
+}
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ── 드롭다운 ── */
+.dropdown {
+  font-family: 'Hakgyoansim', sans-serif;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  z-index: 1000;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+}
+.headerTitle {
+  font-weight: 700;
+  color: var(--text-h);
+}
+.headerActions {
+  display: flex;
+  gap: 10px;
+}
+.linkBtn {
+  font-family: 'Hakgyoansim', sans-serif;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.linkBtn:hover {
+  text-decoration: underline;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.empty {
+  padding: 28px 14px;
+  text-align: center;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.row {
+  position: relative;
+}
+.item {
+  font-family: 'Hakgyoansim', sans-serif;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 32px 12px 14px; /* 오른쪽은 X 버튼 자리 */
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.delBtn {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.row:hover .delBtn {
+  opacity: 0.8;
+}
+.delBtn:hover {
+  opacity: 1;
+  background: var(--border);
+  color: var(--text-h);
+}
+.item:hover {
+  background: var(--accent-bg);
+}
+.unread {
+  background: var(--accent-bg);
+}
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.fail .dot {
+  background: var(--danger);
+}
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}
+.itemTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-h);
+}
+.itemMsg {
+  font-size: 13px;
+  color: var(--text);
+  margin-top: 2px;
+}
+.itemTime {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+/* ── 토스트(우상단 고정) ── */
+.toasts {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 2000;
+  pointer-events: none;
+}
+.toast {
+  font-family: 'Hakgyoansim', sans-serif;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 280px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-border);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  text-align: left;
+  cursor: pointer;
+  animation: toastIn 0.2s ease;
+}
+.toastFail {
+  border-color: var(--danger);
+  border-left-color: var(--danger);
+}
+.toastTitle {
+  font-size: 14px;
+  color: var(--text-h);
+}
+.toastMsg {
+  font-size: 13px;
+  color: var(--text);
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 1200px) {
+  .bell {
+    width: 40px;
+    height: 40px;
+  }
+  .bellImg {
+    width: 37px;
+    height: 37px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .bell {
+    width: 36px;
+    height: 36px;
+  }
+  .bellImg {
+    width: 33px;
+    height: 33px;
+  }
+}
+
+@media (max-width: 768px) {
+  .bell {
+    width: 32px;
+    height: 32px;
+  }
+  .bellImg {
+    width: 29px;
+    height: 29px;
+  }
+}
+
