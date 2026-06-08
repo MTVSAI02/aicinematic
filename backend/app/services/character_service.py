@@ -1,4 +1,6 @@
-from ..core.config import CHARACTER_POSE_STORAGE_DIR, CHARACTER_STORAGE_DIR
+import logging
+
+from ..core import storage
 from ..core.exceptions import (
     CharacterNotFoundError,
     CharacterPoseNotFoundError,
@@ -12,6 +14,8 @@ from ..core.exceptions import (
 from ..repositories.character_repo import character_repository
 from ..repositories.story_repo import story_repository
 from ..repositories.voice_repository import voice_repository
+
+logger = logging.getLogger(__name__)
 
 # 캐릭터 생성용 prompt 접두 규칙. 사용자 appearancePrompt 앞에 붙는다.
 # (내장 ai의 _tags_to_prompt에 있던 로직을 backend로 옮김 — AI 서버에는 이 최종 prompt만 보낸다.)
@@ -82,13 +86,20 @@ class CharacterService:
 
     @staticmethod
     def _delete_character_files(character: dict) -> None:
+        """원본 + 포즈 이미지를 storage(R2/로컬)에서 정리. best-effort — 실패해도 DB 삭제는 진행."""
         char_id = character.get("characterId")
+        keys = []
         if char_id:
-            (CHARACTER_STORAGE_DIR / f"{char_id}.png").unlink(missing_ok=True)
+            keys.append(f"characters/{char_id}.png")
         for pose in character.get("poses") or []:
             pose_id = pose.get("poseId")
             if pose_id:
-                (CHARACTER_POSE_STORAGE_DIR / f"{pose_id}.png").unlink(missing_ok=True)
+                keys.append(f"character_poses/{pose_id}.png")
+        for key in keys:
+            try:
+                storage.delete(key)
+            except Exception as e:  # noqa: BLE001 (파일 정리 실패가 삭제 API 를 막지 않게)
+                logger.warning("캐릭터 파일 정리 실패 (key=%s): %s", key, e)
 
     def update_character_voice(self, character_id: str, voice_id: str | None) -> dict:
         """캐릭터에 보이스(voiceId)를 연결/해제한다.

@@ -1,4 +1,6 @@
-from ..core.config import storage_path
+import logging
+
+from ..core import storage
 from ..core.exceptions import (
     StoryNotFoundError,
     VoiceNotFoundError,
@@ -10,6 +12,8 @@ from ..repositories.voice_repository import voice_repository
 from .image_resolve import resolve_character_display_image
 from .story_parser import EMOTION_OPTIONS, parse_story
 from .text_overlay_service import build_text_overlays
+
+logger = logging.getLogger(__name__)
 
 
 def _serialize_story(story: dict) -> dict:
@@ -86,10 +90,16 @@ class StoryService:
         removed = self._story_repo.delete(story_id)
         if removed is None:
             raise StoryNotFoundError()
+        # 이 스토리에서 생성된 산출물(TTS audio + 렌더 mp4)만 storage 에서 정리.
+        # 캐릭터/배경/보이스는 공용 라이브러리라 건드리지 않는다(story_repo.delete 도 그 URL 은 안 모음).
+        # best-effort: 하나 실패해도 나머지/DB 삭제는 계속(파일 정리 실패가 삭제 API 를 막지 않게).
         for url in [*removed.get("audioUrls", []), *removed.get("videoUrls", [])]:
-            path = storage_path(url)
-            if path is not None:
-                path.unlink(missing_ok=True)
+            if not url:
+                continue
+            try:
+                storage.delete(storage.storage_url_to_key(url))
+            except Exception as e:  # noqa: BLE001
+                logger.warning("스토리 산출물 파일 정리 실패 (url=%s): %s", url, e)
         return {"deleted": True, "storyId": story_id}
 
     def update_narrator_voice(self, story_id: str, voice_id: str | None) -> dict:
