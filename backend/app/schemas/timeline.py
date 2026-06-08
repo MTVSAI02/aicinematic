@@ -24,7 +24,7 @@ class TimelineSceneUpdate(BaseModel):
     """타임라인 저장 요청의 scene 1개. 재생 길이(duration) + (선택) cue 타이밍을 저장한다(순서 변경 없음)."""
 
     sceneId: str = Field(min_length=1)
-    duration: float = Field(ge=1.0, le=30.0)
+    duration: float = Field(ge=1.0, le=180.0)
     # 자막 cue 그룹별 타이밍. None이면 미변경(기본 균등분할 유지). cueOrder 당 1개.
     cueTimings: list[CueTimingUpdate] | None = None
 

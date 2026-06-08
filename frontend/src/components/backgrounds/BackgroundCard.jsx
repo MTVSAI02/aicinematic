@@ -3,6 +3,7 @@ import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
 import { getApiErrorMessage } from '@/utils/apiError'
 import { mediaUrl } from '@/utils/mediaUrl'
+import ConfirmModal from '@/components/common/ConfirmModal'
 import styles from '@/pages/background/BackgroundPage.module.css'
 
 export default function BackgroundCard({ background }) {
@@ -14,6 +15,8 @@ export default function BackgroundCard({ background }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(background.name)
   const [error, setError] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const isSelected = background.backgroundId === selectedBackgroundId
 
@@ -32,13 +35,15 @@ export default function BackgroundCard({ background }) {
   }
 
   async function handleDelete() {
-    if (!window.confirm('이 배경을 삭제할까요?')) return
     setError('')
+    setDeleting(true)
     try {
       await backgroundApi.deleteBackground(background.backgroundId)
-      removeBackground(background.backgroundId)
+      removeBackground(background.backgroundId) // 성공 시 목록에서 제거 → 이 카드 언마운트
     } catch (e) {
       setError(getApiErrorMessage(e))
+      setDeleting(false)
+      setConfirmOpen(false)
     }
   }
 
@@ -79,11 +84,27 @@ export default function BackgroundCard({ background }) {
           {isSelected && <span className={styles.selectedBadge}>선택됨</span>}
           <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
             <button className={styles.cardBtn} onClick={() => setEditing(true)}>수정</button>
-            <button className={styles.cardBtn} onClick={handleDelete}>삭제</button>
+            <button className={styles.cardBtn} onClick={() => setConfirmOpen(true)}>삭제</button>
           </div>
           {error && <span className={styles.error}>{error}</span>}
         </>
       )}
+
+      {/* 공용 삭제 확인 모달 (카드 onClick 버블 방지 래퍼) */}
+      <span onClick={(e) => e.stopPropagation()}>
+        <ConfirmModal
+          open={confirmOpen}
+          title="이 배경을 삭제할까요?"
+          message={`'${background.name}' 배경이 삭제됩니다.`}
+          confirmText={deleting ? '삭제 중…' : '삭제하기'}
+          variant="danger"
+          busy={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            if (!deleting) setConfirmOpen(false)
+          }}
+        />
+      </span>
     </li>
   )
 }

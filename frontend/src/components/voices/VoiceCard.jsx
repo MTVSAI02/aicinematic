@@ -5,6 +5,7 @@ import { assignVoiceToCharacter } from '@/api/characters'
 import { updateVoice as apiUpdateVoice, deleteVoice as apiDeleteVoice } from '@/api/voices'
 import { getApiErrorMessage } from '@/utils/apiError'
 import { mediaUrl } from '@/utils/mediaUrl'
+import ConfirmModal from '@/components/common/ConfirmModal'
 import styles from '@/pages/voice/VoicePage.module.css'
 
 // 보이스 한 개 카드: 미리듣기 / 연결 / (preset 아니면) 수정·삭제.
@@ -25,6 +26,8 @@ export default function VoiceCard({ voice }) {
 
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(voice.name)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // 연결 가능 조건은 voiceType 이 아니라 status 로 판단한다(추천 태그일 뿐).
   // 대상이 선택돼 있고 + 보이스가 ready 면 narrator/character 어디든 연결 가능.
@@ -95,8 +98,8 @@ export default function VoiceCard({ voice }) {
   }
 
   async function handleDelete() {
-    if (!window.confirm('이 보이스를 삭제할까요?')) return
     setError(null)
+    setDeleting(true)
     try {
       await apiDeleteVoice(voice.voiceId)
       removeVoice(voice.voiceId)
@@ -104,6 +107,8 @@ export default function VoiceCard({ voice }) {
       detachDeletedVoice(voice.voiceId)
     } catch (err) {
       setError(getApiErrorMessage(err))
+      setDeleting(false)
+      setConfirmOpen(false)
     }
   }
 
@@ -125,7 +130,7 @@ export default function VoiceCard({ voice }) {
           <p className={styles.failNote}>생성 실패 · AI 보이스 서버 연결 후 다시 생성해 주세요.</p>
           {!voice.isPreset && (
             <div className={styles.cardActions}>
-              <button className={styles.cardBtn} onClick={handleDelete}>삭제</button>
+              <button className={styles.cardBtn} onClick={() => setConfirmOpen(true)}>삭제</button>
             </div>
           )}
         </>
@@ -162,13 +167,27 @@ export default function VoiceCard({ voice }) {
               {!voice.isPreset && (
                 <>
                   <button className={styles.cardBtn} onClick={() => setEditing(true)}>수정</button>
-                  <button className={styles.cardBtn} onClick={handleDelete}>삭제</button>
+                  <button className={styles.cardBtn} onClick={() => setConfirmOpen(true)}>삭제</button>
                 </>
               )}
             </div>
           )}
         </>
       )}
+
+      {/* 공용 삭제 확인 모달 */}
+      <ConfirmModal
+        open={confirmOpen}
+        title="이 보이스를 삭제할까요?"
+        message={`'${voice.name}' 보이스가 삭제됩니다.\n연결된 캐릭터가 있으면 삭제할 수 없습니다.`}
+        confirmText={deleting ? '삭제 중…' : '삭제하기'}
+        variant="danger"
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => {
+          if (!deleting) setConfirmOpen(false)
+        }}
+      />
     </li>
   )
 }
