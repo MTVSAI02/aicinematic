@@ -6,27 +6,30 @@
 - 오디오/TTS 없음(무음). ffmpeg 경로는 config.resolve_ffmpeg_bin(env→PATH→번들)로 찾는다.
 """
 
+import io
+import logging
 import shutil
 import subprocess
+import tempfile
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageStat
 
+from ..core import storage
 from ..core.config import (
     RENDER_FPS,
     RENDER_HEIGHT,
-    RENDER_STORAGE_DIR,
-    RENDER_TMP_DIR,
     RENDER_WIDTH,
     SUBTITLE_FONT_PATH,
     resolve_ffmpeg_bin,
-    storage_path,
-    storage_url,
 )
 from ..core.exceptions import (
     FFmpegNotInstalledError,
     FFmpegRenderFailedError,
     RenderPlanInvalidError,
 )
+
+logger = logging.getLogger(__name__)
 
 # 자막 스타일: 배경 박스 없음 + 배경 밝기로 글자색 자동(흰/검) + 아주 약한 그림자(동화 톤).
 # (외곽선 stroke 미사용 — 유튜브식으로 보이지 않게)
@@ -90,12 +93,18 @@ def _parse_color(value):
 
 
 def _load_rgba(url):
-    """/storage URL → RGBA 이미지. 없거나 열기 실패 시 None(placeholder 처리)."""
-    p = storage_path(url)
-    if p is None or not p.exists():
+    """/storage URL → RGBA 이미지. 없거나 열기 실패 시 None(placeholder 처리).
+
+    Pillow 는 file-like 를 받으므로 storage(R2/로컬)에서 읽은 bytes 를 메모리(BytesIO)로 바로 연다.
+    ffmpeg 가 아니라 Pillow 가 읽는 입력이라 tmp 파일이 필요 없다.
+    """
+    if not url:
+        return None
+    data = storage.read_bytes(storage.storage_url_to_key(url))
+    if data is None:
         return None
     try:
-        return Image.open(p).convert("RGBA")
+        return Image.open(io.BytesIO(data)).convert("RGBA")
     except Exception:  # noqa: BLE001
         return None
 
@@ -262,12 +271,33 @@ def _scene_at(starts, durations, t):
     return 0
 
 
-def _collect_audio_inputs(scenes, starts):
-    """timeline 기준 (offsetSec, wav 절대경로) 목록.
+def _ensure_local_audio(url, audio_dir, cache):
+    """audioUrl → 시스템 tmp 의 로컬 wav 경로(없으면 None). ffmpeg 는 R2 를 직접 못 읽어 내려받아야 한다.
 
+    같은 storage key 는 cache 로 1회만 다운로드(여러 cue 가 같은 audio 를 써도 중복 방지).
+    """
+    key = storage.storage_url_to_key(url)
+    if key in cache:
+        return cache[key]
+    data = storage.read_bytes(key)
+    if data is None:
+        logger.warning("렌더 오디오 입력 누락(storage 에 없음): %s", url)
+        cache[key] = None
+        return None
+    dest = audio_dir / Path(key).name  # 파일명(audioId.wav) 보존
+    dest.write_bytes(data)
+    cache[key] = str(dest)
+    return str(dest)
+
+
+def _collect_audio_inputs(scenes, starts, audio_dir, cache):
+    """timeline 기준 (offsetSec, wav 로컬 tmp 경로) 목록.
+
+    ffmpeg 는 R2 object 를 직접 못 읽으므로 audioUrl 을 storage 에서 받아 audio_dir(시스템 tmp)에
+    내려받고 그 로컬 경로를 입력으로 쓴다.
     배치: 씬 순서 → cue.startSec → cue.items(sourceItemIndex 순, 같은 cue 안은 순차).
     absoluteStartSec = sceneStart + cue.startSec + (같은 cue 앞 item들의 audioDurationSec 합).
-    audioUrl 없거나 파일 없는 item 은 제외(앞 item 길이는 누적엔 반영).
+    audioUrl 없거나 storage 에 없는 item 은 제외(앞 item 길이는 누적엔 반영).
     """
     inputs = []
     for idx, scene in enumerate(scenes):
@@ -278,9 +308,9 @@ def _collect_audio_inputs(scenes, starts):
             for item in sorted(cue.get("items") or [], key=lambda x: x.get("sourceItemIndex", 0)):
                 url = item.get("audioUrl")
                 if url:
-                    p = storage_path(url)
-                    if p is not None and p.exists():
-                        inputs.append((round(scene_start + cue_start + item_off, 3), str(p)))
+                    local = _ensure_local_audio(url, audio_dir, cache)
+                    if local is not None:
+                        inputs.append((round(scene_start + cue_start + item_off, 3), local))
                 item_off += float(item.get("audioDurationSec") or 0.0)
     return inputs
 
@@ -304,10 +334,15 @@ def render_video(render_id: str, plan: dict) -> str:
         acc += d
     total_frames = max(1, round(total * fps))
 
-    tmp_dir = RENDER_TMP_DIR / render_id
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-    base_cache: dict = {}   # sceneId → 배경+캐릭터 합성(RGBA)
-    frame_cache: dict = {}  # (sceneId, frozenset(activeCues)) → 최종 프레임(RGB)
+    # 입력/프레임/출력 모두 시스템 tmp 에서 처리(app/storage 아래에 만들지 않는다). finally 에서 통째로 정리.
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f"render_{render_id}_"))
+    frames_dir = tmp_dir / "frames"
+    audio_dir = tmp_dir / "audio"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    base_cache: dict = {}    # sceneId → 배경+캐릭터 합성(RGBA)
+    frame_cache: dict = {}   # (sceneId, frozenset(activeCues)) → 최종 프레임(RGB)
+    audio_cache: dict = {}   # storage key → 로컬 tmp wav 경로(중복 다운로드 방지)
     try:
         for fi in range(total_frames):
             t = fi / fps
@@ -326,17 +361,17 @@ def render_video(render_id: str, plan: dict) -> str:
                         _draw_subtitle(composed, ov, w, h)
                 frame = composed.convert("RGB")  # yuv420p 인코딩용
                 frame_cache[key] = frame
-            frame.save(tmp_dir / f"frame_{fi + 1:05d}.png")
+            frame.save(frames_dir / f"frame_{fi + 1:05d}.png")
 
-        RENDER_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-        out_path = RENDER_STORAGE_DIR / f"{render_id}.mp4"
+        out_path = tmp_dir / f"{render_id}.mp4"  # 시스템 tmp 에 생성 → 성공 시 storage 업로드
 
         # 오디오: timeline cue.items[].audioUrl 을 absoluteStartSec 에 배치 → adelay → amix → mp4 mux.
-        audio_inputs = _collect_audio_inputs(scenes, starts)
+        # ffmpeg 는 R2 를 직접 못 읽어 입력 wav 를 시스템 tmp(audio_dir)로 내려받아 경로로 전달한다.
+        audio_inputs = _collect_audio_inputs(scenes, starts, audio_dir, audio_cache)
         cmd = [
             ffmpeg_bin, "-y",
             "-framerate", str(fps),
-            "-i", str(tmp_dir / "frame_%05d.png"),
+            "-i", str(frames_dir / "frame_%05d.png"),
         ]
         for _, path in audio_inputs:
             cmd += ["-i", path]
@@ -366,9 +401,13 @@ def render_video(render_id: str, plan: dict) -> str:
                 str(out_path),
             ]
         proc = subprocess.run(cmd, capture_output=True, text=True)
-        if proc.returncode != 0 or not out_path.exists():
+        if proc.returncode != 0 or not out_path.exists() or out_path.stat().st_size == 0:
             tail = (proc.stderr or "").strip().splitlines()
             raise FFmpegRenderFailedError(f"ffmpeg 실패: {tail[-1] if tail else 'unknown error'}")
-        return storage_url("renders", f"{render_id}.mp4")
+        # 성공 + 비어있지 않은 mp4 확인 후에만 storage(R2/로컬) 업로드 — 불완전 mp4 업로드 금지. key 형태 유지.
+        storage.save_bytes(
+            f"renders/{render_id}.mp4", out_path.read_bytes(), content_type="video/mp4"
+        )
+        return storage.get_storage_url(f"renders/{render_id}.mp4")
     finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)  # 성공/실패 모두 임시 프레임 정리
+        shutil.rmtree(tmp_dir, ignore_errors=True)  # 성공/실패 모두 입력/프레임/출력 tmp 통째 정리

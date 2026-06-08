@@ -20,9 +20,8 @@ VOICE_STORAGE_DIR = STORAGE_ROOT / "voices"
 # 클론 reference 변환 기준 sample rate. 브라우저 녹음(webm/opus)을 이 값의 wav(pcm_s16le/mono)로 변환해
 # AI clone/TTS 에 전달한다. Qwen3-TTS / 이후 IndexTTS2 권장값 확인되면 여기만 바꾼다.
 VOICE_REFERENCE_SAMPLE_RATE = 16000
-RENDER_STORAGE_DIR = STORAGE_ROOT / "renders"
-# 렌더 중 프레임 PNG 임시 폴더. 완료/실패 후 정리한다. (jobId가 아니라 renderId 기준)
-RENDER_TMP_DIR = STORAGE_ROOT / "tmp" / "renders"
+# 렌더 출력(renders/{renderId}.mp4)·입력·프레임은 storage(R2/로컬) + 시스템 tmp 로 처리한다.
+# (기존 RENDER_STORAGE_DIR / RENDER_TMP_DIR 는 ffmpeg_render_service 가 시스템 tmp + storage 로 전환되며 제거됨)
 
 # 렌더 출력 규격. 16:9.
 RENDER_FPS = 24
