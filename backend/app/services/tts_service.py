@@ -1,9 +1,10 @@
 import base64
 import logging
+from pathlib import Path
 
 import httpx
 
-from ..core.config import AUDIO_STORAGE_DIR, storage_path, storage_url
+from ..core import storage
 from ..core.exceptions import (
     EmptySceneItemsError,
     SceneNotFoundError,
@@ -44,9 +45,9 @@ def _rehost_audio_to_storage(audio: dict) -> dict:
         if not resp.headers.get("content-type", "").startswith("audio/"):
             logger.warning("TTS audio 재호스팅 건너뜀(오디오 아님): %s", url)
             return audio  # ngrok 경고 HTML 등 → 원본 유지(깨진 파일 저장 안 함)
-        AUDIO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-        (AUDIO_STORAGE_DIR / f"{audio_id}.wav").write_bytes(resp.content)
-        return {**audio, "audioUrl": storage_url("audio", f"{audio_id}.wav")}
+        # storage 경유 저장(R2 모드 → R2, 아니면 로컬 app/storage). key 형태는 기존 그대로.
+        storage.save_bytes(f"audio/{audio_id}.wav", resp.content, content_type="audio/wav")
+        return {**audio, "audioUrl": storage.get_storage_url(f"audio/{audio_id}.wav")}
     except Exception as exc:  # noqa: BLE001 - 실패 시 원본 URL 유지
         logger.warning("TTS audio 재호스팅 실패(%s): %s", audio_id, exc)
         return audio
@@ -116,13 +117,14 @@ def _reference_base64(reference_url: str | None, cache: dict) -> tuple[str | Non
         return (None, None)
     if reference_url in cache:
         return cache[reference_url]
-    path = storage_path(reference_url)
-    if path is None or not path.exists():
+    key = storage.storage_url_to_key(reference_url)
+    data = storage.read_bytes(key)  # R2 모드면 R2, 아니면 로컬에서 읽음. 없으면 None.
+    if data is None:
         result: tuple[str | None, str | None] = (None, None)
     else:
-        ext = path.suffix.lstrip(".").lower()
+        ext = Path(key).suffix.lstrip(".").lower()
         mime = _REFERENCE_MIME.get(ext, "application/octet-stream")
-        result = (base64.b64encode(path.read_bytes()).decode("ascii"), mime)
+        result = (base64.b64encode(data).decode("ascii"), mime)
     cache[reference_url] = result
     return result
 
@@ -151,6 +153,19 @@ class TTSService:
         self._tts_audio_repo = tts_audio_repo
         self._character_repo = character_repo
         self._voice_repo = voice_repo
+
+    @staticmethod
+    def _delete_audio_file(audio_id: str) -> None:
+        """audio/{audioId}.wav 파일 정리(R2/로컬). 없어도 에러 없음 — DB row 와 함께 orphan 방지."""
+        try:
+            storage.delete(f"audio/{audio_id}.wav")
+        except Exception as e:  # noqa: BLE001 (파일 정리 실패가 삭제/교체 흐름을 막지 않게)
+            logger.warning("TTS audio 파일 삭제 실패(%s): %s", audio_id, e)
+
+    def _purge_audio(self, audio_id: str) -> None:
+        """audio 레코드 + 파일을 함께 삭제(교체/실패정리/단건삭제 공통)."""
+        self._delete_audio_file(audio_id)
+        self._tts_audio_repo.delete(audio_id)
 
     def _scene_context(self, story_id: str):
         """씬 합성용 컨텍스트: (narrator_voice_id, name→character 매핑)."""
@@ -256,6 +271,9 @@ class TTSService:
         self, story_id: str, scene_id: str, audio_targets: list[dict]
     ) -> list[dict]:
         """씬 전체 재생성용(씬 단건 TTS 엔드포인트 전용): 씬 audio 전체 삭제 후 새로 저장+합성."""
+        # row 일괄 삭제 전에 파일(audio/{id}.wav)도 함께 정리(orphan 방지).
+        for old in self._tts_audio_repo.list_by_scene(story_id, scene_id):
+            self._delete_audio_file(old["audioId"])
         self._tts_audio_repo.delete_by_scene(story_id, scene_id)
         saved = self._tts_audio_repo.create_many(audio_targets)
         self._call_ai_and_rehost(story_id, scene_id, saved)
@@ -409,13 +427,13 @@ class TTSService:
                         ready_count += 1
         except Exception:  # noqa: BLE001 — 새로 만든 것만 정리하고 기존 audio 보존 후 재전파
             for audio_id in new_ids:
-                self._tts_audio_repo.delete(audio_id)
+                self._purge_audio(audio_id)
             raise
 
         if ready_count > 0:
-            # 성공: 기존 대상 audio 교체
+            # 성공: 기존 대상 audio 교체(파일까지 정리해 orphan 방지)
             for audio_id in old_ids:
-                self._tts_audio_repo.delete(audio_id)
+                self._purge_audio(audio_id)
             return {
                 "audioCount": audio_count,
                 "readyCount": ready_count,
@@ -425,7 +443,7 @@ class TTSService:
 
         # 전부 실패(예외 없이 audioUrl 0개): 새 것 제거, 기존 ready audio 보존
         for audio_id in new_ids:
-            self._tts_audio_repo.delete(audio_id)
+            self._purge_audio(audio_id)
         return {"audioCount": 0, "readyCount": 0, "failedCount": len(new_ids), "replaced": False}
 
     def list_scene_audios(self, story_id: str, scene_id: str) -> list[dict]:
@@ -466,7 +484,7 @@ class TTSService:
     def delete_audio(self, audio_id: str) -> dict:
         if self._tts_audio_repo.get(audio_id) is None:
             raise TTSAudioNotFoundError()
-        self._tts_audio_repo.delete(audio_id)
+        self._purge_audio(audio_id)
         return {"deleted": True, "audioId": audio_id}
 
     def _find_scene(self, story_id: str, scene_id: str) -> dict:

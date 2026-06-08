@@ -8,15 +8,16 @@
 - 내부 절대경로는 AI/백엔드 사이에서만 — 응답/저장 노출은 /storage URL 만.
 """
 
+import shutil
 import subprocess
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..core import storage
 from ..core.config import (
     VOICE_REFERENCE_SAMPLE_RATE,
-    VOICE_STORAGE_DIR,
     resolve_ffmpeg_bin,
-    storage_url,
 )
 from ..core.exceptions import (
     CharacterNotFoundError,
@@ -126,17 +127,22 @@ def create_voice_clone_job(
     # 브라우저 녹음(webm/opus)은 클론/TTS 입력으로 불안정 → 항상 wav(pcm_s16le/mono)로 변환해 사용한다.
     # referenceAudioUrl 은 clone preview 뿐 아니라 이후 TTS(tts_service: referenceAudioBase64)에서도 쓰이므로
     # 반드시 reference.wav 를 가리킨다(절반만 고치는 것 방지).
-    vdir = VOICE_STORAGE_DIR / voice_id
-    vdir.mkdir(parents=True, exist_ok=True)
-    wav_path = vdir / "reference.wav"
-    # 원본 보관 후, 확장자와 무관하게 항상 ffmpeg 로 wav(pcm_s16le/mono/VOICE_REFERENCE_SAMPLE_RATE)로
-    # 변환·정규화한다. wav 업로드도 변환을 거쳐 검증되고(깨진 파일 → VoiceReferenceConversionError),
-    # sample rate/channel 이 통일된다. = "확장자 + ffmpeg 변환 성공"이 곧 입력 검증.
-    original_path = vdir / f"reference_original.{ext}"  # 원본 보관(webm/wav/mp3/m4a)
-    original_path.write_bytes(audio_bytes)
-    _convert_to_wav(original_path, wav_path)  # 디코딩 불가/깨진/비오디오 파일 → VoiceReferenceConversionError
-    reference_wav_bytes = wav_path.read_bytes()
-    reference_url = storage_url("voices", voice_id, "reference.wav")
+    # ffmpeg 는 로컬 경로가 필요하므로 tmp 에서 변환한 뒤 결과를 storage(R2 또는 로컬)에 올린다.
+    # tmp 는 app/storage/voices 밖(시스템 tmp)에 만들고 정리 → R2 모드에서 로컬에 파일이 쌓이지 않는다.
+    # 확장자 무관 항상 wav(pcm_s16le/mono)로 변환·정규화. 깨진/비오디오 → VoiceReferenceConversionError.
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f"vclone_{voice_id}_"))
+    try:
+        tmp_original = tmp_dir / f"reference_original.{ext}"
+        tmp_wav = tmp_dir / "reference.wav"
+        tmp_original.write_bytes(audio_bytes)
+        _convert_to_wav(tmp_original, tmp_wav)
+        reference_wav_bytes = tmp_wav.read_bytes()
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    # storage 에 저장(R2 모드 → R2, 아니면 로컬 app/storage). key 형태는 기존 그대로.
+    storage.save_bytes(f"voices/{voice_id}/reference_original.{ext}", audio_bytes)
+    storage.save_bytes(f"voices/{voice_id}/reference.wav", reference_wav_bytes, content_type="audio/wav")
+    reference_url = storage.get_storage_url(f"voices/{voice_id}/reference.wav")
     voice_repository.apply_clone_update(voice_id, {"referenceAudioUrl": reference_url})
 
     # ⚠️ 캐릭터 자동 연결 안 함 (확정 설계: 연결은 /voice 에서 ready voice 만).
@@ -155,8 +161,10 @@ def create_voice_clone_job(
                 audio_bytes=reference_wav_bytes,  # 변환된 wav 전달(webm 아님)
                 audio_ext="wav",
             )
-            (vdir / "sample.wav").write_bytes(res["sample_bytes"])
-            sample_url = storage_url("voices", voice_id, "sample.wav")
+            storage.save_bytes(
+                f"voices/{voice_id}/sample.wav", res["sample_bytes"], content_type="audio/wav"
+            )
+            sample_url = storage.get_storage_url(f"voices/{voice_id}/sample.wav")
             voice_repository.apply_clone_update(
                 voice_id,
                 {

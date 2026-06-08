@@ -23,11 +23,11 @@ def _load_env(path: Path) -> None:
 _load_env(Path(__file__).parent.parent / ".env")        # backend/.env
 _load_env(_PROJECT_ROOT / "ai" / ".env")                # ai/.env (fallback)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
-from .core.config import STORAGE_ROOT, STORAGE_URL_PREFIX
+from .core import storage
+from .core.config import STORAGE_ROOT
 from .core.exception_handlers import app_exception_handler
 from .core.exceptions import AppException
 from .routers import (
@@ -98,7 +98,15 @@ def _resume_unfinished_tts_jobs():
     tts_service.resume_unfinished_story_tts_jobs()
 
 
-# 생성된 이미지/오디오 정적 서빙 — 경로는 core/config.py 에서 관리(절대경로)
-# 예: /storage/characters/{id}.png
-STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
-app.mount(STORAGE_URL_PREFIX, StaticFiles(directory=str(STORAGE_ROOT)), name="storage")
+# 생성된 이미지/오디오/영상 서빙 — 스토리지 추상화(storage) 경유.
+# R2 모드면 R2(get_object)에서, 아니면 로컬 app/storage 에서 읽어 스트리밍한다.
+# (정적 StaticFiles 마운트 대신 프록시 라우트 — R2 비공개 버킷도 백엔드 통해서만 접근)
+STORAGE_ROOT.mkdir(parents=True, exist_ok=True)  # 로컬 모드 저장 대비
+
+
+@app.get("/storage/{path:path}", include_in_schema=False)
+def serve_storage(path: str):
+    data = storage.read_bytes(path)
+    if data is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    return Response(content=data, media_type=storage.content_type_for(path))
