@@ -4,6 +4,9 @@ import DurationControl from './DurationControl'
 import SceneComposite from './SceneComposite'
 import CueTimingEditor from './CueTimingEditor'
 
+// 미디어(/storage/...) 는 백엔드 서빙 — API 베이스 URL 을 붙여 절대경로로(상대경로면 배포 도메인 기준이라 재생 안 됨).
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+
 // 전체 미리보기 재생 큐: 씬 order 순 → cueOrder 순 → items(sourceItemIndex 순) → audioUrl 있는 것만.
 // (전체 미리보기는 전 씬을 훑으므로 audio 도 전 씬을 순서대로 이어서 재생한다.)
 function buildAudioQueue(scenes) {
@@ -13,7 +16,7 @@ function buildAudioQueue(scenes) {
     const cues = [...(s.cueTimings ?? [])].sort((a, b) => a.cueOrder - b.cueOrder)
     for (const c of cues) {
       for (const it of c.items ?? []) {
-        if (it.audioUrl) urls.push(it.audioUrl)
+        if (it.audioUrl) urls.push(`${BASE_URL}${it.audioUrl}`)
       }
     }
   }

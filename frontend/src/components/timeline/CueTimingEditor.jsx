@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import styles from './Timeline.module.css'
 
+// 미디어(/storage/...) 는 백엔드 서빙 — API 베이스 URL 을 붙여 절대경로로(상대경로면 배포 도메인 기준이라 재생 안 됨).
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+
 // 선택한 씬의 cue 그룹별 타이밍 편집(1차: cue별 카드 = 자막 요약 + 숫자 입력 + 미니 타임바).
 // 텍스트/위치/cueOrder는 건드리지 않음 — startSec/durationSec만. cue 클릭 시 미리보기 필터(onSelectCue).
 const SAVE_LABEL = { saving: '저장 중…', saved: '자동 저장됨', failed: '저장 실패' }
@@ -177,7 +180,7 @@ export default function CueTimingEditor({
                             {it.text && <p className={styles.cueItemText}>{it.text}</p>}
                             {it.ttsStatus === 'ready' && it.audioUrl ? (
                               // eslint-disable-next-line jsx-a11y/media-has-caption
-                              <audio className={styles.cueAudioPlayer} controls src={it.audioUrl} />
+                              <audio className={styles.cueAudioPlayer} controls src={`${BASE_URL}${it.audioUrl}`} />
                             ) : (
                               <span className={styles.cueAudioNote}>{TTS_NOTE[it.ttsStatus] ?? TTS_NOTE.none}</span>
                             )}
