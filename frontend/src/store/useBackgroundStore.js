@@ -18,6 +18,9 @@ const useBackgroundStore = create((set) => ({
   // 선택 상태
   selectedBackgroundId: null,
 
+  // 상세 미리보기 모달 대상(배경 dict). null이면 닫힘.
+  detailModalBackground: null,
+
   // Job
   currentJobId: null,
 
@@ -38,6 +41,7 @@ const useBackgroundStore = create((set) => ({
   // ── setters ──────────────────────────────────
   setBackgrounds: (backgrounds) => set({ backgrounds }),
   setSelectedBackgroundId: (selectedBackgroundId) => set({ selectedBackgroundId }),
+  setDetailModalBackground: (detailModalBackground) => set({ detailModalBackground }),
   setCurrentJobId: (currentJobId) => set({ currentJobId }),
   setPromptInput: (promptInput) => set({ promptInput }),
   setPromptSuffix: (promptSuffix) => set({ promptSuffix }),
@@ -70,6 +74,7 @@ const useBackgroundStore = create((set) => ({
     set({
       backgrounds: [],
       selectedBackgroundId: null,
+      detailModalBackground: null,
       currentJobId: null,
       promptInput: '',
       promptSuffix: '',

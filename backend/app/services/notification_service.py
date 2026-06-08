@@ -13,11 +13,15 @@ from ..schemas.job import JobType
 logger = logging.getLogger(__name__)
 
 # 알림 대상 job_type → (completed/failed 별 notif type, 제목).
-# 키는 JobType enum 값으로 묶어 enum 변경 시 누락을 막는다. character_pose_generate 는 1차 제외.
+# 키는 JobType enum 값으로 묶어 enum 변경 시 누락을 막는다.
 _JOB_NOTIF: dict[str, dict[str, tuple[str, str]]] = {
     JobType.character_generate.value: {
         "completed": ("character_completed", "캐릭터 생성 완료"),
         "failed": ("character_failed", "캐릭터 생성 실패"),
+    },
+    JobType.character_pose_generate.value: {
+        "completed": ("pose_completed", "포즈 생성 완료"),
+        "failed": ("pose_failed", "포즈 생성 실패"),
     },
     JobType.background_generate.value: {
         "completed": ("background_completed", "배경 생성 완료"),
@@ -43,11 +47,13 @@ _JOB_NOTIF: dict[str, dict[str, tuple[str, str]]] = {
 
 _DONE_MESSAGE = {
     "character_completed": "캐릭터 생성이 완료되었습니다.",
+    "pose_completed": "포즈 생성이 완료되었습니다.",
     "background_completed": "배경 생성이 완료되었습니다.",
     "voice_completed": "보이스 생성이 완료되었습니다.",
     "tts_completed": "음성 생성이 완료되었습니다.",
     "render_completed": "영상 생성이 완료되었습니다.",
     "character_failed": "캐릭터 생성에 실패했습니다.",
+    "pose_failed": "포즈 생성에 실패했습니다.",
     "background_failed": "배경 생성에 실패했습니다.",
     "voice_failed": "보이스 생성에 실패했습니다.",
     "tts_failed": "음성 생성에 실패했습니다.",

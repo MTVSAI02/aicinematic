@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useBackgroundStore from '@/store/useBackgroundStore'
 import * as backgroundApi from '@/api/backgrounds'
 import { getApiErrorMessage } from '@/utils/apiError'
+import { mediaUrl } from '@/utils/mediaUrl'
 import BackgroundPromptPanel from '@/components/backgrounds/BackgroundPromptPanel'
 import BackgroundLibrary from '@/components/backgrounds/BackgroundLibrary'
 import styles from './BackgroundPage.module.css'
@@ -18,6 +19,10 @@ import yarnIcon from '@design/assets/figma-icons/Nav/nav_voice.svg'
 export default function BackgroundPage() {
   const navigate = useNavigate()
   const setBackgrounds = useBackgroundStore((s) => s.setBackgrounds)
+  const detailModalBackground = useBackgroundStore((s) => s.detailModalBackground)
+  const setDetailModalBackground = useBackgroundStore((s) => s.setDetailModalBackground)
+  const selectedBackgroundId = useBackgroundStore((s) => s.selectedBackgroundId)
+  const setSelectedBackgroundId = useBackgroundStore((s) => s.setSelectedBackgroundId)
   const [loadError, setLoadError] = useState('')
   const storyTitle = useStoryStore((s) => s.storyTitle)
   const { titleRef, frameHeight } = useSwingingSignboard(1169 / 1538)
@@ -120,6 +125,50 @@ export default function BackgroundPage() {
           </div>
         </div>
       </div>
+
+      {/* ── 배경 상세 미리보기 모달 (최상위 배치로 중앙 정렬 보장) ── */}
+      {detailModalBackground && (
+        <div className={styles.modalOverlay} onClick={() => setDetailModalBackground(null)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className={styles.closeBtn} onClick={() => setDetailModalBackground(null)}>
+              ×
+            </button>
+            <div className={styles.modalBody}>
+              <div className={styles.modalLeft}>
+                {detailModalBackground.imageUrl ? (
+                  <img
+                    src={mediaUrl(detailModalBackground.imageUrl)}
+                    alt={detailModalBackground.name}
+                    className={styles.modalImg}
+                  />
+                ) : (
+                  <span className={styles.thumbEmpty}>이미지 준비 중</span>
+                )}
+              </div>
+              <div className={styles.modalRight}>
+                <h3 className={styles.modalName}>{detailModalBackground.name}</h3>
+                <div className={styles.modalPromptSection}>
+                  <h4 className={styles.modalPromptLabel}>프롬프트 상세 정보</h4>
+                  <p className={styles.modalPromptText}>{detailModalBackground.prompt}</p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.modalSelectBtn}
+                  onClick={() => {
+                    const isSelected = detailModalBackground.backgroundId === selectedBackgroundId
+                    setSelectedBackgroundId(isSelected ? null : detailModalBackground.backgroundId)
+                    setDetailModalBackground(null)
+                  }}
+                >
+                  {detailModalBackground.backgroundId === selectedBackgroundId
+                    ? '선택 해제하기'
+                    : '이 배경 선택하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

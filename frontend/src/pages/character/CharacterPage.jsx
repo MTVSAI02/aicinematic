@@ -145,15 +145,29 @@ export default function CharacterPage() {
         </div>
       )}
 
-      {/* ── 캐릭터 포즈 크게 보기 라이트박스 모달 ── */}
+      {/* ── 캐릭터 포즈 상세 미리보기 모달 (캐릭터 상세 모달과 동일 스타일) ── */}
       {lightboxPose && (
-        <div className={styles.lightboxOverlay} onClick={() => setLightboxPose(null)}>
-          <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
-            <button type="button" className={styles.lightboxCloseBtn} onClick={() => setLightboxPose(null)}>
+        <div className={styles.modalOverlay} onClick={() => setLightboxPose(null)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className={styles.closeBtn} onClick={() => setLightboxPose(null)}>
               ×
             </button>
-            <img src={mediaUrl(lightboxPose.imageUrl)} alt={lightboxPose.posePrompt} className={styles.lightboxImg} />
-            <p className={styles.lightboxPrompt}>{lightboxPose.posePrompt}</p>
+            <div className={styles.modalBody}>
+              <div className={styles.modalLeft}>
+                {lightboxPose.imageUrl ? (
+                  <img src={mediaUrl(lightboxPose.imageUrl)} alt={lightboxPose.posePrompt} className={styles.modalImg} />
+                ) : (
+                  <span className={styles.thumbEmpty}>이미지 준비 중</span>
+                )}
+              </div>
+              <div className={styles.modalRight}>
+                <h3 className={styles.modalName}>포즈</h3>
+                <div className={styles.modalPromptSection}>
+                  <h4 className={styles.modalPromptLabel}>포즈 프롬프트</h4>
+                  <p className={styles.modalPromptText}>{lightboxPose.posePrompt}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
