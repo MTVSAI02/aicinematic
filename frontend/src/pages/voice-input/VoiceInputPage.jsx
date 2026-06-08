@@ -451,7 +451,7 @@ export default function VoiceInputPage() {
                     rows={4}
                   />
                   <p className={`${styles.fieldHint} ${styles.referenceTextHelp}`}>
-                    녹음/업로드한 음성과 문장이 정확히 일치해야 클로닝 품질이 좋아집니다.
+                    녹음/업로드한 음성과 문장이 정확히 일치해야 클로닝 품질이 좋아집니다. 제시된 문장을 그대로 읽어주세요.
                   </p>
                   <button
                     className={styles.scriptRefreshBtn}
