@@ -1,7 +1,4 @@
-from ..core.config import (
-    BACKGROUND_LIBRARY_STORAGE_DIR,
-    storage_url,
-)
+from ..core import storage
 from ..core.exceptions import (
     BackgroundNotFoundError,
     NoFieldsToUpdateError,
@@ -97,9 +94,11 @@ class BackgroundService:
         (background_job_runner 가 AI 생성 결과로 호출 — 사용자 선택/이름 입력 단계 제거)
         """
         background_id = self._background_repo.reserve_id()
-        BACKGROUND_LIBRARY_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-        (BACKGROUND_LIBRARY_STORAGE_DIR / f"{background_id}.png").write_bytes(image_bytes)
-        image_url = storage_url("backgrounds", "library", f"{background_id}.png")
+        # storage(R2/로컬) 저장 → /storage URL. key 형태 유지(backgrounds/library/{id}.png).
+        storage.save_bytes(
+            f"backgrounds/library/{background_id}.png", image_bytes, content_type="image/png"
+        )
+        image_url = storage.get_storage_url(f"backgrounds/library/{background_id}.png")
         return self._background_repo.create(
             background_id,
             {
@@ -133,8 +132,8 @@ class BackgroundService:
         if not deleted:
             raise BackgroundNotFoundError()
 
-        # 저장본 이미지 파일도 함께 삭제 (record만 지우면 library 파일이 고아로 남음).
-        (BACKGROUND_LIBRARY_STORAGE_DIR / f"{background_id}.png").unlink(missing_ok=True)
+        # 저장본 이미지 파일도 함께 삭제 (record만 지우면 library 파일이 고아로 남음). R2/로컬 공통.
+        storage.delete(f"backgrounds/library/{background_id}.png")
         # scene.backgroundId 참조는 FK ondelete=SET NULL 이 자동 정리(배경 row 삭제 → 참조 null).
         return {"deleted": True, "backgroundId": background_id}
 
